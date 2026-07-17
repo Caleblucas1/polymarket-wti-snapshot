@@ -1,6 +1,6 @@
 import unittest
 
-from bab_el_mandeb_snapshot import deadline_sort_key, selected_markets
+from polymarket_deadline_snapshot import deadline_sort_key, selected_markets
 
 
 class BabElMandebSnapshotTests(unittest.TestCase):

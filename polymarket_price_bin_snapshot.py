@@ -20,6 +20,7 @@ from polymarket_wti_snapshot import (
     fetch_event,
     merge_and_write_csv,
     market_is_closed,
+    missing_snapshot_targets,
     snapshot_targets,
 )
 
@@ -48,6 +49,11 @@ def build_parser(
     parser.add_argument("--hour", type=int, default=9, help="Eastern snapshot hour")
     parser.add_argument("--timeout", type=float, default=20, help="HTTP timeout in seconds")
     parser.add_argument(
+        "--no-chart",
+        action="store_true",
+        help="Update only the CSV and skip HTML chart generation",
+    )
+    parser.add_argument(
         "--exclude-closed",
         action="store_true",
         help="Exclude resolved price bins from the CSV and chart",
@@ -62,9 +68,17 @@ def run_tracker(args: argparse.Namespace) -> int:
         targets = snapshot_targets(
             datetime.now(tz=ZoneInfo("UTC")), days=args.days, hour=args.hour
         )
+        targets = missing_snapshot_targets(
+            args.output,
+            targets,
+            label_column=LABEL_COLUMN,
+        )
     except ValueError as exc:
         logging.error("Invalid arguments: %s", exc)
         return 2
+    if not targets:
+        logging.info("All requested snapshot dates already exist; no API calls were needed")
+        return 0
 
     session = build_session()
     try:
@@ -104,6 +118,14 @@ def run_tracker(args: argparse.Namespace) -> int:
             targets,
             label_column=LABEL_COLUMN,
         )
+        if args.no_chart:
+            logging.info(
+                "Added %d new date(s); CSV contains %d stored rows at %s",
+                added_dates,
+                total_rows,
+                args.output,
+            )
+            return 0
         dates, saved_series = load_snapshot(args.output, label_column=LABEL_COLUMN)
         dates, saved_series = latest_window(dates, saved_series, args.days)
         if args.exclude_closed:

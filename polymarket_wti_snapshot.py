@@ -22,6 +22,8 @@ DEFAULT_SLUG = "what-price-will-wti-hit-in-july-2026"
 DEFAULT_OUTPUT = "wti_july_2026_9am_snapshot.csv"
 GAMMA_EVENT_URL = "https://gamma-api.polymarket.com/events/slug/{slug}"
 CLOB_HISTORY_URL = "https://clob.polymarket.com/prices-history"
+CLOB_BATCH_HISTORY_URL = "https://clob.polymarket.com/batch-prices-history"
+BATCH_MARKET_LIMIT = 20
 
 
 def build_session() -> requests.Session:
@@ -31,7 +33,9 @@ def build_session() -> requests.Session:
         total=3,
         backoff_factor=0.5,
         status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=("GET",),
+        # POST is included because the batch-history endpoint is read-only and
+        # idempotent even though it accepts its query in a JSON body.
+        allowed_methods=("GET", "POST"),
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))
     session.headers.update({"User-Agent": "polymarket-wti-snapshot/1.0"})
@@ -100,6 +104,38 @@ def snapshot_targets(
     return [datetime.combine(day, time(hour), tzinfo=tz) for day in dates]
 
 
+def missing_snapshot_targets(
+    path: Path,
+    targets: Iterable[datetime],
+    *,
+    label_column: str = "Price Bin",
+) -> list[datetime]:
+    """Return only targets whose date columns are absent from an existing CSV."""
+    target_list = list(targets)
+    if not path.exists():
+        return target_list
+
+    with path.open(newline="", encoding="utf-8-sig") as input_file:
+        reader = csv.reader(input_file)
+        header = next(reader, None)
+    if not header or label_column not in header:
+        raise ValueError(f"Existing CSV must contain a {label_column!r} column")
+
+    existing_dates = {column for column in header if column != label_column}
+    for date_string in existing_dates:
+        try:
+            date.fromisoformat(date_string)
+        except ValueError as exc:
+            raise ValueError(
+                f"Existing CSV has an invalid ISO date column: {date_string}"
+            ) from exc
+    return [
+        target
+        for target in target_list
+        if target.date().isoformat() not in existing_dates
+    ]
+
+
 def normalize_history(history: Iterable[dict[str, Any]]) -> tuple[list[float], list[float]]:
     """Return valid history timestamps and prices, sorted by timestamp."""
     points: list[tuple[float, float]] = []
@@ -152,6 +188,63 @@ def fetch_history(
     return history
 
 
+def fetch_histories(
+    session: requests.Session,
+    token_ids: list[str],
+    targets: list[datetime],
+    timeout: float,
+) -> dict[str, list[dict[str, Any]]]:
+    """Fetch histories in batches, falling back to one request per failed batch."""
+    if not token_ids or not targets:
+        return {}
+
+    # Preserve the old rolling one-week lookback even when callers request fewer
+    # than seven target dates. For a normal seven-day run, one day before the
+    # earliest target and seven days before the latest target are identical.
+    earliest_target = min(target.timestamp() for target in targets)
+    latest_target = max(target.timestamp() for target in targets)
+    # Although the API schema describes these values as numeric, the live batch
+    # endpoint rejects fractional Unix timestamps. Datetime.timestamp() returns
+    # a float, so normalize both bounds to whole seconds before posting.
+    start_timestamp = int(
+        min(earliest_target - 24 * 60 * 60, latest_target - 7 * 24 * 60 * 60)
+    )
+    end_timestamp = int(latest_target) + 5 * 60
+    histories: dict[str, list[dict[str, Any]]] = {}
+
+    for start in range(0, len(token_ids), BATCH_MARKET_LIMIT):
+        chunk = token_ids[start : start + BATCH_MARKET_LIMIT]
+        try:
+            response = session.post(
+                CLOB_BATCH_HISTORY_URL,
+                json={
+                    "markets": chunk,
+                    "start_ts": start_timestamp,
+                    "end_ts": end_timestamp,
+                    "fidelity": 5,
+                },
+                timeout=timeout,
+            )
+            response.raise_for_status()
+            history_map = response.json().get("history", {})
+            if not isinstance(history_map, dict):
+                raise ValueError("CLOB batch API returned an unexpected response")
+            for token_id in chunk:
+                history = history_map.get(token_id, [])
+                histories[token_id] = history if isinstance(history, list) else []
+            continue
+        except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
+            logging.warning("Batch history request failed; using individual requests: %s", exc)
+
+        for token_id in chunk:
+            try:
+                histories[token_id] = fetch_history(session, token_id, timeout)
+            except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
+                logging.warning("Skipping token %s: %s", token_id, exc)
+                histories[token_id] = []
+    return histories
+
+
 def collect_rows(
     session: requests.Session,
     markets: Iterable[dict[str, Any]],
@@ -160,19 +253,24 @@ def collect_rows(
     *,
     label_column: str = "Price Bin",
 ) -> list[dict[str, str | float | None]]:
-    rows: list[dict[str, str | float | None]] = []
+    market_records: list[tuple[str, str]] = []
     for market in markets:
         label = market.get("groupItemTitle") or market.get("question") or "Unknown market"
         token_id = yes_token_id(market)
         if token_id is None:
             logging.warning("Skipping %s: no CLOB token IDs", label)
             continue
+        market_records.append((str(label), token_id))
 
-        try:
-            history = fetch_history(session, token_id, timeout)
-        except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
-            logging.warning("Skipping %s: %s", label, exc)
-            continue
+    histories = fetch_histories(
+        session,
+        [token_id for _, token_id in market_records],
+        targets,
+        timeout,
+    )
+    rows: list[dict[str, str | float | None]] = []
+    for label, token_id in market_records:
+        history = histories.get(token_id, [])
         if not history:
             logging.warning("Skipping %s: no price history", label)
             continue
@@ -262,16 +360,20 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> int:
-    args = parse_args()
+def run_snapshot(args: argparse.Namespace) -> int:
+    """Run one append-only price snapshot update."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
         targets = snapshot_targets(
             datetime.now(tz=ZoneInfo("UTC")), days=args.days, hour=args.hour
         )
+        targets = missing_snapshot_targets(args.output, targets)
     except ValueError as exc:
         logging.error("Invalid arguments: %s", exc)
         return 2
+    if not targets:
+        logging.info("All requested snapshot dates already exist; no API calls were needed")
+        return 0
 
     session = build_session()
     try:
@@ -302,6 +404,10 @@ def main() -> int:
         args.output,
     )
     return 0
+
+
+def main() -> int:
+    return run_snapshot(parse_args())
 
 
 if __name__ == "__main__":
