@@ -170,13 +170,64 @@ def collect_rows(
     return rows
 
 
-def write_csv(path: Path, rows: list[dict[str, Any]], targets: list[datetime]) -> None:
+def merge_and_write_csv(
+    path: Path, rows: list[dict[str, Any]], targets: list[datetime]
+) -> tuple[int, int]:
+    """Append missing date columns while preserving previously saved snapshots."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = ["Price Bin", *(target.date().isoformat() for target in targets)]
-    with path.open("w", newline="", encoding="utf-8") as output_file:
+    incoming_dates = [target.date().isoformat() for target in targets]
+    existing_dates: list[str] = []
+    existing_rows: list[dict[str, Any]] = []
+
+    if path.exists():
+        with path.open(newline="", encoding="utf-8-sig") as input_file:
+            reader = csv.DictReader(input_file)
+            if not reader.fieldnames or "Price Bin" not in reader.fieldnames:
+                raise ValueError("Existing CSV must contain a 'Price Bin' column")
+            existing_dates = [
+                column for column in reader.fieldnames if column != "Price Bin"
+            ]
+            for date_string in existing_dates:
+                try:
+                    date.fromisoformat(date_string)
+                except ValueError as exc:
+                    raise ValueError(
+                        f"Existing CSV has an invalid ISO date column: {date_string}"
+                    ) from exc
+            existing_rows = list(reader)
+
+    new_dates = [date_string for date_string in incoming_dates if date_string not in existing_dates]
+    if path.exists() and not new_dates:
+        return 0, len(existing_rows)
+
+    combined_dates = sorted(set(existing_dates + new_dates))
+    rows_by_label: dict[str, dict[str, Any]] = {}
+    label_order: list[str] = []
+    for row in existing_rows:
+        label = str(row.get("Price Bin") or "").strip()
+        if not label:
+            raise ValueError("Existing CSV contains a row without a price-bin label")
+        if label in rows_by_label:
+            raise ValueError(f"Existing CSV contains duplicate price bin: {label}")
+        rows_by_label[label] = {"Price Bin": label, **row}
+        label_order.append(label)
+
+    for incoming_row in rows:
+        label = str(incoming_row["Price Bin"])
+        if label not in rows_by_label:
+            rows_by_label[label] = {"Price Bin": label}
+            label_order.append(label)
+        for date_string in new_dates:
+            rows_by_label[label][date_string] = incoming_row.get(date_string)
+
+    fieldnames = ["Price Bin", *combined_dates]
+    temporary_path = path.with_suffix(f"{path.suffix}.tmp")
+    with temporary_path.open("w", newline="", encoding="utf-8") as output_file:
         writer = csv.DictWriter(output_file, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(rows_by_label[label] for label in label_order)
+    temporary_path.replace(path)
+    return len(new_dates), len(label_order)
 
 
 def parse_args() -> argparse.Namespace:
@@ -216,8 +267,17 @@ def main() -> int:
 
     logging.info("Fetching %d price bins", len(markets))
     rows = collect_rows(session, markets, targets, args.timeout)
-    write_csv(args.output, rows, targets)
-    logging.info("Exported %d rows to %s", len(rows), args.output)
+    try:
+        added_dates, total_rows = merge_and_write_csv(args.output, rows, targets)
+    except (OSError, ValueError) as exc:
+        logging.error("Could not update CSV: %s", exc)
+        return 1
+    logging.info(
+        "Added %d new date(s); CSV contains %d rows at %s",
+        added_dates,
+        total_rows,
+        args.output,
+    )
     return 0
 
 

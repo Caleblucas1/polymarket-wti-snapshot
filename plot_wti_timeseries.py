@@ -59,6 +59,23 @@ def load_snapshot(path: Path) -> tuple[list[str], dict[str, list[float | None]]]
     return dates, series
 
 
+def latest_window(
+    dates: list[str],
+    series: dict[str, list[float | None]],
+    days: int = 7,
+) -> tuple[list[str], dict[str, list[float | None]]]:
+    """Select the most recent calendar-date columns for charting."""
+    if days < 1:
+        raise ValueError("days must be at least 1")
+    selected_indices = sorted(range(len(dates)), key=lambda index: dates[index])[-days:]
+    selected_dates = [dates[index] for index in selected_indices]
+    selected_series = {
+        label: [values[index] for index in selected_indices]
+        for label, values in series.items()
+    }
+    return selected_dates, selected_series
+
+
 def create_chart(
     dates: list[str], series: dict[str, list[float | None]]
 ) -> Any:
@@ -192,6 +209,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT, help="Snapshot CSV path")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="Output HTML path")
+    parser.add_argument("--days", type=int, default=7, help="Most recent days to chart")
     return parser.parse_args()
 
 
@@ -199,6 +217,7 @@ def main() -> int:
     args = parse_args()
     try:
         dates, series = load_snapshot(args.input)
+        dates, series = latest_window(dates, series, args.days)
         figure = create_chart(dates, series)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         figure.write_html(

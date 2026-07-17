@@ -24,6 +24,8 @@ python polymarket_wti_snapshot.py
 
 The default output is `wti_july_2026_9am_snapshot.csv`. Each row is a price bin,
 and each ISO-formatted date column contains an implied probability percentage.
+When the file already exists, the script preserves its history and appends only
+date columns that are not already present. Existing snapshots are never revised.
 
 Options can change the event, output, snapshot count, or snapshot hour:
 
@@ -47,9 +49,10 @@ After generating the CSV, create an interactive time-series chart:
 python plot_wti_timeseries.py
 ```
 
-The chart is saved as `wti_7_day_time_series.html`. Open it in a browser and
-use the controls to select a WTI price bin or switch between an automatic and
-fixed 0–100% probability scale.
+The chart is saved as `wti_7_day_time_series.html`. It uses the latest seven
+dates in the cumulative CSV. Open it in a browser and use the controls to select
+a WTI price bin or switch between an automatic and fixed 0–100% probability
+scale.
 
 Use different input or output paths when needed:
 
