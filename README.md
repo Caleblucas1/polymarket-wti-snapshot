@@ -82,6 +82,20 @@ This creates:
 Resolved deadlines are excluded by default. Add `--include-closed` to retain
 them when rebuilding the CSV and chart.
 
+## Iran action and Houthi shipping markets
+
+Two more deadline-based events use the same cumulative snapshot engine:
+
+```bash
+python iran_gulf_action_snapshot.py
+python houthi_shipping_snapshot.py
+```
+
+The Iran event currently contains many unresolved daily contracts, so its
+seven-day output automatically uses a heatmap. The Houthi shipping event has
+only three deadline contracts and uses a line chart. Both scripts exclude
+closed contracts by default and create their own cumulative CSV and HTML chart.
+
 ## Test
 
 ```bash
