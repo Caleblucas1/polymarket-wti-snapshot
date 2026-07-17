@@ -62,6 +62,24 @@ python plot_wti_timeseries.py \
   --output charts/wti_7_day_time_series.html
 ```
 
+## Simple seven-day bar chart
+
+The `agent/simple-chart-option` branch also includes a simpler chart for one
+price bin. Each bar shows that day's total odds. When the odds increased from
+the previous day, only the incremental portion is stacked in a darker color.
+
+```bash
+python plot_wti_simple_bar.py
+```
+
+The default price bin is `↑ $90`. Select another exact CSV row label with:
+
+```bash
+python plot_wti_simple_bar.py --price-bin '↑ $85'
+```
+
+The output is `wti_simple_7_day_bar.html`.
+
 ## Test
 
 ```bash
