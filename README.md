@@ -80,6 +80,30 @@ python plot_wti_simple_bar.py --price-bin '↑ $85'
 
 The output is `wti_simple_7_day_bar.html`.
 
+## Compare five chart formats
+
+Generate one interactive gallery containing all five display options:
+
+```bash
+python plot_wti_chart_options.py
+```
+
+The output is `wti_chart_options.html`, with buttons for:
+
+1. Increase bars for one focus bin (default: `↑ $90`).
+2. Five upside price bands on a shared line-chart scale.
+3. A seven-day heatmap containing every available price bin.
+4. A latest-day horizontal odds ladder containing every available price bin.
+5. Six small-multiple trend charts with independent scales.
+
+Change the focus bin or output path when needed:
+
+```bash
+python plot_wti_chart_options.py \
+  --focus-bin '↑ $85' \
+  --output charts/wti_chart_options.html
+```
+
 ## Test
 
 ```bash
