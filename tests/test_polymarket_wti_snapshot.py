@@ -5,6 +5,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from polymarket_wti_snapshot import (
+    all_markets_closed,
     prices_at_or_before,
     merge_and_write_csv,
     snapshot_targets,
@@ -13,6 +14,11 @@ from polymarket_wti_snapshot import (
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_detects_only_fully_closed_events(self):
+        self.assertTrue(all_markets_closed([{"closed": True}, {"closed": "true"}]))
+        self.assertFalse(all_markets_closed([{"closed": True}, {"closed": False}]))
+        self.assertFalse(all_markets_closed([]))
+
     def test_uses_previous_day_before_snapshot_hour(self):
         now = datetime(2026, 7, 17, 8, 30, tzinfo=ZoneInfo("America/New_York"))
         targets = snapshot_targets(now, days=3)

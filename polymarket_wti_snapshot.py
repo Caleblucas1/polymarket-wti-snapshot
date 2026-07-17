@@ -51,6 +51,18 @@ def parse_json_array(value: Any) -> list[Any]:
     return []
 
 
+def market_is_closed(market: dict[str, Any]) -> bool:
+    """Return whether Gamma marks a market as closed."""
+    value = market.get("closed")
+    return value is True or (isinstance(value, str) and value.strip().lower() == "true")
+
+
+def all_markets_closed(markets: Iterable[dict[str, Any]]) -> bool:
+    """Return true only when an event has markets and every one is closed."""
+    market_list = list(markets)
+    return bool(market_list) and all(market_is_closed(market) for market in market_list)
+
+
 def yes_token_id(market: dict[str, Any]) -> str | None:
     """Return the token corresponding to the Yes outcome."""
     token_ids = parse_json_array(market.get("clobTokenIds"))
@@ -272,6 +284,9 @@ def main() -> int:
     if not isinstance(markets, list) or not markets:
         logging.error("The event contains no markets")
         return 1
+    if all_markets_closed(markets):
+        logging.info("All event markets are closed; no snapshot date was appended")
+        return 0
 
     logging.info("Fetching %d price bins", len(markets))
     rows = collect_rows(session, markets, targets, args.timeout)

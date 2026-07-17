@@ -14,10 +14,12 @@ import requests
 
 from plot_wti_timeseries import create_chart, latest_window, load_snapshot
 from polymarket_wti_snapshot import (
+    all_markets_closed,
     build_session,
     collect_rows,
     fetch_event,
     merge_and_write_csv,
+    market_is_closed,
     snapshot_targets,
 )
 
@@ -75,10 +77,13 @@ def run_tracker(args: argparse.Namespace) -> int:
     if not isinstance(event_markets, list) or not event_markets:
         logging.error("The event contains no markets")
         return 1
+    if all_markets_closed(event_markets):
+        logging.info("All event markets are closed; no snapshot date was appended")
+        return 0
     markets = [
         market
         for market in event_markets
-        if not args.exclude_closed or not bool(market.get("closed"))
+        if not args.exclude_closed or not market_is_closed(market)
     ]
     if not markets:
         logging.error("The event contains no markets matching the requested status")

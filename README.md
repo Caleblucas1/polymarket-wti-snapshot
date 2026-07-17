@@ -41,6 +41,13 @@ The value for a date is the latest five-minute observation returned by
 Polymarket at or before that day's target time. It may predate the target when
 no exact 9:00 AM observation exists.
 
+Every snapshot command follows the same historical-data safeguards:
+
+- Existing date columns and their values are preserved.
+- Only missing date columns are appended.
+- Once every market in an event is closed, the command exits successfully
+  without adding another date.
+
 ## Create the seven-day chart
 
 After generating the CSV, create an interactive time-series chart:
