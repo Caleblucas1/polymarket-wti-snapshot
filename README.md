@@ -39,6 +39,26 @@ The value for a date is the latest five-minute observation returned by
 Polymarket at or before that day's target time. It may predate the target when
 no exact 9:00 AM observation exists.
 
+## Create the seven-day chart
+
+After generating the CSV, create an interactive time-series chart:
+
+```bash
+python plot_wti_timeseries.py
+```
+
+The chart is saved as `wti_7_day_time_series.html`. Open it in a browser and
+use the controls to select a WTI price bin or switch between an automatic and
+fixed 0–100% probability scale.
+
+Use different input or output paths when needed:
+
+```bash
+python plot_wti_timeseries.py \
+  --input wti_july_2026_9am_snapshot.csv \
+  --output charts/wti_7_day_time_series.html
+```
+
 ## Test
 
 ```bash

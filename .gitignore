@@ -2,3 +2,4 @@ __pycache__/
 *.py[cod]
 .venv/
 wti_july_2026_9am_snapshot.csv
+wti_7_day_time_series.html
