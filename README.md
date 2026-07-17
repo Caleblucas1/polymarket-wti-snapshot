@@ -96,6 +96,21 @@ seven-day output automatically uses a heatmap. The Houthi shipping event has
 only three deadline contracts and uses a line chart. Both scripts exclude
 closed contracts by default and create their own cumulative CSV and HTML chart.
 
+## Additional Houthi and crude-oil markets
+
+Three additional event commands use the appropriate shared engine:
+
+```bash
+python houthi_saudi_action_snapshot.py
+python crude_oil_ath_snapshot.py
+python wti_week_july_13_snapshot.py
+```
+
+The Houthi-Saudi and crude-oil all-time-high events use deadline comparison
+charts. The weekly WTI event uses the price-bin selector chart and includes all
+fourteen thresholds by default, including bins that have already resolved.
+Each command writes its own cumulative 9:00 AM ET CSV and seven-day HTML chart.
+
 ## Test
 
 ```bash

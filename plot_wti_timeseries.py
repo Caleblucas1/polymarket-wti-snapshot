@@ -79,7 +79,9 @@ def latest_window(
 
 
 def create_chart(
-    dates: list[str], series: dict[str, list[float | None]]
+    dates: list[str],
+    series: dict[str, list[float | None]],
+    title_prefix: str = "WTI July 2026 probability",
 ) -> Any:
     """Build a Plotly chart with price-bin and y-axis scale controls."""
     import plotly.graph_objects as go
@@ -118,13 +120,13 @@ def create_chart(
                 "method": "update",
                 "args": [
                     {"visible": visibility},
-                    {"title.text": f"WTI July 2026 probability — {label}"},
+                    {"title.text": f"{title_prefix} — {label}"},
                 ],
             }
         )
 
     figure.update_layout(
-        title={"text": f"WTI July 2026 probability — {default_label}", "x": 0.5},
+        title={"text": f"{title_prefix} — {default_label}", "x": 0.5},
         xaxis={
             "title": "Daily snapshot at 9:00 AM ET",
             "type": "date",
