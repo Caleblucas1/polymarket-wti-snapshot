@@ -91,7 +91,7 @@ def create_chart(
         xaxis={"title": "Daily snapshot at 9:00 AM ET", "type": "date"},
         yaxis={
             "title": "Yes probability (%)",
-            "range": [0, 100],
+            "rangemode": "tozero",
             "ticksuffix": "%",
             "gridcolor": "#E5E7EB",
         },
