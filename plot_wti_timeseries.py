@@ -14,14 +14,16 @@ DEFAULT_INPUT = Path("wti_july_2026_9am_snapshot.csv")
 DEFAULT_OUTPUT = Path("wti_7_day_time_series.html")
 
 
-def load_snapshot(path: Path) -> tuple[list[str], dict[str, list[float | None]]]:
+def load_snapshot(
+    path: Path, label_column: str = "Price Bin"
+) -> tuple[list[str], dict[str, list[float | None]]]:
     """Load and validate price-bin time series from a snapshot CSV."""
     with path.open(newline="", encoding="utf-8-sig") as input_file:
         reader = csv.DictReader(input_file)
-        if not reader.fieldnames or "Price Bin" not in reader.fieldnames:
-            raise ValueError("CSV must contain a 'Price Bin' column")
+        if not reader.fieldnames or label_column not in reader.fieldnames:
+            raise ValueError(f"CSV must contain a {label_column!r} column")
 
-        dates = [column for column in reader.fieldnames if column != "Price Bin"]
+        dates = [column for column in reader.fieldnames if column != label_column]
         if not dates:
             raise ValueError("CSV must contain at least one date column")
         for date_string in dates:
@@ -32,7 +34,7 @@ def load_snapshot(path: Path) -> tuple[list[str], dict[str, list[float | None]]]
 
         series: dict[str, list[float | None]] = {}
         for row_number, row in enumerate(reader, start=2):
-            label = (row.get("Price Bin") or "").strip()
+            label = (row.get(label_column) or "").strip()
             if not label:
                 raise ValueError(f"Missing price-bin label on row {row_number}")
             values: list[float | None] = []

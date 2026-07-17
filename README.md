@@ -62,6 +62,26 @@ python plot_wti_timeseries.py \
   --output charts/wti_7_day_time_series.html
 ```
 
+## Bab el-Mandeb effective-closure market
+
+Fetch the four currently open deadline markets for Polymarket's
+“Bab el-Mandeb Strait effectively closed by…?” event and create a seven-day
+comparison chart:
+
+```bash
+python bab_el_mandeb_snapshot.py
+```
+
+This creates:
+
+- `bab_el_mandeb_9am_snapshot.csv`, containing cumulative daily 9:00 AM ET
+  Yes-probability snapshots.
+- `bab_el_mandeb_7_day_chart.html`, comparing the latest seven days for each
+  open deadline.
+
+Resolved deadlines are excluded by default. Add `--include-closed` to retain
+them when rebuilding the CSV and chart.
+
 ## Test
 
 ```bash

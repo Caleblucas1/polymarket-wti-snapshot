@@ -145,6 +145,8 @@ def collect_rows(
     markets: Iterable[dict[str, Any]],
     targets: list[datetime],
     timeout: float,
+    *,
+    label_column: str = "Price Bin",
 ) -> list[dict[str, str | float | None]]:
     rows: list[dict[str, str | float | None]] = []
     for market in markets:
@@ -163,7 +165,7 @@ def collect_rows(
             logging.warning("Skipping %s: no price history", label)
             continue
 
-        row: dict[str, str | float | None] = {"Price Bin": str(label)}
+        row: dict[str, str | float | None] = {label_column: str(label)}
         for target, price in zip(targets, prices_at_or_before(history, targets)):
             row[target.date().isoformat()] = None if price is None else round(price * 100, 1)
         rows.append(row)
@@ -171,7 +173,11 @@ def collect_rows(
 
 
 def merge_and_write_csv(
-    path: Path, rows: list[dict[str, Any]], targets: list[datetime]
+    path: Path,
+    rows: list[dict[str, Any]],
+    targets: list[datetime],
+    *,
+    label_column: str = "Price Bin",
 ) -> tuple[int, int]:
     """Append missing date columns while preserving previously saved snapshots."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -182,10 +188,12 @@ def merge_and_write_csv(
     if path.exists():
         with path.open(newline="", encoding="utf-8-sig") as input_file:
             reader = csv.DictReader(input_file)
-            if not reader.fieldnames or "Price Bin" not in reader.fieldnames:
-                raise ValueError("Existing CSV must contain a 'Price Bin' column")
+            if not reader.fieldnames or label_column not in reader.fieldnames:
+                raise ValueError(
+                    f"Existing CSV must contain a {label_column!r} column"
+                )
             existing_dates = [
-                column for column in reader.fieldnames if column != "Price Bin"
+                column for column in reader.fieldnames if column != label_column
             ]
             for date_string in existing_dates:
                 try:
@@ -204,23 +212,23 @@ def merge_and_write_csv(
     rows_by_label: dict[str, dict[str, Any]] = {}
     label_order: list[str] = []
     for row in existing_rows:
-        label = str(row.get("Price Bin") or "").strip()
+        label = str(row.get(label_column) or "").strip()
         if not label:
             raise ValueError("Existing CSV contains a row without a price-bin label")
         if label in rows_by_label:
             raise ValueError(f"Existing CSV contains duplicate price bin: {label}")
-        rows_by_label[label] = {"Price Bin": label, **row}
+        rows_by_label[label] = {label_column: label, **row}
         label_order.append(label)
 
     for incoming_row in rows:
-        label = str(incoming_row["Price Bin"])
+        label = str(incoming_row[label_column])
         if label not in rows_by_label:
-            rows_by_label[label] = {"Price Bin": label}
+            rows_by_label[label] = {label_column: label}
             label_order.append(label)
         for date_string in new_dates:
             rows_by_label[label][date_string] = incoming_row.get(date_string)
 
-    fieldnames = ["Price Bin", *combined_dates]
+    fieldnames = [label_column, *combined_dates]
     temporary_path = path.with_suffix(f"{path.suffix}.tmp")
     with temporary_path.open("w", newline="", encoding="utf-8") as output_file:
         writer = csv.DictWriter(output_file, fieldnames=fieldnames)
