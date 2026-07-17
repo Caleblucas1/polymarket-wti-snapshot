@@ -1,0 +1,4 @@
+__pycache__/
+*.py[cod]
+.venv/
+wti_july_2026_9am_snapshot.csv
