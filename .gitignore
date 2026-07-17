@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 wti_july_2026_9am_snapshot.csv
 wti_7_day_time_series.html
+wti_simple_7_day_bar.html
+wti_chart_options.html
