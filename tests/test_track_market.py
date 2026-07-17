@@ -1,16 +1,15 @@
 import unittest
 
 from track_market import load_registry
+from update_all_markets import build_parser
 
 
 class EventRegistryTests(unittest.TestCase):
-    def test_daily_registry_contains_the_four_persistent_automation_files(self):
+    def test_daily_updater_includes_every_configured_market(self):
         registry = load_registry()
-        daily_events = {key for key, config in registry.items() if config["daily"]}
-        self.assertEqual(
-            daily_events,
-            {"wti-july", "houthi-saudi", "crude-oil-ath", "wti-week-july-13"},
-        )
+        args = build_parser().parse_args([])
+        self.assertEqual(set(args.events), set(registry))
+        self.assertEqual(len(args.events), 7)
 
 
 if __name__ == "__main__":

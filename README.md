@@ -132,7 +132,7 @@ python track_market.py houthi-saudi
 ```
 
 The older event-specific commands remain available as compatibility wrappers.
-For the four persistent daily CSVs, update events concurrently and skip unused
+For all seven persistent daily CSVs, update events concurrently and skip unused
 chart generation with:
 
 ```bash
@@ -146,10 +146,10 @@ the faster default for the multi-market updater.
 
 The cumulative `*_9am_snapshot.csv` files are versioned in this repository as
 a second copy of the locally maintained data. The 9:00 AM Eastern automation
-updates the four active cumulative files in persistent local storage and then
-syncs those same files to the `agent/faster-market-updates` branch. This makes
-the complete history available after cloning or downloading the repository on
-a device that did not already have the local CSVs.
+updates all seven cumulative files in persistent local storage and then syncs
+those same files to the `agent/faster-market-updates` branch. This makes the
+complete history available after cloning or downloading the repository on a
+device that did not already have the local CSVs.
 
 The same append-only and fully-closed-event safeguards apply before either copy
 is replaced.

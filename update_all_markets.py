@@ -12,14 +12,14 @@ from track_market import load_registry, run_event
 
 def build_parser() -> argparse.ArgumentParser:
     registry = load_registry()
-    daily_events = [key for key, config in registry.items() if config["daily"]]
+    all_events = list(registry)
     parser = argparse.ArgumentParser(description="Update multiple tracked markets concurrently.")
     parser.add_argument(
         "--events",
         nargs="+",
         choices=sorted(registry),
-        default=daily_events,
-        help="Events to update; defaults to registry entries marked daily",
+        default=all_events,
+        help="Events to update; defaults to every configured market",
     )
     parser.add_argument("--data-dir", type=Path, default=Path("."), help="CSV directory")
     parser.add_argument("--workers", type=int, default=4, help="Concurrent event workers")

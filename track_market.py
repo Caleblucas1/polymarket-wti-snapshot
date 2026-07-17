@@ -23,7 +23,7 @@ def load_registry(path: Path = REGISTRY_PATH) -> dict[str, dict[str, Any]]:
         payload = json.load(input_file)
     if not isinstance(payload, dict) or not payload:
         raise ValueError("Event registry must contain at least one event")
-    required = {"title", "engine", "slug", "output", "chart_output", "daily"}
+    required = {"title", "engine", "slug", "output", "chart_output"}
     for key, config in payload.items():
         if not isinstance(config, dict) or not required.issubset(config):
             raise ValueError(f"Invalid event registry entry: {key}")
