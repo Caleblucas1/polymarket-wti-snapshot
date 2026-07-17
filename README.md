@@ -142,6 +142,18 @@ python update_all_markets.py --data-dir .
 Use `--with-charts` when individual event charts are also needed. CSV-only is
 the faster default for the multi-market updater.
 
+## GitHub snapshot storage
+
+The cumulative `*_9am_snapshot.csv` files are versioned in this repository as
+a second copy of the locally maintained data. The 9:00 AM Eastern automation
+updates the four active cumulative files in persistent local storage and then
+syncs those same files to the `agent/faster-market-updates` branch. This makes
+the complete history available after cloning or downloading the repository on
+a device that did not already have the local CSVs.
+
+The same append-only and fully-closed-event safeguards apply before either copy
+is replaced.
+
 ## Test
 
 ```bash
