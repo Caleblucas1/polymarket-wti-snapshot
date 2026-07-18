@@ -125,15 +125,27 @@ def missing_snapshot_targets(
 ) -> list[datetime]:
     """Return only targets whose date columns are absent from an existing CSV."""
     target_list = list(targets)
-    if not path.exists():
-        return target_list
+    existing_dates = stored_snapshot_dates(path, label_column=label_column)
+    return [
+        target
+        for target in target_list
+        if target.date().isoformat() not in existing_dates
+    ]
 
+
+def stored_snapshot_dates(
+    path: Path,
+    *,
+    label_column: str = "Price Bin",
+) -> set[str]:
+    """Return validated date columns already stored in a snapshot CSV."""
+    if not path.exists():
+        return set()
     with path.open(newline="", encoding="utf-8-sig") as input_file:
         reader = csv.reader(input_file)
         header = next(reader, None)
     if not header or label_column not in header:
         raise ValueError(f"Existing CSV must contain a {label_column!r} column")
-
     existing_dates = {column for column in header if column != label_column}
     for date_string in existing_dates:
         try:
@@ -142,11 +154,7 @@ def missing_snapshot_targets(
             raise ValueError(
                 f"Existing CSV has an invalid ISO date column: {date_string}"
             ) from exc
-    return [
-        target
-        for target in target_list
-        if target.date().isoformat() not in existing_dates
-    ]
+    return existing_dates
 
 
 def normalize_history(history: Iterable[dict[str, Any]]) -> tuple[list[float], list[float]]:

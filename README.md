@@ -152,14 +152,24 @@ python update_all_markets.py --data-dir .
 Use `--with-charts` to regenerate all seven event charts from the stored CSVs,
 including on a day when no date needs to be appended. CSV-only remains the
 faster default. The command reports each event as `appended`, `already current`,
-`fully closed`, or `failed`.
+`fully closed`, or `failed`. Every event also maintains a companion
+`*_9am_ranges.csv` file with the observed five-minute low and high during the
+24 hours ending at each 9:00 AM ET snapshot. Small deadline charts show these
+as whiskers; dense heatmaps show the low–high range in each populated cell and
+in its hover details.
+
+The same command refreshes `market_resolution_status.csv` from Gamma metadata.
+It records each contract's current UMA status, whether it is currently
+disputed, whether it has ever been disputed, the dispute count and status
+history, and whether it is closed or automatically resolved. Past disputes are
+sticky: a later resolved status does not erase the historical dispute flag.
 
 ## GitHub snapshot storage
 
-The cumulative `*_9am_snapshot.csv` files and the WTI companion range CSV are
-versioned in this repository as a second copy of the locally maintained data.
-The 9:00 AM Eastern automation updates all seven snapshot files plus the WTI
-range file in persistent local storage and then syncs those same files to the
+The cumulative `*_9am_snapshot.csv` files, all seven companion range CSVs, and
+the resolution-status inventory are versioned in this repository as a second
+copy of the locally maintained data. The 9:00 AM Eastern automation updates
+these files in persistent local storage and then syncs the same files to the
 configured branch. This makes the complete history available after cloning or
 downloading the repository on a device that did not already have the local
 CSVs.

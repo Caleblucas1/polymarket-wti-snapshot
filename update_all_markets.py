@@ -7,6 +7,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from polymarket_resolution_status import refresh_resolution_status
 from polymarket_wti_snapshot import TrackerResult
 from track_market import load_registry, run_event
 
@@ -75,7 +76,32 @@ def main() -> int:
         else:
             detail = "failed"
         print(f"{event_key}: {detail}")
-    return 1 if any(result.exit_code != 0 for result in results.values()) else 0
+
+    status_failures: list[str] = []
+    if not args.with_charts:
+        registry = load_registry()
+        selected_registry = {key: registry[key] for key in args.events}
+        try:
+            changed, total, status_failures = refresh_resolution_status(
+                selected_registry,
+                data_dir=args.data_dir,
+                timeout=args.timeout,
+                workers=args.workers,
+            )
+            print(
+                "resolution-status: "
+                f"refreshed {total} markets ({changed} changed or newly discovered)"
+            )
+            for failure in status_failures:
+                print(f"resolution-status: failed: {failure}")
+        except (OSError, ValueError) as exc:
+            status_failures = [str(exc)]
+            print(f"resolution-status: failed: {exc}")
+    return (
+        1
+        if any(result.exit_code != 0 for result in results.values()) or status_failures
+        else 0
+    )
 
 
 if __name__ == "__main__":
