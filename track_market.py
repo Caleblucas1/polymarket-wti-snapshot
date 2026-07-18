@@ -11,7 +11,7 @@ from typing import Any, Sequence
 
 from polymarket_deadline_snapshot import run_tracker as run_deadline_tracker
 from polymarket_price_bin_snapshot import run_tracker as run_price_bin_tracker
-from polymarket_wti_snapshot import run_snapshot
+from polymarket_wti_snapshot import run_snapshot, TrackerResult
 
 
 REGISTRY_PATH = Path(__file__).with_name("tracked_events.json")
@@ -45,7 +45,7 @@ def run_event(
     no_chart: bool = False,
     include_closed: bool = False,
     exclude_closed: bool = False,
-) -> int:
+) -> TrackerResult:
     """Run one registry event through its configured tracking engine."""
     registry = load_registry()
     if event_key not in registry:
@@ -55,6 +55,7 @@ def run_event(
     resolved_chart = chart_output or data_dir / str(config["chart_output"])
     args = argparse.Namespace(
         slug=slug or str(config["slug"]),
+        title=str(config["title"]),
         output=resolved_output,
         chart_output=resolved_chart,
         days=days,
@@ -92,7 +93,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        return run_event(
+        result = run_event(
             args.event,
             data_dir=args.data_dir,
             output=args.output,
@@ -105,6 +106,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             include_closed=args.include_closed,
             exclude_closed=args.exclude_closed,
         )
+        return result.exit_code
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"Error: {exc}")
         return 2
