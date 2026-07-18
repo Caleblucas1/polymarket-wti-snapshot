@@ -4,6 +4,7 @@
     "engine": "snapshot",
     "slug": "what-price-will-wti-hit-in-july-2026",
     "output": "wti_july_2026_9am_snapshot.csv",
+    "range_output": "wti_july_2026_9am_ranges.csv",
     "chart_output": "wti_7_day_time_series.html"
   },
   "bab-el-mandeb": {

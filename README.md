@@ -41,6 +41,14 @@ The value for a date is the latest five-minute observation returned by
 Polymarket at or before that day's target time. It may predate the target when
 no exact 9:00 AM observation exists.
 
+The WTI tracker also writes `wti_july_2026_9am_ranges.csv`. Each row contains a
+price bin, snapshot date, and the observed minimum and maximum probability over
+the complete 24-hour period ending at that day's 9:00 AM ET snapshot. These
+ranges reuse the same CLOB history response as the snapshot, so they do not add
+one request per market. When a resolved or inactive bin has no observation in a
+window, its last observed snapshot is carried forward as a zero-width range.
+Stored ranges are cumulative and are never revised.
+
 Every snapshot command follows the same historical-data safeguards:
 
 - Existing date columns and their values are preserved.
@@ -63,13 +71,15 @@ python plot_wti_timeseries.py
 The chart is saved as `wti_7_day_time_series.html`. It uses the latest seven
 dates in the cumulative CSV. Open it in a browser and use the controls to select
 a WTI price bin or switch between an automatic and fixed 0–100% probability
-scale.
+scale. Vertical whiskers show each point's trailing-24-hour low and high when
+the companion range CSV is available.
 
 Use different input or output paths when needed:
 
 ```bash
 python plot_wti_timeseries.py \
   --input wti_july_2026_9am_snapshot.csv \
+  --range-input wti_july_2026_9am_ranges.csv \
   --output charts/wti_7_day_time_series.html
 ```
 
@@ -146,12 +156,13 @@ faster default. The command reports each event as `appended`, `already current`,
 
 ## GitHub snapshot storage
 
-The cumulative `*_9am_snapshot.csv` files are versioned in this repository as
-a second copy of the locally maintained data. The 9:00 AM Eastern automation
-updates all seven cumulative files in persistent local storage and then syncs
-those same files to the `agent/faster-market-updates` branch. This makes the
-complete history available after cloning or downloading the repository on a
-device that did not already have the local CSVs.
+The cumulative `*_9am_snapshot.csv` files and the WTI companion range CSV are
+versioned in this repository as a second copy of the locally maintained data.
+The 9:00 AM Eastern automation updates all seven snapshot files plus the WTI
+range file in persistent local storage and then syncs those same files to the
+configured branch. This makes the complete history available after cloning or
+downloading the repository on a device that did not already have the local
+CSVs.
 
 The same append-only and fully-closed-event safeguards apply before either copy
 is replaced.
