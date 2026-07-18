@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from plot_wti_timeseries import latest_window, load_snapshot
+from plot_wti_timeseries import create_chart, latest_window, load_ranges, load_snapshot
 
 
 class TimeSeriesDataTests(unittest.TestCase):
@@ -44,6 +44,36 @@ class TimeSeriesDataTests(unittest.TestCase):
         self.assertEqual(selected_dates[0], "2026-07-04")
         self.assertEqual(selected_dates[-1], "2026-07-10")
         self.assertEqual(selected_series["↑ $90"], [4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+
+    def test_loads_range_series(self):
+        content = (
+            "Price Bin,Date,Low,High\n"
+            "↑ $90,2026-07-16,20.0,30.0\n"
+            "↑ $90,2026-07-17,22.0,40.0\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_directory:
+            path = Path(temp_directory) / "ranges.csv"
+            path.write_text(content, encoding="utf-8")
+            ranges = load_ranges(path)
+
+        self.assertEqual(ranges["↑ $90"]["2026-07-17"], (22.0, 40.0))
+
+    def test_adds_asymmetric_whiskers_to_snapshot_points(self):
+        figure = create_chart(
+            ["2026-07-16", "2026-07-17"],
+            {"↑ $90": [25.0, 30.0]},
+            ranges={
+                "↑ $90": {
+                    "2026-07-16": (20.0, 28.0),
+                    "2026-07-17": (22.0, 40.0),
+                }
+            },
+        )
+        trace = figure.data[0]
+
+        self.assertEqual(list(trace.error_y.arrayminus), [5.0, 8.0])
+        self.assertEqual(list(trace.error_y.array), [3.0, 10.0])
+        self.assertTrue(trace.error_y.visible)
 
 
 if __name__ == "__main__":

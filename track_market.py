@@ -37,6 +37,7 @@ def run_event(
     *,
     data_dir: Path = Path("."),
     output: Path | None = None,
+    range_output: Path | None = None,
     chart_output: Path | None = None,
     slug: str | None = None,
     days: int = 7,
@@ -53,10 +54,15 @@ def run_event(
     config = registry[event_key]
     resolved_output = output or data_dir / str(config["output"])
     resolved_chart = chart_output or data_dir / str(config["chart_output"])
+    configured_range_output = config.get("range_output")
+    resolved_range = range_output or (
+        data_dir / str(configured_range_output) if configured_range_output else None
+    )
     args = argparse.Namespace(
         slug=slug or str(config["slug"]),
         title=str(config["title"]),
         output=resolved_output,
+        range_output=resolved_range,
         chart_output=resolved_chart,
         days=days,
         hour=hour,
@@ -79,6 +85,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("event", choices=sorted(registry), help="Configured event name")
     parser.add_argument("--data-dir", type=Path, default=Path("."), help="Output directory")
     parser.add_argument("--output", type=Path, help="Override CSV output path")
+    parser.add_argument("--range-output", type=Path, help="Override range CSV output path")
     parser.add_argument("--chart-output", type=Path, help="Override HTML output path")
     parser.add_argument("--slug", help="Override Polymarket event slug")
     parser.add_argument("--days", type=int, default=7, help="Calendar-day snapshots")
@@ -97,6 +104,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.event,
             data_dir=args.data_dir,
             output=args.output,
+            range_output=args.range_output,
             chart_output=args.chart_output,
             slug=args.slug,
             days=args.days,

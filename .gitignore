@@ -6,6 +6,7 @@ __pycache__/
 # ignored.
 *.csv
 !/*_9am_snapshot.csv
+!/wti_july_2026_9am_ranges.csv
 wti_7_day_time_series.html
 bab_el_mandeb_7_day_chart.html
 iran_gulf_action_7_day_chart.html

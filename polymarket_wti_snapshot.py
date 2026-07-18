@@ -21,6 +21,7 @@ from urllib3.util.retry import Retry
 
 DEFAULT_SLUG = "what-price-will-wti-hit-in-july-2026"
 DEFAULT_OUTPUT = "wti_july_2026_9am_snapshot.csv"
+DEFAULT_RANGE_OUTPUT = "wti_july_2026_9am_ranges.csv"
 DEFAULT_CHART_OUTPUT = "wti_7_day_time_series.html"
 GAMMA_EVENT_URL = "https://gamma-api.polymarket.com/events/slug/{slug}"
 CLOB_HISTORY_URL = "https://clob.polymarket.com/prices-history"
@@ -174,6 +175,68 @@ def prices_at_or_before(
     return results
 
 
+def probability_range(
+    history: Iterable[dict[str, Any]],
+    target: datetime,
+    *,
+    hours: int = 24,
+) -> tuple[float | None, float | None]:
+    """Return the observed low and high in the window ending at a target."""
+    if hours < 1:
+        raise ValueError("hours must be at least 1")
+    timestamps, prices = normalize_history(history)
+    start_timestamp = target.timestamp() - hours * 60 * 60
+    start_index = bisect.bisect_left(timestamps, start_timestamp)
+    end_index = bisect.bisect_right(timestamps, target.timestamp())
+    window = prices[start_index:end_index]
+    if not window:
+        return None, None
+    return min(window), max(window)
+
+
+def missing_range_targets(
+    path: Path,
+    targets: Iterable[datetime],
+    *,
+    label_column: str = "Price Bin",
+) -> list[datetime]:
+    """Return targets not yet represented in a cumulative range CSV."""
+    target_list = list(targets)
+    if not path.exists():
+        return target_list
+
+    with path.open(newline="", encoding="utf-8-sig") as input_file:
+        reader = csv.DictReader(input_file)
+        required = {label_column, "Date", "Low", "High"}
+        if not reader.fieldnames or not required.issubset(reader.fieldnames):
+            raise ValueError(
+                f"Existing range CSV must contain {', '.join(sorted(required))}"
+            )
+        existing_dates = set()
+        for row in reader:
+            date_string = str(row.get("Date") or "").strip()
+            try:
+                date.fromisoformat(date_string)
+            except ValueError as exc:
+                raise ValueError(
+                    f"Existing range CSV has an invalid ISO date: {date_string}"
+                ) from exc
+            existing_dates.add(date_string)
+    return [
+        target
+        for target in target_list
+        if target.date().isoformat() not in existing_dates
+    ]
+
+
+def range_output_for_snapshot(path: Path) -> Path:
+    """Return the default companion range path for a snapshot CSV."""
+    suffix = "_snapshot.csv"
+    if path.name.endswith(suffix):
+        return path.with_name(f"{path.name[:-len(suffix)]}_ranges.csv")
+    return path.with_name(f"{path.stem}_ranges.csv")
+
+
 def fetch_event(session: requests.Session, slug: str, timeout: float) -> dict[str, Any]:
     response = session.get(GAMMA_EVENT_URL.format(slug=slug), timeout=timeout)
     response.raise_for_status()
@@ -257,14 +320,18 @@ def fetch_histories(
     return histories
 
 
-def collect_rows(
+def collect_rows_and_ranges(
     session: requests.Session,
     markets: Iterable[dict[str, Any]],
     targets: list[datetime],
     timeout: float,
     *,
     label_column: str = "Price Bin",
-) -> list[dict[str, str | float | None]]:
+) -> tuple[
+    list[dict[str, str | float | None]],
+    list[dict[str, str | float | None]],
+]:
+    """Collect snapshots and trailing-24-hour ranges from one history fetch."""
     market_records: list[tuple[str, str]] = []
     for market in markets:
         label = market.get("groupItemTitle") or market.get("question") or "Unknown market"
@@ -281,6 +348,7 @@ def collect_rows(
         timeout,
     )
     rows: list[dict[str, str | float | None]] = []
+    range_rows: list[dict[str, str | float | None]] = []
     for label, token_id in market_records:
         history = histories.get(token_id, [])
         if not history:
@@ -290,7 +358,40 @@ def collect_rows(
         row: dict[str, str | float | None] = {label_column: str(label)}
         for target, price in zip(targets, prices_at_or_before(history, targets)):
             row[target.date().isoformat()] = None if price is None else round(price * 100, 1)
+            low, high = probability_range(history, target)
+            # A resolved or inactive market may have no new observation inside
+            # the window even though its last price remains the snapshot value.
+            # Represent that carried-forward day as a zero-width range.
+            if low is None and high is None and price is not None:
+                low = high = price
+            range_rows.append(
+                {
+                    label_column: str(label),
+                    "Date": target.date().isoformat(),
+                    "Low": None if low is None else round(low * 100, 1),
+                    "High": None if high is None else round(high * 100, 1),
+                }
+            )
         rows.append(row)
+    return rows, range_rows
+
+
+def collect_rows(
+    session: requests.Session,
+    markets: Iterable[dict[str, Any]],
+    targets: list[datetime],
+    timeout: float,
+    *,
+    label_column: str = "Price Bin",
+) -> list[dict[str, str | float | None]]:
+    """Compatibility wrapper returning only snapshot rows."""
+    rows, _ = collect_rows_and_ranges(
+        session,
+        markets,
+        targets,
+        timeout,
+        label_column=label_column,
+    )
     return rows
 
 
@@ -360,12 +461,79 @@ def merge_and_write_csv(
     return len(new_dates), len(label_order)
 
 
+def merge_and_write_range_csv(
+    path: Path,
+    rows: list[dict[str, Any]],
+    *,
+    label_column: str = "Price Bin",
+) -> tuple[int, int]:
+    """Append new label/date ranges without revising stored range values."""
+    fieldnames = [label_column, "Date", "Low", "High"]
+    existing_rows: list[dict[str, Any]] = []
+    existing_keys: set[tuple[str, str]] = set()
+    if path.exists():
+        with path.open(newline="", encoding="utf-8-sig") as input_file:
+            reader = csv.DictReader(input_file)
+            if not reader.fieldnames or not set(fieldnames).issubset(reader.fieldnames):
+                raise ValueError(
+                    f"Existing range CSV must contain {', '.join(fieldnames)}"
+                )
+            for row in reader:
+                label = str(row.get(label_column) or "").strip()
+                date_string = str(row.get("Date") or "").strip()
+                if not label:
+                    raise ValueError("Existing range CSV contains a row without a label")
+                try:
+                    date.fromisoformat(date_string)
+                except ValueError as exc:
+                    raise ValueError(
+                        f"Existing range CSV has an invalid ISO date: {date_string}"
+                    ) from exc
+                key = (label, date_string)
+                if key in existing_keys:
+                    raise ValueError(
+                        f"Existing range CSV contains a duplicate row: {label} {date_string}"
+                    )
+                existing_keys.add(key)
+                existing_rows.append({field: row.get(field) for field in fieldnames})
+
+    new_rows: list[dict[str, Any]] = []
+    for row in rows:
+        label = str(row.get(label_column) or "").strip()
+        date_string = str(row.get("Date") or "").strip()
+        if not label or not date_string:
+            continue
+        key = (label, date_string)
+        if key in existing_keys:
+            continue
+        existing_keys.add(key)
+        new_rows.append({field: row.get(field) for field in fieldnames})
+
+    if not new_rows:
+        return 0, len(existing_rows)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    combined_rows = existing_rows + new_rows
+    temporary_path = path.with_suffix(f"{path.suffix}.tmp")
+    with temporary_path.open("w", newline="", encoding="utf-8") as output_file:
+        writer = csv.DictWriter(output_file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(combined_rows)
+    temporary_path.replace(path)
+    return len(new_rows), len(combined_rows)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Export daily 9 AM ET Polymarket probability snapshots to CSV."
     )
     parser.add_argument("--slug", default=DEFAULT_SLUG, help="Polymarket event slug")
     parser.add_argument("--output", type=Path, default=Path(DEFAULT_OUTPUT), help="CSV output path")
+    parser.add_argument(
+        "--range-output",
+        type=Path,
+        default=Path(DEFAULT_RANGE_OUTPUT),
+        help="Trailing-24-hour probability range CSV output path",
+    )
     parser.add_argument(
         "--chart-output",
         type=Path,
@@ -387,6 +555,7 @@ def write_snapshot_chart(args: argparse.Namespace) -> int:
     return write_chart(
         args.output,
         args.chart_output,
+        range_path=getattr(args, "range_output", None),
         days=args.days,
         title_prefix=title,
     )
@@ -396,10 +565,22 @@ def run_snapshot(args: argparse.Namespace) -> TrackerResult:
     """Run one append-only price snapshot update."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
-        targets = snapshot_targets(
+        requested_targets = snapshot_targets(
             datetime.now(tz=ZoneInfo("UTC")), days=args.days, hour=args.hour
         )
-        targets = missing_snapshot_targets(args.output, targets)
+        snapshot_targets_to_add = missing_snapshot_targets(args.output, requested_targets)
+        configured_range_output = getattr(args, "range_output", None)
+        range_output = (
+            Path(configured_range_output)
+            if configured_range_output is not None
+            else range_output_for_snapshot(args.output)
+        )
+        range_targets_to_add = missing_range_targets(range_output, requested_targets)
+        targets_by_date = {
+            target.date().isoformat(): target
+            for target in snapshot_targets_to_add + range_targets_to_add
+        }
+        targets = [targets_by_date[key] for key in sorted(targets_by_date)]
     except ValueError as exc:
         logging.error("Invalid arguments: %s", exc)
         return TrackerResult("failed", exit_code=2)
@@ -437,9 +618,17 @@ def run_snapshot(args: argparse.Namespace) -> TrackerResult:
         return TrackerResult("closed")
 
     logging.info("Fetching %d price bins", len(markets))
-    rows = collect_rows(session, markets, targets, args.timeout)
+    rows, range_rows = collect_rows_and_ranges(session, markets, targets, args.timeout)
     try:
-        added_dates, total_rows = merge_and_write_csv(args.output, rows, targets)
+        added_dates, total_rows = merge_and_write_csv(
+            args.output,
+            rows,
+            snapshot_targets_to_add,
+        )
+        added_ranges, total_ranges = merge_and_write_range_csv(
+            range_output,
+            range_rows,
+        )
     except (OSError, ValueError) as exc:
         logging.error("Could not update CSV: %s", exc)
         return TrackerResult("failed", exit_code=1)
@@ -451,10 +640,14 @@ def run_snapshot(args: argparse.Namespace) -> TrackerResult:
             return TrackerResult("failed", exit_code=1)
         logging.info("Created chart with %d price bins at %s", series_count, args.chart_output)
     logging.info(
-        "Added %d new date(s); CSV contains %d rows at %s",
+        "Added %d new date(s); CSV contains %d rows at %s; "
+        "stored %d new range row(s) (%d total) at %s",
         added_dates,
         total_rows,
         args.output,
+        added_ranges,
+        total_ranges,
+        range_output,
     )
     status = "appended" if added_dates else "current"
     return TrackerResult(status, added_dates=added_dates, row_count=total_rows)
