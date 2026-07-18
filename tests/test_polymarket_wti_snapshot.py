@@ -6,6 +6,8 @@ from zoneinfo import ZoneInfo
 
 from polymarket_wti_snapshot import (
     all_markets_closed,
+    fetch_histories,
+    missing_snapshot_targets,
     prices_at_or_before,
     merge_and_write_csv,
     snapshot_targets,
@@ -54,6 +56,53 @@ class SnapshotTests(unittest.TestCase):
         ]
         history = [{"t": 300, "p": 0.3}, {"t": 100, "p": 0.1}, {"bad": "row"}]
         self.assertEqual(prices_at_or_before(history, targets), [0.1, 0.3])
+
+    def test_finds_only_missing_snapshot_targets(self):
+        targets = [
+            datetime(2026, 7, 16, 9, tzinfo=ZoneInfo("America/New_York")),
+            datetime(2026, 7, 17, 9, tzinfo=ZoneInfo("America/New_York")),
+        ]
+        with tempfile.TemporaryDirectory() as temp_directory:
+            path = Path(temp_directory) / "snapshot.csv"
+            path.write_text("Price Bin,2026-07-16\n↑ $90,22.0\n", encoding="utf-8")
+            missing = missing_snapshot_targets(path, targets)
+        self.assertEqual([target.date().isoformat() for target in missing], ["2026-07-17"])
+
+    def test_fetches_histories_in_batches_of_twenty(self):
+        class FakeResponse:
+            def __init__(self, token_ids):
+                self.token_ids = token_ids
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {
+                    "history": {
+                        token_id: [{"t": 100, "p": 0.5}]
+                        for token_id in self.token_ids
+                    }
+                }
+
+        class FakeSession:
+            def __init__(self):
+                self.payloads = []
+
+            def post(self, _url, *, json, timeout):
+                self.payloads.append((json, timeout))
+                return FakeResponse(json["markets"])
+
+        session = FakeSession()
+        token_ids = [f"token-{index}" for index in range(21)]
+        targets = [datetime.fromtimestamp(200, tz=ZoneInfo("UTC"))]
+        histories = fetch_histories(session, token_ids, targets, timeout=5)
+
+        self.assertEqual(len(session.payloads), 2)
+        self.assertEqual(len(session.payloads[0][0]["markets"]), 20)
+        self.assertEqual(len(session.payloads[1][0]["markets"]), 1)
+        self.assertIsInstance(session.payloads[0][0]["start_ts"], int)
+        self.assertIsInstance(session.payloads[0][0]["end_ts"], int)
+        self.assertEqual(set(histories), set(token_ids))
 
     def test_appends_only_missing_dates(self):
         targets = [

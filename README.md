@@ -48,6 +48,10 @@ Every snapshot command follows the same historical-data safeguards:
 - Once every market in an event is closed, the command exits successfully
   without adding another date.
 
+History requests are sent through Polymarket's batch endpoint in groups of up
+to 20 markets. If every requested date already exists in the CSV, the command
+exits before making any API calls.
+
 ## Create the seven-day chart
 
 After generating the CSV, create an interactive time-series chart:
@@ -117,6 +121,38 @@ The Houthi-Saudi and crude-oil all-time-high events use deadline comparison
 charts. The weekly WTI event uses the price-bin selector chart and includes all
 fourteen thresholds by default, including bins that have already resolved.
 Each command writes its own cumulative 9:00 AM ET CSV and seven-day HTML chart.
+
+## Fast multi-market update
+
+Tracked-event settings live in `tracked_events.json`. Run any configured event
+through the single entry point:
+
+```bash
+python track_market.py houthi-saudi
+```
+
+The older event-specific commands remain available as compatibility wrappers.
+For all seven persistent daily CSVs, update events concurrently and skip unused
+chart generation with:
+
+```bash
+python update_all_markets.py --data-dir .
+```
+
+Use `--with-charts` when individual event charts are also needed. CSV-only is
+the faster default for the multi-market updater.
+
+## GitHub snapshot storage
+
+The cumulative `*_9am_snapshot.csv` files are versioned in this repository as
+a second copy of the locally maintained data. The 9:00 AM Eastern automation
+updates all seven cumulative files in persistent local storage and then syncs
+those same files to the `agent/faster-market-updates` branch. This makes the
+complete history available after cloning or downloading the repository on a
+device that did not already have the local CSVs.
+
+The same append-only and fully-closed-event safeguards apply before either copy
+is replaced.
 
 ## Test
 
