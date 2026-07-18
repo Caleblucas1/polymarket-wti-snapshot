@@ -23,6 +23,7 @@ from polymarket_wti_snapshot import (
     market_is_closed,
     missing_snapshot_targets,
     snapshot_targets,
+    TrackerResult,
 )
 
 
@@ -174,7 +175,7 @@ def create_chart(
         figure = create_heatmap_chart(dates, series, title)
 
     figure.add_annotation(
-        text="Only currently unresolved deadline markets are shown by default.",
+        text="Stored deadline series are shown; fully closed events remain frozen.",
         xref="paper",
         yref="paper",
         x=0,
@@ -194,6 +195,30 @@ def create_chart(
         font={"size": 11, "color": "#6B7280"},
     )
     return figure
+
+
+def write_deadline_chart(
+    input_path: Path,
+    output_path: Path,
+    *,
+    days: int,
+    title: str,
+    labels: set[str] | None = None,
+) -> int:
+    """Render a deadline chart directly from its cumulative CSV."""
+    dates, series = load_snapshot(input_path, label_column=LABEL_COLUMN)
+    dates, series = latest_window(dates, series, days)
+    if labels is not None:
+        series = {label: values for label, values in series.items() if label in labels}
+    figure = create_chart(dates, series, title)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    figure.write_html(
+        output_path,
+        include_plotlyjs="cdn",
+        full_html=True,
+        config={"displaylogo": False, "responsive": True},
+    )
+    return len(series)
 
 
 def build_parser(
@@ -229,7 +254,7 @@ def build_parser(
     return parser
 
 
-def run_tracker(args: argparse.Namespace) -> int:
+def run_tracker(args: argparse.Namespace) -> TrackerResult:
     """Fetch, append, and chart one deadline-based Polymarket event."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
@@ -243,29 +268,89 @@ def run_tracker(args: argparse.Namespace) -> int:
         )
     except ValueError as exc:
         logging.error("Invalid arguments: %s", exc)
-        return 2
+        return TrackerResult("failed", exit_code=2)
     if not targets:
-        logging.info("All requested snapshot dates already exist; no API calls were needed")
-        return 0
+        if args.no_chart:
+            logging.info("All requested snapshot dates already exist; no API calls were needed")
+            return TrackerResult("current")
+        logging.info("All requested snapshot dates already exist; skipped history API calls")
+        session = build_session()
+        try:
+            event = fetch_event(session, args.slug, args.timeout)
+            event_markets = event.get("markets", [])
+            if not isinstance(event_markets, list) or not event_markets:
+                raise ValueError("The event contains no markets")
+            event_closed = all_markets_closed(event_markets)
+            chart_markets = (
+                event_markets
+                if event_closed
+                else selected_markets(event_markets, include_closed=args.include_closed)
+            )
+            labels = {
+                str(market.get("groupItemTitle") or market.get("question") or "Unknown market")
+                for market in chart_markets
+            }
+            series_count = write_deadline_chart(
+                args.output,
+                args.chart_output,
+                days=args.days,
+                title=str(
+                    event.get("title")
+                    or getattr(args, "title", "Polymarket deadline markets")
+                ),
+                labels=labels,
+            )
+        except (requests.RequestException, OSError, ValueError, json.JSONDecodeError) as exc:
+            logging.error("Could not create chart: %s", exc)
+            return TrackerResult("failed", exit_code=1)
+        logging.info("Created chart with %d stored markets at %s", series_count, args.chart_output)
+        return TrackerResult("closed" if event_closed else "current")
 
     session = build_session()
     try:
         event = fetch_event(session, args.slug, args.timeout)
     except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
         logging.error("Could not fetch event: %s", exc)
-        return 1
+        return TrackerResult("failed", exit_code=1)
 
     event_markets = event.get("markets", [])
     if not isinstance(event_markets, list) or not event_markets:
         logging.error("The event contains no markets")
-        return 1
+        return TrackerResult("failed", exit_code=1)
     if all_markets_closed(event_markets):
         logging.info("All event markets are closed; no snapshot date was appended")
-        return 0
+        if not args.no_chart and args.output.exists():
+            try:
+                series_count = write_deadline_chart(
+                    args.output,
+                    args.chart_output,
+                    days=args.days,
+                    title=str(
+                        event.get("title")
+                        or getattr(args, "title", "Polymarket deadline markets")
+                    ),
+                    labels={
+                        str(
+                            market.get("groupItemTitle")
+                            or market.get("question")
+                            or "Unknown market"
+                        )
+                        for market in event_markets
+                    },
+                )
+            except (OSError, ValueError) as exc:
+                logging.error("Could not create chart: %s", exc)
+                return TrackerResult("failed", exit_code=1)
+            logging.info(
+                "Created chart with %d stored markets at %s",
+                series_count,
+                args.chart_output,
+            )
+        return TrackerResult("closed")
     markets = selected_markets(event_markets, include_closed=args.include_closed)
     if not markets:
         logging.error("The event contains no markets matching the requested status")
-        return 1
+        return TrackerResult("failed", exit_code=1)
 
     logging.info("Fetching %d unresolved deadline markets", len(markets))
     rows = collect_rows(
@@ -282,37 +367,24 @@ def run_tracker(args: argparse.Namespace) -> int:
             targets,
             label_column=LABEL_COLUMN,
         )
-        if args.no_chart:
-            logging.info(
-                "Added %d new date(s); CSV contains %d stored rows at %s",
-                added_dates,
-                total_rows,
+        series_count = 0
+        if not args.no_chart:
+            series_count = write_deadline_chart(
                 args.output,
+                args.chart_output,
+                days=args.days,
+                title=str(
+                    event.get("title")
+                    or getattr(args, "title", "Polymarket deadline markets")
+                ),
+                labels={
+                    str(market.get("groupItemTitle") or market.get("question") or "Unknown market")
+                    for market in markets
+                },
             )
-            return 0
-        dates, saved_series = load_snapshot(args.output, label_column=LABEL_COLUMN)
-        dates, saved_series = latest_window(dates, saved_series, args.days)
-        current_labels = {
-            str(market.get("groupItemTitle") or market.get("question") or "Unknown market")
-            for market in markets
-        }
-        series = {
-            label: values
-            for label, values in saved_series.items()
-            if label in current_labels
-        }
-        title = str(event.get("title") or "Polymarket deadline markets")
-        figure = create_chart(dates, series, title)
-        args.chart_output.parent.mkdir(parents=True, exist_ok=True)
-        figure.write_html(
-            args.chart_output,
-            include_plotlyjs="cdn",
-            full_html=True,
-            config={"displaylogo": False, "responsive": True},
-        )
     except (OSError, ValueError) as exc:
         logging.error("Could not create output: %s", exc)
-        return 1
+        return TrackerResult("failed", exit_code=1)
 
     logging.info(
         "Added %d new date(s); CSV contains %d stored rows at %s",
@@ -320,5 +392,7 @@ def run_tracker(args: argparse.Namespace) -> int:
         total_rows,
         args.output,
     )
-    logging.info("Created chart with %d current markets at %s", len(series), args.chart_output)
-    return 0
+    if not args.no_chart:
+        logging.info("Created chart with %d stored markets at %s", series_count, args.chart_output)
+    status = "appended" if added_dates else "current"
+    return TrackerResult(status, added_dates=added_dates, row_count=total_rows)

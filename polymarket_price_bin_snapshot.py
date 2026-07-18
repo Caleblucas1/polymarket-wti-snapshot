@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from plot_wti_timeseries import create_chart, latest_window, load_snapshot
+from plot_wti_timeseries import write_chart
 from polymarket_wti_snapshot import (
     all_markets_closed,
     build_session,
@@ -22,10 +22,28 @@ from polymarket_wti_snapshot import (
     market_is_closed,
     missing_snapshot_targets,
     snapshot_targets,
+    TrackerResult,
 )
 
 
 LABEL_COLUMN = "Price Bin"
+
+
+def write_price_bin_chart(
+    args: argparse.Namespace,
+    *,
+    title: str,
+    labels: set[str] | None = None,
+) -> int:
+    """Render a price-bin chart directly from its cumulative CSV."""
+    return write_chart(
+        args.output,
+        args.chart_output,
+        days=args.days,
+        label_column=LABEL_COLUMN,
+        title_prefix=title,
+        labels=labels,
+    )
 
 
 def build_parser(
@@ -61,7 +79,7 @@ def build_parser(
     return parser
 
 
-def run_tracker(args: argparse.Namespace) -> int:
+def run_tracker(args: argparse.Namespace) -> TrackerResult:
     """Fetch, append, and chart one price-bin Polymarket event."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
@@ -75,25 +93,81 @@ def run_tracker(args: argparse.Namespace) -> int:
         )
     except ValueError as exc:
         logging.error("Invalid arguments: %s", exc)
-        return 2
+        return TrackerResult("failed", exit_code=2)
     if not targets:
-        logging.info("All requested snapshot dates already exist; no API calls were needed")
-        return 0
+        if args.no_chart:
+            logging.info("All requested snapshot dates already exist; no API calls were needed")
+            return TrackerResult("current")
+        labels = None
+        title = str(getattr(args, "title", "Polymarket price-bin event"))
+        if args.exclude_closed:
+            logging.info("All requested snapshot dates already exist; skipped history API calls")
+            session = build_session()
+            try:
+                event = fetch_event(session, args.slug, args.timeout)
+                event_markets = event.get("markets", [])
+                if not isinstance(event_markets, list) or not event_markets:
+                    raise ValueError("The event contains no markets")
+                event_closed = all_markets_closed(event_markets)
+                chart_markets = (
+                    event_markets
+                    if event_closed
+                    else [market for market in event_markets if not market_is_closed(market)]
+                )
+                labels = {
+                    str(market.get("groupItemTitle") or market.get("question") or "Unknown market")
+                    for market in chart_markets
+                }
+                title = str(event.get("title") or title)
+            except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
+                logging.error("Could not fetch event for chart filters: %s", exc)
+                return TrackerResult("failed", exit_code=1)
+        else:
+            logging.info("All requested snapshot dates already exist; no API calls were needed")
+            event_closed = False
+        try:
+            series_count = write_price_bin_chart(args, title=title, labels=labels)
+        except (OSError, ValueError) as exc:
+            logging.error("Could not create chart: %s", exc)
+            return TrackerResult("failed", exit_code=1)
+        logging.info("Created chart with %d price bins at %s", series_count, args.chart_output)
+        return TrackerResult("closed" if event_closed else "current")
 
     session = build_session()
     try:
         event = fetch_event(session, args.slug, args.timeout)
     except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
         logging.error("Could not fetch event: %s", exc)
-        return 1
+        return TrackerResult("failed", exit_code=1)
 
     event_markets = event.get("markets", [])
     if not isinstance(event_markets, list) or not event_markets:
         logging.error("The event contains no markets")
-        return 1
+        return TrackerResult("failed", exit_code=1)
     if all_markets_closed(event_markets):
         logging.info("All event markets are closed; no snapshot date was appended")
-        return 0
+        if not args.no_chart and args.output.exists():
+            try:
+                series_count = write_price_bin_chart(
+                    args,
+                    title=str(
+                        event.get("title")
+                        or getattr(args, "title", "Polymarket price-bin event")
+                    ),
+                    labels={
+                        str(
+                            market.get("groupItemTitle")
+                            or market.get("question")
+                            or "Unknown market"
+                        )
+                        for market in event_markets
+                    },
+                )
+            except (OSError, ValueError) as exc:
+                logging.error("Could not create chart: %s", exc)
+                return TrackerResult("failed", exit_code=1)
+            logging.info("Created chart with %d price bins at %s", series_count, args.chart_output)
+        return TrackerResult("closed")
     markets = [
         market
         for market in event_markets
@@ -101,7 +175,7 @@ def run_tracker(args: argparse.Namespace) -> int:
     ]
     if not markets:
         logging.error("The event contains no markets matching the requested status")
-        return 1
+        return TrackerResult("failed", exit_code=1)
 
     logging.info("Fetching %d price bins", len(markets))
     rows = collect_rows(
@@ -118,40 +192,30 @@ def run_tracker(args: argparse.Namespace) -> int:
             targets,
             label_column=LABEL_COLUMN,
         )
-        if args.no_chart:
-            logging.info(
-                "Added %d new date(s); CSV contains %d stored rows at %s",
-                added_dates,
-                total_rows,
-                args.output,
+        series_count = 0
+        if not args.no_chart:
+            series_count = write_price_bin_chart(
+                args,
+                title=str(
+                    event.get("title")
+                    or getattr(args, "title", "Polymarket price-bin event")
+                ),
+                labels=(
+                    {
+                        str(
+                            market.get("groupItemTitle")
+                            or market.get("question")
+                            or "Unknown market"
+                        )
+                        for market in markets
+                    }
+                    if args.exclude_closed
+                    else None
+                ),
             )
-            return 0
-        dates, saved_series = load_snapshot(args.output, label_column=LABEL_COLUMN)
-        dates, saved_series = latest_window(dates, saved_series, args.days)
-        if args.exclude_closed:
-            current_labels = {
-                str(market.get("groupItemTitle") or market.get("question") or "Unknown market")
-                for market in markets
-            }
-            series = {
-                label: values
-                for label, values in saved_series.items()
-                if label in current_labels
-            }
-        else:
-            series = saved_series
-        event_title = str(event.get("title") or "Polymarket price-bin event")
-        figure = create_chart(dates, series, title_prefix=event_title)
-        args.chart_output.parent.mkdir(parents=True, exist_ok=True)
-        figure.write_html(
-            args.chart_output,
-            include_plotlyjs="cdn",
-            full_html=True,
-            config={"displaylogo": False, "responsive": True},
-        )
     except (OSError, ValueError) as exc:
         logging.error("Could not create output: %s", exc)
-        return 1
+        return TrackerResult("failed", exit_code=1)
 
     logging.info(
         "Added %d new date(s); CSV contains %d stored rows at %s",
@@ -159,5 +223,7 @@ def run_tracker(args: argparse.Namespace) -> int:
         total_rows,
         args.output,
     )
-    logging.info("Created chart with %d price bins at %s", len(series), args.chart_output)
-    return 0
+    if not args.no_chart:
+        logging.info("Created chart with %d price bins at %s", series_count, args.chart_output)
+    status = "appended" if added_dates else "current"
+    return TrackerResult(status, added_dates=added_dates, row_count=total_rows)

@@ -207,6 +207,33 @@ def create_chart(
     return figure
 
 
+def write_chart(
+    input_path: Path,
+    output_path: Path,
+    *,
+    days: int = 7,
+    label_column: str = "Price Bin",
+    title_prefix: str = "WTI July 2026 probability",
+    labels: set[str] | None = None,
+) -> int:
+    """Render a saved snapshot CSV and return the number of plotted series."""
+    dates, series = load_snapshot(input_path, label_column=label_column)
+    dates, series = latest_window(dates, series, days)
+    if labels is not None:
+        series = {label: values for label, values in series.items() if label in labels}
+    if not series:
+        raise ValueError("No stored series match the requested chart filters")
+    figure = create_chart(dates, series, title_prefix=title_prefix)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    figure.write_html(
+        output_path,
+        include_plotlyjs="cdn",
+        full_html=True,
+        config={"displaylogo": False, "responsive": True},
+    )
+    return len(series)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Create an interactive seven-day chart from a WTI snapshot CSV."
@@ -220,16 +247,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
-        dates, series = load_snapshot(args.input)
-        dates, series = latest_window(dates, series, args.days)
-        figure = create_chart(dates, series)
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        figure.write_html(
-            args.output,
-            include_plotlyjs="cdn",
-            full_html=True,
-            config={"displaylogo": False, "responsive": True},
-        )
+        write_chart(args.input, args.output, days=args.days)
     except (OSError, ValueError) as exc:
         print(f"Error: {exc}")
         return 1

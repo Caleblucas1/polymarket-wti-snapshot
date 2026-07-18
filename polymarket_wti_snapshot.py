@@ -8,9 +8,10 @@ import bisect
 import csv
 import json
 import logging
+from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Literal
 from zoneinfo import ZoneInfo
 
 import requests
@@ -20,10 +21,21 @@ from urllib3.util.retry import Retry
 
 DEFAULT_SLUG = "what-price-will-wti-hit-in-july-2026"
 DEFAULT_OUTPUT = "wti_july_2026_9am_snapshot.csv"
+DEFAULT_CHART_OUTPUT = "wti_7_day_time_series.html"
 GAMMA_EVENT_URL = "https://gamma-api.polymarket.com/events/slug/{slug}"
 CLOB_HISTORY_URL = "https://clob.polymarket.com/prices-history"
 CLOB_BATCH_HISTORY_URL = "https://clob.polymarket.com/batch-prices-history"
 BATCH_MARKET_LIMIT = 20
+
+
+@dataclass(frozen=True)
+class TrackerResult:
+    """Structured result shared by individual and aggregate tracker commands."""
+
+    status: Literal["appended", "current", "closed", "failed"]
+    exit_code: int = 0
+    added_dates: int = 0
+    row_count: int = 0
 
 
 def build_session() -> requests.Session:
@@ -354,13 +366,33 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--slug", default=DEFAULT_SLUG, help="Polymarket event slug")
     parser.add_argument("--output", type=Path, default=Path(DEFAULT_OUTPUT), help="CSV output path")
+    parser.add_argument(
+        "--chart-output",
+        type=Path,
+        default=Path(DEFAULT_CHART_OUTPUT),
+        help="HTML chart output path",
+    )
     parser.add_argument("--days", type=int, default=7, help="Number of calendar-day snapshots")
     parser.add_argument("--hour", type=int, default=9, help="Eastern snapshot hour (0-23)")
     parser.add_argument("--timeout", type=float, default=20, help="HTTP timeout in seconds")
+    parser.add_argument("--no-chart", action="store_true", help="Update only the CSV")
     return parser.parse_args()
 
 
-def run_snapshot(args: argparse.Namespace) -> int:
+def write_snapshot_chart(args: argparse.Namespace) -> int:
+    """Render the stored WTI snapshot without fetching market history."""
+    from plot_wti_timeseries import write_chart
+
+    title = str(getattr(args, "title", "What price will WTI hit in July 2026?"))
+    return write_chart(
+        args.output,
+        args.chart_output,
+        days=args.days,
+        title_prefix=title,
+    )
+
+
+def run_snapshot(args: argparse.Namespace) -> TrackerResult:
     """Run one append-only price snapshot update."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
@@ -370,25 +402,39 @@ def run_snapshot(args: argparse.Namespace) -> int:
         targets = missing_snapshot_targets(args.output, targets)
     except ValueError as exc:
         logging.error("Invalid arguments: %s", exc)
-        return 2
+        return TrackerResult("failed", exit_code=2)
     if not targets:
         logging.info("All requested snapshot dates already exist; no API calls were needed")
-        return 0
+        if not args.no_chart:
+            try:
+                series_count = write_snapshot_chart(args)
+            except (OSError, ValueError) as exc:
+                logging.error("Could not create chart: %s", exc)
+                return TrackerResult("failed", exit_code=1)
+            logging.info("Created chart with %d price bins at %s", series_count, args.chart_output)
+        return TrackerResult("current")
 
     session = build_session()
     try:
         event = fetch_event(session, args.slug, args.timeout)
     except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
         logging.error("Could not fetch event: %s", exc)
-        return 1
+        return TrackerResult("failed", exit_code=1)
 
     markets = event.get("markets", [])
     if not isinstance(markets, list) or not markets:
         logging.error("The event contains no markets")
-        return 1
+        return TrackerResult("failed", exit_code=1)
     if all_markets_closed(markets):
         logging.info("All event markets are closed; no snapshot date was appended")
-        return 0
+        if not args.no_chart and args.output.exists():
+            try:
+                series_count = write_snapshot_chart(args)
+            except (OSError, ValueError) as exc:
+                logging.error("Could not create chart: %s", exc)
+                return TrackerResult("failed", exit_code=1)
+            logging.info("Created chart with %d price bins at %s", series_count, args.chart_output)
+        return TrackerResult("closed")
 
     logging.info("Fetching %d price bins", len(markets))
     rows = collect_rows(session, markets, targets, args.timeout)
@@ -396,18 +442,26 @@ def run_snapshot(args: argparse.Namespace) -> int:
         added_dates, total_rows = merge_and_write_csv(args.output, rows, targets)
     except (OSError, ValueError) as exc:
         logging.error("Could not update CSV: %s", exc)
-        return 1
+        return TrackerResult("failed", exit_code=1)
+    if not args.no_chart:
+        try:
+            series_count = write_snapshot_chart(args)
+        except (OSError, ValueError) as exc:
+            logging.error("Could not create chart: %s", exc)
+            return TrackerResult("failed", exit_code=1)
+        logging.info("Created chart with %d price bins at %s", series_count, args.chart_output)
     logging.info(
         "Added %d new date(s); CSV contains %d rows at %s",
         added_dates,
         total_rows,
         args.output,
     )
-    return 0
+    status = "appended" if added_dates else "current"
+    return TrackerResult(status, added_dates=added_dates, row_count=total_rows)
 
 
 def main() -> int:
-    return run_snapshot(parse_args())
+    return run_snapshot(parse_args()).exit_code
 
 
 if __name__ == "__main__":

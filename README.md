@@ -139,8 +139,10 @@ chart generation with:
 python update_all_markets.py --data-dir .
 ```
 
-Use `--with-charts` when individual event charts are also needed. CSV-only is
-the faster default for the multi-market updater.
+Use `--with-charts` to regenerate all seven event charts from the stored CSVs,
+including on a day when no date needs to be appended. CSV-only remains the
+faster default. The command reports each event as `appended`, `already current`,
+`fully closed`, or `failed`.
 
 ## GitHub snapshot storage
 

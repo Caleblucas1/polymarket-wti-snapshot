@@ -7,6 +7,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from polymarket_wti_snapshot import TrackerResult
 from track_market import load_registry, run_event
 
 
@@ -40,7 +41,7 @@ def main() -> int:
         print("Error: workers must be at least 1")
         return 2
 
-    results: dict[str, int] = {}
+    results: dict[str, TrackerResult] = {}
     worker_count = min(args.workers, len(args.events))
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
@@ -61,12 +62,20 @@ def main() -> int:
                 results[event_key] = future.result()
             except Exception as exc:  # Keep other independent updates running.
                 print(f"{event_key}: failed: {exc}")
-                results[event_key] = 1
+                results[event_key] = TrackerResult("failed", exit_code=1)
 
     for event_key in args.events:
-        status = "updated" if results.get(event_key) == 0 else "failed"
-        print(f"{event_key}: {status}")
-    return 1 if any(code != 0 for code in results.values()) else 0
+        result = results.get(event_key, TrackerResult("failed", exit_code=1))
+        if result.status == "appended":
+            detail = f"appended {result.added_dates} date(s)"
+        elif result.status == "current":
+            detail = "already current"
+        elif result.status == "closed":
+            detail = "fully closed"
+        else:
+            detail = "failed"
+        print(f"{event_key}: {detail}")
+    return 1 if any(result.exit_code != 0 for result in results.values()) else 0
 
 
 if __name__ == "__main__":

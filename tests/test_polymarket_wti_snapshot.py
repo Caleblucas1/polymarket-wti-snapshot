@@ -1,7 +1,9 @@
+import argparse
 import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from polymarket_wti_snapshot import (
@@ -10,6 +12,7 @@ from polymarket_wti_snapshot import (
     missing_snapshot_targets,
     prices_at_or_before,
     merge_and_write_csv,
+    run_snapshot,
     snapshot_targets,
     yes_token_id,
 )
@@ -103,6 +106,57 @@ class SnapshotTests(unittest.TestCase):
         self.assertIsInstance(session.payloads[0][0]["start_ts"], int)
         self.assertIsInstance(session.payloads[0][0]["end_ts"], int)
         self.assertEqual(set(histories), set(token_ids))
+
+    def test_regenerates_chart_without_api_calls_when_csv_is_current(self):
+        target = datetime(2026, 7, 17, 9, tzinfo=ZoneInfo("America/New_York"))
+        with tempfile.TemporaryDirectory() as temp_directory:
+            output = Path(temp_directory) / "snapshot.csv"
+            output.write_text("Price Bin,2026-07-17\n↑ $90,25.0\n", encoding="utf-8")
+            args = argparse.Namespace(
+                output=output,
+                chart_output=Path(temp_directory) / "chart.html",
+                slug="example",
+                title="Example",
+                days=7,
+                hour=9,
+                timeout=5,
+                no_chart=False,
+            )
+            with (
+                patch("polymarket_wti_snapshot.snapshot_targets", return_value=[target]),
+                patch("polymarket_wti_snapshot.write_snapshot_chart", return_value=1) as chart,
+                patch("polymarket_wti_snapshot.build_session") as session,
+            ):
+                result = run_snapshot(args)
+
+        self.assertEqual(result.status, "current")
+        chart.assert_called_once_with(args)
+        session.assert_not_called()
+
+    def test_reports_fully_closed_event(self):
+        target = datetime(2026, 7, 17, 9, tzinfo=ZoneInfo("America/New_York"))
+        with tempfile.TemporaryDirectory() as temp_directory:
+            args = argparse.Namespace(
+                output=Path(temp_directory) / "missing.csv",
+                chart_output=Path(temp_directory) / "chart.html",
+                slug="closed-event",
+                days=1,
+                hour=9,
+                timeout=5,
+                no_chart=True,
+            )
+            with (
+                patch("polymarket_wti_snapshot.snapshot_targets", return_value=[target]),
+                patch("polymarket_wti_snapshot.build_session"),
+                patch(
+                    "polymarket_wti_snapshot.fetch_event",
+                    return_value={"markets": [{"closed": True}]},
+                ),
+            ):
+                result = run_snapshot(args)
+
+        self.assertEqual(result.status, "closed")
+        self.assertEqual(result.exit_code, 0)
 
     def test_appends_only_missing_dates(self):
         targets = [
