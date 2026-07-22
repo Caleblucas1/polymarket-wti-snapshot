@@ -175,8 +175,11 @@ python update_orderbooks.py --data-dir orderbook
 ```
 
 The collector batches public CLOB book requests and stores Yes-token depth in
-shares and price-weighted notional at 1¢, 5¢, and 10¢ from the best quote. It
-also creates an interactive report and a physical market-instance inventory.
+shares and price-weighted notional at 1¢, 2¢, 5¢, and 10¢ from the best quote.
+Its report ranks markets by the weaker side's five-point move cost, compares
+spread with executable two-sided depth, and summarizes liquidity by Asia,
+Europe, U.S., and evening hours as intraday observations accumulate. It also
+maintains a physical market-instance inventory.
 
 Logical identity includes the configured event and the full normalized market
 label. When Polymarket publishes a new condition/token for the same logical

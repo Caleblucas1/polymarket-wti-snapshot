@@ -13,7 +13,9 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from statistics import median
 from typing import Any, Iterable
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -24,7 +26,7 @@ from track_market import load_registry
 CLOB_BOOKS_URL = "https://clob.polymarket.com/books"
 CLOB_BOOK_URL = "https://clob.polymarket.com/book"
 BOOK_BATCH_LIMIT = 20
-DEPTH_BANDS = (0.01, 0.05, 0.10)
+DEPTH_BANDS = (0.01, 0.02, 0.05, 0.10)
 
 INSTANCE_FIELDS = [
     "Event Key", "Event Slug", "Logical Market ID", "Threshold Family ID",
@@ -41,15 +43,17 @@ LIFECYCLE_FIELDS = [
 ]
 
 DEPTH_FIELDS = [
-    "Snapshot At", "Book Timestamp", "Event Key", "Event Slug",
+    "Snapshot At", "Hour ET", "Session", "Book Timestamp", "Event Key", "Event Slug",
     "Logical Market ID", "Threshold Family ID", "Market Label", "Condition ID",
     "Token ID", "Outcome", "Book Status", "Best Bid", "Best Ask", "Midpoint",
     "Spread", "Bid Levels", "Ask Levels", "Bid Shares Total", "Ask Shares Total",
     "Bid Notional Total", "Ask Notional Total", "Bid Shares 1c", "Ask Shares 1c",
-    "Bid Notional 1c", "Ask Notional 1c", "Bid Shares 5c", "Ask Shares 5c",
+    "Bid Notional 1c", "Ask Notional 1c", "Bid Shares 2c", "Ask Shares 2c",
+    "Bid Notional 2c", "Ask Notional 2c", "Bid Shares 5c", "Ask Shares 5c",
     "Bid Notional 5c", "Ask Notional 5c", "Bid Shares 10c", "Ask Shares 10c",
     "Bid Notional 10c", "Ask Notional 10c", "Book Hash", "Instance Volume",
-    "Logical Lifetime Volume", "Liquidity", "Last Trade Price",
+    "Logical Lifetime Volume", "Liquidity", "Last Trade Price", "Weak Side Notional 2c",
+    "Weak Side Notional 5c", "Book Imbalance 5c",
 ]
 
 SUMMARY_FIELDS = [
@@ -82,6 +86,29 @@ def number_text(value: Any) -> str:
     if not math.isfinite(number):
         return ""
     return f"{number:.10f}".rstrip("0").rstrip(".")
+
+
+def float_value(value: Any) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return number if math.isfinite(number) else 0.0
+
+
+def session_for_timestamp(timestamp: str) -> tuple[str, str]:
+    """Return Eastern hour and a mutually exclusive global-liquidity session."""
+    observed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    hour = observed.astimezone(ZoneInfo("America/New_York")).hour
+    if 3 <= hour < 9:
+        session = "Europe (03–09 ET)"
+    elif 9 <= hour < 17:
+        session = "U.S. (09–17 ET)"
+    elif 20 <= hour or hour < 3:
+        session = "Asia (20–03 ET)"
+    else:
+        session = "Evening (17–20 ET)"
+    return str(hour), session
 
 
 def market_label(market: dict[str, Any]) -> str:
@@ -182,7 +209,9 @@ def write_csv(path: Path, fields: list[str], rows: Iterable[dict[str, Any]]) -> 
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(f"{path.suffix}.tmp")
     with temporary.open("w", newline="", encoding="utf-8") as output_file:
-        writer = csv.DictWriter(output_file, fieldnames=fields, extrasaction="ignore")
+        writer = csv.DictWriter(
+            output_file, fieldnames=fields, extrasaction="ignore", lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(rows)
     temporary.replace(path)
@@ -428,6 +457,7 @@ def collect_depth_rows(
     ]
     books = fetch_books(session, [row["Yes Token ID"] for row in eligible], timeout)
     lifetime_volume = logical_volume_totals(instances)
+    hour_et, session_name = session_for_timestamp(snapshot_at)
     rows: list[dict[str, str]] = []
     for instance in present:
         token_id = instance.get("Yes Token ID", "")
@@ -444,6 +474,8 @@ def collect_depth_rows(
         row = {field: "" for field in DEPTH_FIELDS}
         row.update({
             "Snapshot At": snapshot_at,
+            "Hour ET": hour_et,
+            "Session": session_name,
             "Event Key": instance["Event Key"],
             "Event Slug": instance["Event Slug"],
             "Logical Market ID": instance["Logical Market ID"],
@@ -460,6 +492,16 @@ def collect_depth_rows(
         })
         if status == "available":
             row.update(summarize_book(books[token_id]))
+            bid_2c = float_value(row.get("Bid Notional 2c"))
+            ask_2c = float_value(row.get("Ask Notional 2c"))
+            bid_5c = float_value(row.get("Bid Notional 5c"))
+            ask_5c = float_value(row.get("Ask Notional 5c"))
+            total_5c = bid_5c + ask_5c
+            row["Weak Side Notional 2c"] = number_text(min(bid_2c, ask_2c))
+            row["Weak Side Notional 5c"] = number_text(min(bid_5c, ask_5c))
+            row["Book Imbalance 5c"] = number_text(
+                (bid_5c - ask_5c) / total_5c if total_5c else None
+            )
         rows.append(row)
     return rows
 
@@ -496,6 +538,17 @@ def build_logical_summary(instances: list[dict[str, str]]) -> list[dict[str, str
 
 def append_depth(path: Path, rows: list[dict[str, str]]) -> None:
     existing = read_csv(path)
+    for row in existing:
+        if row.get("Snapshot At") and not row.get("Session"):
+            row["Hour ET"], row["Session"] = session_for_timestamp(row["Snapshot At"])
+        bid_5c = float_value(row.get("Bid Notional 5c"))
+        ask_5c = float_value(row.get("Ask Notional 5c"))
+        total_5c = bid_5c + ask_5c
+        if row.get("Book Status") == "available":
+            row["Weak Side Notional 5c"] = number_text(min(bid_5c, ask_5c))
+            row["Book Imbalance 5c"] = number_text(
+                (bid_5c - ask_5c) / total_5c if total_5c else None
+            )
     keys = {
         (row.get("Snapshot At", ""), row.get("Condition ID", ""), row.get("Token ID", ""))
         for row in existing
@@ -510,70 +563,141 @@ def append_depth(path: Path, rows: list[dict[str, str]]) -> None:
 def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[str, str]]) -> None:
     import plotly.graph_objects as go
 
-    available = [row for row in rows if row.get("Book Status") == "available"]
-    events = sorted({row["Event Key"] for row in available})
-    figure = go.Figure()
-    for event_key in events:
-        event_rows = sorted(
-            (row for row in available if row["Event Key"] == event_key),
-            key=lambda row: row["Market Label"],
-        )
-        labels = [row["Market Label"] for row in event_rows]
-        custom = [[
-            row.get("Best Bid", ""), row.get("Best Ask", ""), row.get("Spread", ""),
-            row.get("Bid Shares 5c", ""), row.get("Ask Shares 5c", ""),
-            row.get("Instance Volume", ""), row.get("Logical Lifetime Volume", ""),
-            row.get("Condition ID", ""),
-        ] for row in event_rows]
-        figure.add_trace(go.Bar(
-            name=f"{event_key} bids", y=labels,
-            x=[-float(row.get("Bid Shares 5c") or 0) for row in event_rows],
-            orientation="h", marker_color="#2563EB", customdata=custom,
-            hovertemplate=(
-                "<b>%{y}</b><br>Bid depth within 5¢: %{customdata[3]:,.0f} shares"
-                "<br>Best bid: %{customdata[0]}<br>Best ask: %{customdata[1]}"
-                "<br>Spread: %{customdata[2]}<br>Instance volume: %{customdata[5]}"
-                "<br>Logical lifetime volume: %{customdata[6]}"
-                "<br>Condition: %{customdata[7]}<extra></extra>"
-            ),
-        ))
-        figure.add_trace(go.Bar(
-            name=f"{event_key} asks", y=labels,
-            x=[float(row.get("Ask Shares 5c") or 0) for row in event_rows],
-            orientation="h", marker_color="#DC2626", customdata=custom,
-            hovertemplate=(
-                "<b>%{y}</b><br>Ask depth within 5¢: %{customdata[4]:,.0f} shares"
-                "<br>Best bid: %{customdata[0]}<br>Best ask: %{customdata[1]}"
-                "<br>Spread: %{customdata[2]}<br>Instance volume: %{customdata[5]}"
-                "<br>Logical lifetime volume: %{customdata[6]}"
-                "<br>Condition: %{customdata[7]}<extra></extra>"
-            ),
-        ))
+    if not rows:
+        raise ValueError("No order-book snapshots are available to report")
+    latest_at = max(row.get("Snapshot At", "") for row in rows)
+    latest = [row for row in rows if row.get("Snapshot At") == latest_at]
+    available = [row for row in latest if row.get("Book Status") == "available"]
+    historical_available = [row for row in rows if row.get("Book Status") == "available"]
 
-    buttons = [{"label": "All events", "method": "update", "args": [{"visible": [True] * len(figure.data)}]}]
-    for event_index, event_key in enumerate(events):
-        visibility = [False] * len(figure.data)
-        visibility[event_index * 2] = True
-        visibility[event_index * 2 + 1] = True
-        buttons.append({"label": event_key, "method": "update", "args": [{"visible": visibility}]})
-    figure.update_layout(
-        title={"text": "Polymarket order-book depth by logical market", "x": 0.5},
-        template="plotly_white", barmode="relative", height=max(700, 30 * len(available)),
-        xaxis_title="Shares within 5¢ of best quote (bids left, asks right)",
-        yaxis_title="Market", legend={"orientation": "h"},
-        updatemenus=[{"buttons": buttons, "direction": "down", "x": 0, "y": 1.12}],
-        margin={"l": 170, "r": 40, "t": 120, "b": 80},
+    easiest = sorted(
+        available,
+        key=lambda row: float_value(row.get("Weak Side Notional 5c")),
+    )[:25]
+    easiest.reverse()
+    move_values = [float_value(row.get("Weak Side Notional 5c")) for row in easiest]
+    # A zero value is economically meaningful: one side has no displayed depth.
+    # Plot it at a small visual floor so it remains visible on the logarithmic axis.
+    move_plot_values = [max(value, 0.10) for value in move_values]
+    move_figure = go.Figure(go.Bar(
+        x=move_plot_values,
+        y=[f"{row['Event Key']} · {row['Market Label']}" for row in easiest],
+        orientation="h",
+        marker={"color": "#D97706", "line": {"color": "#92400E", "width": 1}},
+        text=["one-sided ($0)" if value == 0 else f"${value:,.0f}" for value in move_values],
+        textposition="outside",
+        customdata=[[
+            float_value(row.get("Ask Notional 5c")),
+            float_value(row.get("Bid Notional 5c")),
+            float_value(row.get("Spread")) * 100,
+            float_value(row.get("Book Imbalance 5c")),
+            row.get("Best Bid", ""), row.get("Best Ask", ""),
+            float_value(row.get("Weak Side Notional 5c")),
+        ] for row in easiest],
+        hovertemplate=(
+            "<b>%{y}</b><br>Weakest-side 5-point depth: $%{customdata[6]:,.2f}"
+            "<br>Cost to lift asks through +5 points: $%{customdata[0]:,.0f}"
+            "<br>Bid notional through −5 points: $%{customdata[1]:,.0f}"
+            "<br>Spread: %{customdata[2]:.2f} points"
+            "<br>5-point imbalance: %{customdata[3]:+.1%}"
+            "<br>Best bid / ask: %{customdata[4]} / %{customdata[5]}<extra></extra>"
+        ),
+    ))
+    move_figure.update_layout(
+        title={"text": "Easiest markets to move by roughly five probability points", "x": 0.5},
+        template="plotly_white", height=max(650, 31 * len(easiest)), showlegend=False,
+        xaxis={"title": "Weaker side resting notional ($, log scale)", "type": "log"},
+        yaxis={"title": ""}, margin={"l": 235, "r": 95, "t": 85, "b": 75},
+        annotations=[{
+            "text": "One-sided books have $0 displayed resistance and use a $0.10 visual floor.",
+            "xref": "paper", "yref": "paper", "x": 0, "y": -0.13,
+            "showarrow": False, "font": {"size": 11, "color": "#6B7280"},
+        }],
     )
-    figure.add_annotation(
-        text="Depth is measured on the Yes-token book. Closed or unavailable books remain listed below.",
-        xref="paper", yref="paper", x=0, y=-0.08, showarrow=False, xanchor="left",
+
+    palette = ["#2563EB", "#D97706", "#7C3AED", "#0891B2", "#DB2777", "#4F46E5", "#059669"]
+    confidence_figure = go.Figure()
+    events = sorted({row["Event Key"] for row in available})
+    max_volume = max((float_value(row.get("Instance Volume")) for row in available), default=1)
+    for index, event_key in enumerate(events):
+        event_rows = [
+            row for row in available
+            if row["Event Key"] == event_key and float_value(row.get("Weak Side Notional 2c")) > 0
+        ]
+        confidence_figure.add_trace(go.Scatter(
+            x=[float_value(row.get("Spread")) * 100 for row in event_rows],
+            y=[float_value(row.get("Weak Side Notional 2c")) for row in event_rows],
+            mode="markers", name=event_key,
+            marker={
+                "color": palette[index % len(palette)], "opacity": 0.78,
+                "size": [8 + 28 * math.sqrt(float_value(row.get("Instance Volume")) / max_volume) for row in event_rows],
+                "line": {"color": "#111827", "width": 0.7},
+            },
+            text=[row["Market Label"] for row in event_rows],
+            customdata=[[
+                row.get("Best Bid", ""), row.get("Best Ask", ""),
+                float_value(row.get("Weak Side Notional 5c")),
+                float_value(row.get("Instance Volume")),
+            ] for row in event_rows],
+            hovertemplate=(
+                "<b>%{text}</b><br>Spread: %{x:.2f} points"
+                "<br>Weakest-side depth within 2 points: $%{y:,.0f}"
+                "<br>Weakest-side depth within 5 points: $%{customdata[2]:,.0f}"
+                "<br>Best bid / ask: %{customdata[0]} / %{customdata[1]}"
+                "<br>Lifetime instance volume: $%{customdata[3]:,.0f}<extra>%{fullData.name}</extra>"
+            ),
+        ))
+    confidence_figure.update_layout(
+        title={"text": "Displayed-price credibility: spread versus executable two-sided depth", "x": 0.5},
+        template="plotly_white", height=650,
+        xaxis={"title": "Bid–ask spread (probability points)", "rangemode": "tozero"},
+        yaxis={"title": "Weaker side notional within 2 points ($, log scale)", "type": "log"},
+        legend={"orientation": "h", "y": 1.12},
+        margin={"l": 80, "r": 35, "t": 115, "b": 75},
     )
-    plot = figure.to_html(include_plotlyjs="cdn", full_html=False, config={"displaylogo": False, "responsive": True})
+
+    session_order = ["Asia (20–03 ET)", "Europe (03–09 ET)", "U.S. (09–17 ET)", "Evening (17–20 ET)"]
+    session_values: list[float] = []
+    session_samples: list[int] = []
+    session_observations: list[int] = []
+    for session_name in session_order:
+        session_rows = [
+            row for row in historical_available
+            if (row.get("Session") or session_for_timestamp(row["Snapshot At"])[1]) == session_name
+            and float_value(row.get("Weak Side Notional 5c")) > 0
+        ]
+        session_values.append(median([float_value(row["Weak Side Notional 5c"]) for row in session_rows]) if session_rows else 0)
+        session_samples.append(len({row["Snapshot At"] for row in session_rows}))
+        session_observations.append(len(session_rows))
+    session_figure = go.Figure(go.Bar(
+        x=session_order, y=session_values,
+        marker={"color": ["#7C3AED", "#0891B2", "#2563EB", "#D97706"]},
+        text=[f"${value:,.0f}<br>{samples} samples" for value, samples in zip(session_values, session_samples)],
+        textposition="outside",
+        customdata=[[samples, observations] for samples, observations in zip(session_samples, session_observations)],
+        hovertemplate=(
+            "<b>%{x}</b><br>Median weakest-side 5-point depth: $%{y:,.0f}"
+            "<br>Book snapshots: %{customdata[0]}"
+            "<br>Market observations: %{customdata[1]}<extra></extra>"
+        ),
+    ))
+    session_figure.update_layout(
+        title={"text": "When liquidity is thickest", "x": 0.5},
+        template="plotly_white", height=520, showlegend=False,
+        xaxis={"title": "Mutually exclusive Eastern-time session"},
+        yaxis={"title": "Median weakest-side 5-point depth ($)", "rangemode": "tozero"},
+        margin={"l": 85, "r": 35, "t": 85, "b": 90},
+    )
+
+    config = {"displaylogo": False, "responsive": True}
+    move_plot = move_figure.to_html(include_plotlyjs="cdn", full_html=False, config=config)
+    confidence_plot = confidence_figure.to_html(include_plotlyjs=False, full_html=False, config=config)
+    session_plot = session_figure.to_html(include_plotlyjs=False, full_html=False, config=config)
     table_rows = []
-    for row in sorted(rows, key=lambda value: (value["Event Key"], value["Market Label"])):
+    for row in sorted(latest, key=lambda value: (value["Event Key"], value["Market Label"])):
         table_rows.append("<tr>" + "".join(
             f"<td>{html.escape(str(row.get(field, '')))}</td>"
-            for field in ["Event Key", "Market Label", "Book Status", "Best Bid", "Best Ask", "Spread", "Bid Shares 5c", "Ask Shares 5c", "Instance Volume", "Logical Lifetime Volume"]
+            for field in ["Event Key", "Market Label", "Book Status", "Best Bid", "Best Ask", "Spread", "Ask Notional 5c", "Bid Notional 5c", "Weak Side Notional 5c", "Book Imbalance 5c", "Instance Volume"]
         ) + "</tr>")
     lifecycle_rows = []
     for row in lifecycle[-100:]:
@@ -581,7 +705,18 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
             f"<td>{html.escape(str(row.get(field, '')))}</td>"
             for field in ["Detected At", "Event Key", "Market Label", "Event Type", "Condition ID", "Related Condition ID"]
         ) + "</tr>")
-    document = f"""<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Polymarket order-book depth</title><style>body{{font-family:Arial,sans-serif;margin:24px;color:#111827}}table{{border-collapse:collapse;width:100%;font-size:12px;margin-top:16px}}th,td{{border:1px solid #d1d5db;padding:6px;text-align:right}}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){{text-align:left}}th{{background:#f3f4f6;position:sticky;top:0}}.scroll{{overflow:auto;max-height:720px}}p{{color:#4b5563}}</style></head><body>{plot}<h2>Latest depth for every present market</h2><p>Prices are probabilities from 0 to 1; depth columns are Yes shares within five cents of the best quote.</p><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(field)}</th>' for field in ['Event','Market','Status','Best Bid','Best Ask','Spread','Bid 5c','Ask 5c','Instance Volume','Logical Lifetime Volume'])}</tr></thead><tbody>{''.join(table_rows)}</tbody></table></div><h2>Lifecycle events</h2><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(field)}</th>' for field in ['Detected At','Event','Market','Event Type','Condition ID','Related Condition ID'])}</tr></thead><tbody>{''.join(lifecycle_rows)}</tbody></table></div></body></html>"""
+    available_count = len(available)
+    easiest_row = min(available, key=lambda row: float_value(row.get("Weak Side Notional 5c")), default={})
+    resilient_row = max(available, key=lambda row: float_value(row.get("Weak Side Notional 5c")), default={})
+    distinct_snapshots = len({row.get("Snapshot At") for row in rows})
+    easiest_value = float_value(easiest_row.get("Weak Side Notional 5c"))
+    easiest_display = "one-sided ($0)" if easiest_row and easiest_value == 0 else f"${easiest_value:,.0f}"
+    session_note = (
+        "Session comparisons are preliminary. At least 8–12 snapshots spanning multiple sessions are needed before treating the pattern as evidence."
+        if distinct_snapshots < 8 or sum(value > 0 for value in session_values) < 2
+        else "Session bars use the median across all available market observations in each Eastern-time window."
+    )
+    document = f"""<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Polymarket liquidity and market impact</title><style>body{{font-family:Arial,sans-serif;margin:24px;color:#111827;background:#f9fafb}}main{{max-width:1500px;margin:auto}}.hero,.panel,.card{{background:white;border:1px solid #e5e7eb;border-radius:12px}}.hero{{padding:22px;margin-bottom:18px}}.grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}}.card{{padding:14px}}.kpi{{font-size:24px;font-weight:700;margin-top:6px}}.label,.note{{font-size:12px;color:#6b7280}}.panel{{padding:12px;margin:18px 0}}table{{border-collapse:collapse;width:100%;font-size:12px;margin-top:16px;background:white}}th,td{{border:1px solid #d1d5db;padding:6px;text-align:right}}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){{text-align:left}}th{{background:#f3f4f6;position:sticky;top:0}}.scroll{{overflow:auto;max-height:720px}}p{{color:#4b5563;line-height:1.45}}@media(max-width:800px){{.grid{{grid-template-columns:1fr 1fr}}body{{margin:8px}}}}</style></head><body><main><section class=\"hero\"><h1>Polymarket liquidity and market impact</h1><p>Latest book: {html.escape(latest_at)}. The dashboard measures executable Yes-token liquidity—not just displayed probability.</p><div class=\"grid\"><div class=\"card\"><div class=\"label\">Available books</div><div class=\"kpi\">{available_count}</div></div><div class=\"card\"><div class=\"label\">Easiest current 5-point move</div><div class=\"kpi\">{easiest_display}</div><div class=\"note\">{html.escape(str(easiest_row.get('Event Key','')))} · {html.escape(str(easiest_row.get('Market Label','')))}</div></div><div class=\"card\"><div class=\"label\">Most resilient current 5-point book</div><div class=\"kpi\">${float_value(resilient_row.get('Weak Side Notional 5c')):,.0f}</div><div class=\"note\">{html.escape(str(resilient_row.get('Event Key','')))} · {html.escape(str(resilient_row.get('Market Label','')))}</div></div><div class=\"card\"><div class=\"label\">Intraday snapshots collected</div><div class=\"kpi\">{distinct_snapshots}</div></div></div></section><section class=\"panel\">{move_plot}<p>Lower bars are easier to push: the metric is the smaller of ask notional through +5 points and bid notional through −5 points. A one-sided book has no displayed resistance in one direction. This is an order-book estimate, not a guarantee against cancellations or hidden liquidity.</p></section><section class=\"panel\">{confidence_plot}<p>Stronger displayed prices sit toward the upper-left: narrower spreads and more executable liquidity on the weaker side. Bubble size reflects instance volume.</p></section><section class=\"panel\">{session_plot}<p>{html.escape(session_note)}</p></section><h2>Latest executable-depth table</h2><p>“Up cost” is resting ask notional through five points above the best ask. “Down notional” is resting bid notional through five points below the best bid.</p><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(field)}</th>' for field in ['Event','Market','Status','Best Bid','Best Ask','Spread','Up Cost 5pt','Down Notional 5pt','Weak Side 5pt','Imbalance 5pt','Instance Volume'])}</tr></thead><tbody>{''.join(table_rows)}</tbody></table></div><h2>Lifecycle events</h2><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(field)}</th>' for field in ['Detected At','Event','Market','Event Type','Condition ID','Related Condition ID'])}</tr></thead><tbody>{''.join(lifecycle_rows)}</tbody></table></div></main></body></html>"""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(document, encoding="utf-8")
 
@@ -617,7 +752,7 @@ def run_orderbook_update(data_dir: Path, *, timeout: float = 20, workers: int = 
     write_csv(lifecycle_path, LIFECYCLE_FIELDS, lifecycle)
     append_depth(depth_path, depth_rows)
     write_csv(summary_path, SUMMARY_FIELDS, summaries)
-    write_report(report_path, depth_rows, lifecycle)
+    write_report(report_path, read_csv(depth_path), lifecycle)
     return {
         "physical_instances": len(instances),
         "present_markets": sum(is_true(row.get("Present")) for row in instances),

@@ -10,11 +10,14 @@ intraday-range files.
 - `market_lifecycle_events.csv`: append-only detections for appearances, disappearances,
   replacements, closure, order acceptance, and order-book availability transitions.
 - `orderbook_depth_snapshots.csv`: append-only Yes-token book snapshots. Depth is stored at
-  1¢, 5¢, and 10¢ from the best quote, in both shares and price-weighted notional.
+  1¢, 2¢, 5¢, and 10¢ from the best quote, in both shares and price-weighted notional. Each
+  observation also records its Eastern hour and mutually exclusive Asia, Europe, U.S., or
+  evening session.
 - `logical_market_summary.csv`: one row per stable logical contract with cumulative volume
   across genuine replacement instances.
 - `orderbook_depth_report.html`: interactive current-depth chart plus complete depth and
-  lifecycle tables.
+  lifecycle tables. Its primary views rank markets by five-point move cost, compare spread
+  with executable two-sided depth, and aggregate liquidity by trading session.
 
 ## Identity rules
 
@@ -36,3 +39,12 @@ continues across both instances.
 For a band of N cents, bid depth includes bid levels from the best bid down through
 `best bid - N`; ask depth includes ask levels from the best ask up through `best ask + N`.
 Closed, disabled, non-accepting, and unavailable books are retained with an explicit status.
+
+`Weak Side Notional 5c` is the smaller of bid and ask notional within five cents of the
+corresponding best quote. It is used as an approximate market-resilience measure: a smaller
+value means one side of the displayed probability is cheaper to move. This is not guaranteed
+execution because orders may cancel and new or hidden liquidity may appear.
+
+Session analysis requires repeated intraday collection. The public current-book endpoint does
+not provide historical order-book states, so the Asia/Europe/U.S. comparison becomes reliable
+only after the tracker has accumulated observations across those windows.

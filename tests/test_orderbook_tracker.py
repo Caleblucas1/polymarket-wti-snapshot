@@ -6,6 +6,7 @@ from polymarket_orderbook import (
     instance_from_market,
     logical_ids,
     reconcile_instances,
+    session_for_timestamp,
     summarize_book,
     write_report,
 )
@@ -85,11 +86,26 @@ class OrderbookTrackerTests(unittest.TestCase):
         self.assertEqual(summary["Bid Shares 5c"], "60")
         self.assertEqual(summary["Ask Shares 5c"], "110")
 
+    def test_assigns_global_sessions_in_eastern_time(self):
+        self.assertEqual(
+            session_for_timestamp("2026-07-22T14:00:00Z"),
+            ("10", "U.S. (09–17 ET)"),
+        )
+        self.assertEqual(
+            session_for_timestamp("2026-07-22T05:00:00Z")[1],
+            "Asia (20–03 ET)",
+        )
+
     def test_writes_depth_report_table(self):
         row = {
             "Event Key": "wti-july", "Market Label": "↑ $90",
             "Book Status": "available", "Best Bid": "0.4", "Best Ask": "0.5",
             "Spread": "0.1", "Bid Shares 5c": "10", "Ask Shares 5c": "20",
+            "Bid Notional 5c": "5", "Ask Notional 5c": "10",
+            "Bid Notional 2c": "3", "Ask Notional 2c": "4",
+            "Weak Side Notional 2c": "3", "Weak Side Notional 5c": "5",
+            "Book Imbalance 5c": "-0.333", "Snapshot At": "2026-07-22T14:00:00Z",
+            "Session": "U.S. (09–17 ET)",
             "Instance Volume": "100", "Logical Lifetime Volume": "100",
             "Condition ID": "condition", "Logical Market ID": "wti-july::up-90",
         }
@@ -97,8 +113,27 @@ class OrderbookTrackerTests(unittest.TestCase):
             path = Path(temp_directory) / "report.html"
             write_report(path, [row], [])
             content = path.read_text(encoding="utf-8")
-        self.assertIn("Latest depth for every present market", content)
+        self.assertIn("Polymarket liquidity and market impact", content)
+        self.assertIn("Easiest current 5-point move", content)
         self.assertIn("↑ $90", content)
+
+    def test_report_labels_one_sided_book_without_hiding_zero_depth(self):
+        row = {
+            "Event Key": "wti-july", "Market Label": "↓ $10",
+            "Book Status": "available", "Best Bid": "", "Best Ask": "0.001",
+            "Spread": "", "Bid Notional 2c": "0", "Ask Notional 2c": "10",
+            "Weak Side Notional 2c": "0", "Bid Notional 5c": "0",
+            "Ask Notional 5c": "18.47", "Weak Side Notional 5c": "0",
+            "Book Imbalance 5c": "-1", "Snapshot At": "2026-07-22T14:00:00Z",
+            "Session": "U.S. (09–17 ET)", "Instance Volume": "100",
+            "Condition ID": "condition", "Logical Market ID": "wti-july::down-10",
+        }
+        with tempfile.TemporaryDirectory() as temp_directory:
+            path = Path(temp_directory) / "report.html"
+            write_report(path, [row], [])
+            content = path.read_text(encoding="utf-8")
+        self.assertIn("one-sided ($0)", content)
+        self.assertIn("$0 displayed resistance", content)
 
 
 if __name__ == "__main__":
