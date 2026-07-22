@@ -158,6 +158,14 @@ faster default. The command reports each event as `appended`, `already current`,
 as whiskers; dense heatmaps show the low–high range in each populated cell and
 in its hover details.
 
+When charts are enabled, the updater also publishes freshness-verified,
+content-addressed copies under `published_charts/` and writes
+`published_charts/latest.json`. A chart is rejected if the newest snapshot date
+is absent from its HTML. The published filename contains both that date and the
+chart's SHA-256 prefix, so changed content never reuses a previously surfaced
+filename. User-facing links should always come from the manifest rather than
+the mutable compatibility filename at the repository root.
+
 The same command refreshes `market_resolution_status.csv` from Gamma metadata.
 It records each contract's current UMA status, whether it is currently
 disputed, whether it has ever been disputed, the dispute count and status
