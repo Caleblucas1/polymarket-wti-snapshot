@@ -164,6 +164,31 @@ disputed, whether it has ever been disputed, the dispute count and status
 history, and whether it is closed or automatically resolved. Past disputes are
 sticky: a later resolved status does not erase the historical dispute flag.
 
+## Order-book depth and market lifecycle
+
+Order-book data uses an independent schema under `orderbook/` and does not
+modify the daily snapshot, intraday-range, or resolution-status CSVs. Collect a
+current depth snapshot for every configured event with:
+
+```bash
+python update_orderbooks.py --data-dir orderbook
+```
+
+The collector batches public CLOB book requests and stores Yes-token depth in
+shares and price-weighted notional at 1¢, 5¢, and 10¢ from the best quote. It
+also creates an interactive report and a physical market-instance inventory.
+
+Logical identity includes the configured event and the full normalized market
+label. When Polymarket publishes a new condition/token for the same logical
+contract, the new instance links to the prior condition and cumulative volume
+continues across the replacement. Appearances, disappearances, closure, order
+acceptance, and order-book state changes are recorded once in the lifecycle
+event file.
+
+Price direction remains part of contract identity: `↑ $80` and `↓ $80` share
+an `$80` comparison family, but are not stitched because they are opposite
+propositions. See `orderbook/SCHEMA.md` for the complete schema and definitions.
+
 ## GitHub snapshot storage
 
 The cumulative `*_9am_snapshot.csv` files, all seven companion range CSVs, and
