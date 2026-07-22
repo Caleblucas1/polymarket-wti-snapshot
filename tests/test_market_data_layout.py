@@ -44,6 +44,7 @@ class MarketDataLayoutTests(unittest.TestCase):
             target = destination / "catalog" / "market_instances.csv"
             self.assertEqual(len(actions), 1)
             self.assertFalse(source_file.exists())
+            self.assertFalse(source.exists())
             self.assertEqual(target.read_bytes(), b"Condition ID\nabc\n")
 
 

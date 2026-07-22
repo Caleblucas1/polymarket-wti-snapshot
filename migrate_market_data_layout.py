@@ -21,6 +21,7 @@ def file_hash(path: Path) -> str:
 def migration_pairs(source: Path, destination: Path) -> list[tuple[Path, Path]]:
     layout = MarketDataPaths(destination)
     pairs = [
+        (source / "SCHEMA.md", layout.root / "SCHEMA.md"),
         (source / "market_instances.csv", layout.market_instances),
         (source / "logical_market_summary.csv", layout.logical_markets),
         (source / "market_lifecycle_events.csv", layout.lifecycle_events),
@@ -49,6 +50,14 @@ def migrate(source: Path, destination: Path, *, apply: bool = False) -> list[str
             old.unlink()
         else:
             old.replace(new)
+    for directory in (source / "depth", source):
+        try:
+            directory.rmdir()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            # Preserve unrelated legacy files instead of deleting a non-empty directory.
+            pass
     return actions
 
 
