@@ -7,6 +7,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from publish_market_charts import publish_all_charts
 from polymarket_resolution_status import refresh_resolution_status
 from polymarket_wti_snapshot import TrackerResult
 from track_market import load_registry, run_event
@@ -78,7 +79,23 @@ def main() -> int:
         print(f"{event_key}: {detail}")
 
     status_failures: list[str] = []
-    if not args.with_charts:
+    chart_publish_failure = ""
+    if args.with_charts:
+        successful_events = [
+            key for key in args.events
+            if results.get(key, TrackerResult("failed", exit_code=1)).exit_code == 0
+        ]
+        try:
+            manifest_path, entries = publish_all_charts(
+                args.data_dir, event_keys=successful_events,
+            )
+            print(f"chart-manifest: {manifest_path}")
+            for entry in entries:
+                print(f"{entry['event']}: published {entry['published_chart']}")
+        except (OSError, ValueError) as exc:
+            chart_publish_failure = str(exc)
+            print(f"chart-publish: failed: {exc}")
+    else:
         registry = load_registry()
         selected_registry = {key: registry[key] for key in args.events}
         try:
@@ -99,7 +116,9 @@ def main() -> int:
             print(f"resolution-status: failed: {exc}")
     return (
         1
-        if any(result.exit_code != 0 for result in results.values()) or status_failures
+        if any(result.exit_code != 0 for result in results.values())
+        or status_failures
+        or chart_publish_failure
         else 0
     )
 
