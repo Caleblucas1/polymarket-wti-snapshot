@@ -171,6 +171,42 @@ def normalize_history(history: Iterable[dict[str, Any]]) -> tuple[list[float], l
     return [point[0] for point in points], [point[1] for point in points]
 
 
+def market_created_timestamp(market: dict[str, Any]) -> float:
+    """Return a sortable creation timestamp for physical-instance stitching."""
+    value = market.get("createdAt") or market.get("startDate")
+    if not value:
+        return float("-inf")
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return float("-inf")
+
+
+def stitch_market_histories(
+    instances: Iterable[tuple[str, float]],
+    histories: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, float]]:
+    """Stitch replacement-token histories without mixing overlapping instances.
+
+    The newest physical instance owns observations from its creation time forward;
+    the preceding instance remains authoritative before that boundary.
+    """
+    ordered = sorted(instances, key=lambda item: item[1])
+    stitched: list[dict[str, float]] = []
+    for index, (token_id, created_at) in enumerate(ordered):
+        next_created = ordered[index + 1][1] if index + 1 < len(ordered) else float("inf")
+        for item in histories.get(token_id, []):
+            try:
+                timestamp = float(item["t"])
+                price = float(item["p"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if timestamp >= created_at and timestamp < next_created:
+                stitched.append({"t": timestamp, "p": price})
+    stitched.sort(key=lambda item: item["t"])
+    return stitched
+
+
 def prices_at_or_before(
     history: Iterable[dict[str, Any]], targets: Iterable[datetime]
 ) -> list[float | None]:
@@ -340,25 +376,31 @@ def collect_rows_and_ranges(
     list[dict[str, str | float | None]],
 ]:
     """Collect snapshots and trailing-24-hour ranges from one history fetch."""
-    market_records: list[tuple[str, str]] = []
+    market_records: dict[str, list[tuple[str, float]]] = {}
     for market in markets:
         label = market.get("groupItemTitle") or market.get("question") or "Unknown market"
         token_id = yes_token_id(market)
         if token_id is None:
             logging.warning("Skipping %s: no CLOB token IDs", label)
             continue
-        market_records.append((str(label), token_id))
+        market_records.setdefault(str(label), []).append(
+            (token_id, market_created_timestamp(market))
+        )
 
     histories = fetch_histories(
         session,
-        [token_id for _, token_id in market_records],
+        list(dict.fromkeys(
+            token_id
+            for instances in market_records.values()
+            for token_id, _ in instances
+        )),
         targets,
         timeout,
     )
     rows: list[dict[str, str | float | None]] = []
     range_rows: list[dict[str, str | float | None]] = []
-    for label, token_id in market_records:
-        history = histories.get(token_id, [])
+    for label, instances in market_records.items():
+        history = stitch_market_histories(instances, histories)
         if not history:
             logging.warning("Skipping %s: no price history", label)
             continue
