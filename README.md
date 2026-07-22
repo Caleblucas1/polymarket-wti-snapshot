@@ -177,8 +177,11 @@ python update_orderbooks.py --data-dir orderbook
 The collector batches public CLOB book requests and stores Yes-token depth in
 shares and price-weighted notional at 1¢, 2¢, 5¢, and 10¢ from the best quote.
 Its report opens with clearly labeled blue bid-side support and red ask-side
-resistance, with a control to switch between dollar notional and shares. It
-then ranks markets by the weaker side's five-point move cost, compares
+resistance, with controls for effective dollars, raw five-point dollars, and
+raw five-point shares. Effective depth applies exponential distance decay with
+a one-probability-point half-life, preventing distant penny orders from
+dominating the default view. It then ranks markets by weaker-side effective
+depth, compares
 spread with executable two-sided depth, and summarizes liquidity by Asia,
 Europe, U.S., and evening hours as intraday observations accumulate. It also
 maintains a physical market-instance inventory.
@@ -191,12 +194,18 @@ acceptance, and order-book state changes are recorded once in the lifecycle
 event file. Each update retains that complete audit history but returns only
 newly detected lifecycle events in its command output.
 
-`Instance Volume` means traded volume reported for one physical Polymarket
-condition. `Logical Lifetime Volume` sums traded volume across genuine
-replacement conditions belonging to the same configured event and normalized
-market label. A related condition ID is either the previous condition for a
+The report calls `Instance Volume` **Current-listing volume**: traded volume for
+one physical Polymarket condition. It calls `Logical Lifetime Volume`
+**Continuous-market volume**: the sum across genuine replacement conditions
+belonging to the same event and normalized market label. A related condition ID is either the previous condition for a
 true replacement or a comparison condition in the same price-threshold family;
 the lifecycle event type distinguishes those cases.
+
+Hourly runs write depth and price observations into bounded monthly files under
+`orderbook/depth/`. The original baseline file remains readable, while the daily
+9:00 AM snapshot/range/status files are not modified. These high-frequency files
+remain in persistent local storage rather than being committed every hour;
+source code and compact lifecycle changes remain suitable for GitHub sync.
 
 Price direction remains part of contract identity: `↑ $80` and `↓ $80` share
 an `$80` comparison family, but are not stitched because they are opposite

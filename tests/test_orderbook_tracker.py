@@ -3,9 +3,12 @@ import unittest
 from pathlib import Path
 
 from polymarket_orderbook import (
+    append_depth,
+    depth_partition_path,
     instance_from_market,
     logical_ids,
     reconcile_instances,
+    read_depth_history,
     session_for_timestamp,
     summarize_book,
     write_report,
@@ -85,6 +88,33 @@ class OrderbookTrackerTests(unittest.TestCase):
         self.assertEqual(summary["Spread"], "0.05")
         self.assertEqual(summary["Bid Shares 5c"], "60")
         self.assertEqual(summary["Ask Shares 5c"], "110")
+        self.assertAlmostEqual(float(summary["Bid Effective Notional"]), 12.35)
+        self.assertAlmostEqual(float(summary["Ask Effective Notional"]), 27.0484375)
+
+    def test_hourly_depth_uses_monthly_partitions(self):
+        self.assertEqual(
+            depth_partition_path(Path("orderbook"), "2026-07-22T14:00:00Z"),
+            Path("orderbook/depth/orderbook_depth_2026-07.csv"),
+        )
+
+    def test_depth_history_combines_baseline_and_monthly_partitions(self):
+        with tempfile.TemporaryDirectory() as temp_directory:
+            base = Path(temp_directory)
+            baseline = {
+                "Snapshot At": "2026-07-22T14:00:00Z", "Condition ID": "old",
+                "Token ID": "yes-old", "Book Status": "available",
+            }
+            hourly = {
+                "Snapshot At": "2026-07-22T15:00:00Z", "Condition ID": "new",
+                "Token ID": "yes-new", "Book Status": "available",
+            }
+            append_depth(base / "orderbook_depth_snapshots.csv", [baseline])
+            append_depth(depth_partition_path(base, hourly["Snapshot At"]), [hourly])
+            history = read_depth_history(base)
+        self.assertEqual(
+            {row["Snapshot At"] for row in history},
+            {baseline["Snapshot At"], hourly["Snapshot At"]},
+        )
 
     def test_assigns_global_sessions_in_eastern_time(self):
         self.assertEqual(
@@ -104,6 +134,8 @@ class OrderbookTrackerTests(unittest.TestCase):
             "Bid Notional 5c": "5", "Ask Notional 5c": "10",
             "Bid Notional 2c": "3", "Ask Notional 2c": "4",
             "Weak Side Notional 2c": "3", "Weak Side Notional 5c": "5",
+            "Bid Effective Notional": "4", "Ask Effective Notional": "6",
+            "Weak Side Effective Notional": "4",
             "Book Imbalance 5c": "-0.333", "Snapshot At": "2026-07-22T14:00:00Z",
             "Session": "U.S. (09–17 ET)",
             "Instance Volume": "100", "Logical Lifetime Volume": "100",
@@ -114,10 +146,12 @@ class OrderbookTrackerTests(unittest.TestCase):
             write_report(path, [row], [])
             content = path.read_text(encoding="utf-8")
         self.assertIn("Polymarket liquidity and market impact", content)
-        self.assertIn("Easiest current 5-point move", content)
+        self.assertIn("Least effective liquidity", content)
         self.assertIn("resting bid liquidity", content)
-        self.assertIn("Dollar notional", content)
+        self.assertIn("Effective dollars", content)
         self.assertIn("Bid shares, 5pt", content)
+        self.assertIn("Current-listing volume", content)
+        self.assertIn("Continuous-market volume", content)
         self.assertNotIn(">Best Bid<", content)
         self.assertNotIn(">Best Ask<", content)
         self.assertIn("↑ $90", content)
@@ -129,6 +163,8 @@ class OrderbookTrackerTests(unittest.TestCase):
             "Spread": "", "Bid Notional 2c": "0", "Ask Notional 2c": "10",
             "Weak Side Notional 2c": "0", "Bid Notional 5c": "0",
             "Ask Notional 5c": "18.47", "Weak Side Notional 5c": "0",
+            "Bid Effective Notional": "0", "Ask Effective Notional": "7",
+            "Weak Side Effective Notional": "0",
             "Book Imbalance 5c": "-1", "Snapshot At": "2026-07-22T14:00:00Z",
             "Session": "U.S. (09–17 ET)", "Instance Volume": "100",
             "Condition ID": "condition", "Logical Market ID": "wti-july::down-10",

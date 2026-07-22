@@ -27,6 +27,7 @@ CLOB_BOOKS_URL = "https://clob.polymarket.com/books"
 CLOB_BOOK_URL = "https://clob.polymarket.com/book"
 BOOK_BATCH_LIMIT = 20
 DEPTH_BANDS = (0.01, 0.02, 0.05, 0.10)
+EFFECTIVE_DEPTH_HALF_LIFE = 0.01
 
 INSTANCE_FIELDS = [
     "Event Key", "Event Slug", "Logical Market ID", "Threshold Family ID",
@@ -53,7 +54,8 @@ DEPTH_FIELDS = [
     "Bid Notional 5c", "Ask Notional 5c", "Bid Shares 10c", "Ask Shares 10c",
     "Bid Notional 10c", "Ask Notional 10c", "Book Hash", "Instance Volume",
     "Logical Lifetime Volume", "Liquidity", "Last Trade Price", "Weak Side Notional 2c",
-    "Weak Side Notional 5c", "Book Imbalance 5c",
+    "Weak Side Notional 5c", "Book Imbalance 5c", "Bid Effective Notional",
+    "Ask Effective Notional", "Weak Side Effective Notional",
 ]
 
 SUMMARY_FIELDS = [
@@ -397,6 +399,14 @@ def summarize_book(book: dict[str, Any]) -> dict[str, str]:
         summary[f"Ask Shares {suffix}"] = number_text(sum(size for _, size in near_asks))
         summary[f"Bid Notional {suffix}"] = number_text(sum(price * size for price, size in near_bids))
         summary[f"Ask Notional {suffix}"] = number_text(sum(price * size for price, size in near_asks))
+    summary["Bid Effective Notional"] = number_text(sum(
+        price * size * (0.5 ** ((best_bid - price) / EFFECTIVE_DEPTH_HALF_LIFE))
+        for price, size in bids
+    ) if best_bid is not None else 0)
+    summary["Ask Effective Notional"] = number_text(sum(
+        price * size * (0.5 ** ((price - best_ask) / EFFECTIVE_DEPTH_HALF_LIFE))
+        for price, size in asks
+    ) if best_ask is not None else 0)
     return summary
 
 
@@ -502,6 +512,10 @@ def collect_depth_rows(
             row["Book Imbalance 5c"] = number_text(
                 (bid_5c - ask_5c) / total_5c if total_5c else None
             )
+            row["Weak Side Effective Notional"] = number_text(min(
+                float_value(row.get("Bid Effective Notional")),
+                float_value(row.get("Ask Effective Notional")),
+            ))
         rows.append(row)
     return rows
 
@@ -560,6 +574,34 @@ def append_depth(path: Path, rows: list[dict[str, str]]) -> None:
     write_csv(path, DEPTH_FIELDS, [*existing, *new_rows])
 
 
+def depth_partition_path(data_dir: Path, snapshot_at: str) -> Path:
+    """Keep hourly history in bounded monthly files instead of one ever-growing CSV."""
+    month = snapshot_at[:7]
+    if not re.fullmatch(r"\d{4}-\d{2}", month):
+        raise ValueError(f"Invalid snapshot timestamp: {snapshot_at}")
+    return data_dir / "depth" / f"orderbook_depth_{month}.csv"
+
+
+def read_depth_history(data_dir: Path) -> list[dict[str, str]]:
+    """Read the pre-partition baseline plus every monthly depth partition."""
+    paths = [
+        data_dir / "orderbook_depth_snapshots.csv",
+        *sorted((data_dir / "depth").glob("orderbook_depth_*.csv")),
+    ]
+    rows: list[dict[str, str]] = []
+    keys: set[tuple[str, str, str]] = set()
+    for path in paths:
+        for row in read_csv(path):
+            key = (
+                row.get("Snapshot At", ""), row.get("Condition ID", ""),
+                row.get("Token ID", ""),
+            )
+            if key not in keys:
+                rows.append(row)
+                keys.add(key)
+    return rows
+
+
 def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[str, str]]) -> None:
     import plotly.graph_objects as go
 
@@ -574,6 +616,8 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         available, key=lambda row: (row.get("Event Key", ""), row.get("Market Label", "")),
     )
     depth_labels = [f"{row['Event Key']} · {row['Market Label']}" for row in depth_rows]
+    bid_effective = [float_value(row.get("Bid Effective Notional")) for row in depth_rows]
+    ask_effective = [float_value(row.get("Ask Effective Notional")) for row in depth_rows]
     bid_notional = [float_value(row.get("Bid Notional 5c")) for row in depth_rows]
     ask_notional = [float_value(row.get("Ask Notional 5c")) for row in depth_rows]
     bid_shares = [float_value(row.get("Bid Shares 5c")) for row in depth_rows]
@@ -585,33 +629,55 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         float_value(row.get("Ask Shares 5c")),
         float_value(row.get("Instance Volume")),
         float_value(row.get("Logical Lifetime Volume")),
+        float_value(row.get("Bid Effective Notional")),
+        float_value(row.get("Ask Effective Notional")),
     ] for row in depth_rows]
     depth_figure = go.Figure()
     depth_figure.add_trace(go.Bar(
-        x=bid_notional, y=depth_labels, orientation="h",
-        name="BLUE — resting bids (buyers / downward support)",
+        x=bid_effective, y=depth_labels, orientation="h",
+        name="BLUE — effective bid support (distance-weighted dollars)",
         marker={"color": "#2563EB"}, customdata=depth_customdata,
         hovertemplate=(
-            "<b>%{y}</b><br>Bid-side dollars within 5 points: $%{customdata[0]:,.2f}"
+            "<b>%{y}</b><br>Effective bid-side depth: $%{customdata[6]:,.2f}"
+            "<br>Raw bid-side dollars within 5 points: $%{customdata[0]:,.2f}"
             "<br>Bid-side shares within 5 points: %{customdata[2]:,.0f}"
-            "<br>Physical-instance traded volume: $%{customdata[4]:,.0f}"
-            "<br>Logical-lifetime traded volume: $%{customdata[5]:,.0f}<extra></extra>"
+            "<br>Current-listing volume: $%{customdata[4]:,.0f}"
+            "<br>Continuous-market volume: $%{customdata[5]:,.0f}<extra></extra>"
         ),
     ))
     depth_figure.add_trace(go.Bar(
-        x=ask_notional, y=depth_labels, orientation="h",
-        name="RED — resting asks (sellers / upward resistance)",
+        x=ask_effective, y=depth_labels, orientation="h",
+        name="RED — effective ask resistance (distance-weighted dollars)",
+        marker={"color": "#DC2626"}, customdata=depth_customdata,
+        hovertemplate=(
+            "<b>%{y}</b><br>Effective ask-side depth: $%{customdata[7]:,.2f}"
+            "<br>Raw ask-side dollars within 5 points: $%{customdata[1]:,.2f}"
+            "<br>Ask-side shares within 5 points: %{customdata[3]:,.0f}"
+            "<br>Current-listing volume: $%{customdata[4]:,.0f}"
+            "<br>Continuous-market volume: $%{customdata[5]:,.0f}<extra></extra>"
+        ),
+    ))
+    depth_figure.add_trace(go.Bar(
+        x=bid_notional, y=depth_labels, orientation="h", visible=False,
+        name="BLUE — raw bid dollars within 5 points",
+        marker={"color": "#2563EB"}, customdata=depth_customdata,
+        hovertemplate=(
+            "<b>%{y}</b><br>Bid-side dollars within 5 points: $%{customdata[0]:,.2f}"
+            "<br>Bid-side shares within 5 points: %{customdata[2]:,.0f}<extra></extra>"
+        ),
+    ))
+    depth_figure.add_trace(go.Bar(
+        x=ask_notional, y=depth_labels, orientation="h", visible=False,
+        name="RED — raw ask dollars within 5 points",
         marker={"color": "#DC2626"}, customdata=depth_customdata,
         hovertemplate=(
             "<b>%{y}</b><br>Ask-side dollars within 5 points: $%{customdata[1]:,.2f}"
-            "<br>Ask-side shares within 5 points: %{customdata[3]:,.0f}"
-            "<br>Physical-instance traded volume: $%{customdata[4]:,.0f}"
-            "<br>Logical-lifetime traded volume: $%{customdata[5]:,.0f}<extra></extra>"
+            "<br>Ask-side shares within 5 points: %{customdata[3]:,.0f}<extra></extra>"
         ),
     ))
     depth_figure.add_trace(go.Bar(
         x=bid_shares, y=depth_labels, orientation="h", visible=False,
-        name="BLUE — resting bid shares (buyers / downward support)",
+        name="BLUE — raw bid shares within 5 points",
         marker={"color": "#2563EB"}, customdata=depth_customdata,
         hovertemplate=(
             "<b>%{y}</b><br>Bid-side shares within 5 points: %{customdata[2]:,.0f}"
@@ -620,7 +686,7 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
     ))
     depth_figure.add_trace(go.Bar(
         x=ask_shares, y=depth_labels, orientation="h", visible=False,
-        name="RED — resting ask shares (sellers / upward resistance)",
+        name="RED — raw ask shares within 5 points",
         marker={"color": "#DC2626"}, customdata=depth_customdata,
         hovertemplate=(
             "<b>%{y}</b><br>Ask-side shares within 5 points: %{customdata[3]:,.0f}"
@@ -630,18 +696,23 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
     depth_figure.update_layout(
         title={"text": "Resting liquidity within five probability points of each best quote", "x": 0.5},
         template="plotly_white", barmode="group", height=max(900, 31 * len(depth_rows)),
-        xaxis={"title": "Price-weighted resting notional ($)"}, yaxis={"title": ""},
+        xaxis={"title": "Effective resting depth ($, exponentially distance-weighted)"},
+        yaxis={"title": ""},
         legend={"orientation": "h", "y": 1.075, "x": 0},
         margin={"l": 245, "r": 40, "t": 125, "b": 85},
         updatemenus=[{
             "type": "buttons", "direction": "right", "x": 0, "y": 1.12,
             "buttons": [
-                {"label": "Dollar notional", "method": "update", "args": [
-                    {"visible": [True, True, False, False]},
+                {"label": "Effective dollars", "method": "update", "args": [
+                    {"visible": [True, True, False, False, False, False]},
+                    {"xaxis.title.text": "Effective resting depth ($, exponentially distance-weighted)"},
+                ]},
+                {"label": "Raw 5pt dollars", "method": "update", "args": [
+                    {"visible": [False, False, True, True, False, False]},
                     {"xaxis.title.text": "Price-weighted resting notional ($)"},
                 ]},
-                {"label": "Shares", "method": "update", "args": [
-                    {"visible": [False, False, True, True]},
+                {"label": "Raw 5pt shares", "method": "update", "args": [
+                    {"visible": [False, False, False, False, True, True]},
                     {"xaxis.title.text": "Resting outcome-token shares"},
                 ]},
             ],
@@ -650,10 +721,10 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
 
     easiest = sorted(
         available,
-        key=lambda row: float_value(row.get("Weak Side Notional 5c")),
+        key=lambda row: float_value(row.get("Weak Side Effective Notional")),
     )[:25]
     easiest.reverse()
-    move_values = [float_value(row.get("Weak Side Notional 5c")) for row in easiest]
+    move_values = [float_value(row.get("Weak Side Effective Notional")) for row in easiest]
     # A zero value is economically meaningful: one side has no displayed depth.
     # Plot it at a small visual floor so it remains visible on the logarithmic axis.
     move_plot_values = [max(value, 0.10) for value in move_values]
@@ -670,10 +741,10 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
             float_value(row.get("Spread")) * 100,
             float_value(row.get("Book Imbalance 5c")),
             row.get("Best Bid", ""), row.get("Best Ask", ""),
-            float_value(row.get("Weak Side Notional 5c")),
+            float_value(row.get("Weak Side Effective Notional")),
         ] for row in easiest],
         hovertemplate=(
-            "<b>%{y}</b><br>Weakest-side 5-point depth: $%{customdata[6]:,.2f}"
+            "<b>%{y}</b><br>Weaker-side effective depth: $%{customdata[6]:,.2f}"
             "<br>Cost to lift asks through +5 points: $%{customdata[0]:,.0f}"
             "<br>Bid notional through −5 points: $%{customdata[1]:,.0f}"
             "<br>Spread: %{customdata[2]:.2f} points"
@@ -682,9 +753,9 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         ),
     ))
     move_figure.update_layout(
-        title={"text": "Easiest markets to move by roughly five probability points", "x": 0.5},
+        title={"text": "Markets with the least nearby effective liquidity", "x": 0.5},
         template="plotly_white", height=max(650, 31 * len(easiest)), showlegend=False,
-        xaxis={"title": "Weaker side resting notional ($, log scale)", "type": "log"},
+        xaxis={"title": "Weaker-side effective depth ($, log scale)", "type": "log"},
         yaxis={"title": ""}, margin={"l": 235, "r": 95, "t": 85, "b": 75},
         annotations=[{
             "text": "One-sided books have $0 displayed resistance and use a $0.10 visual floor.",
@@ -700,11 +771,11 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
     for index, event_key in enumerate(events):
         event_rows = [
             row for row in available
-            if row["Event Key"] == event_key and float_value(row.get("Weak Side Notional 2c")) > 0
+            if row["Event Key"] == event_key and float_value(row.get("Weak Side Effective Notional")) > 0
         ]
         confidence_figure.add_trace(go.Scatter(
             x=[float_value(row.get("Spread")) * 100 for row in event_rows],
-            y=[float_value(row.get("Weak Side Notional 2c")) for row in event_rows],
+            y=[float_value(row.get("Weak Side Effective Notional")) for row in event_rows],
             mode="markers", name=event_key,
             marker={
                 "color": palette[index % len(palette)], "opacity": 0.78,
@@ -719,17 +790,17 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
             ] for row in event_rows],
             hovertemplate=(
                 "<b>%{text}</b><br>Spread: %{x:.2f} points"
-                "<br>Weakest-side depth within 2 points: $%{y:,.0f}"
+                "<br>Weaker-side effective depth: $%{y:,.0f}"
                 "<br>Weakest-side depth within 5 points: $%{customdata[2]:,.0f}"
                 "<br>Best bid / ask: %{customdata[0]} / %{customdata[1]}"
-                "<br>Lifetime instance volume: $%{customdata[3]:,.0f}<extra>%{fullData.name}</extra>"
+                "<br>Current-listing volume: $%{customdata[3]:,.0f}<extra>%{fullData.name}</extra>"
             ),
         ))
     confidence_figure.update_layout(
         title={"text": "Displayed-price credibility: spread versus executable two-sided depth", "x": 0.5},
         template="plotly_white", height=650,
         xaxis={"title": "Bid–ask spread (probability points)", "rangemode": "tozero"},
-        yaxis={"title": "Weaker side notional within 2 points ($, log scale)", "type": "log"},
+        yaxis={"title": "Weaker-side effective depth ($, log scale)", "type": "log"},
         legend={"orientation": "h", "y": 1.12},
         margin={"l": 80, "r": 35, "t": 115, "b": 75},
     )
@@ -742,9 +813,11 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         session_rows = [
             row for row in historical_available
             if (row.get("Session") or session_for_timestamp(row["Snapshot At"])[1]) == session_name
-            and float_value(row.get("Weak Side Notional 5c")) > 0
+            and float_value(row.get("Weak Side Effective Notional")) > 0
         ]
-        session_values.append(median([float_value(row["Weak Side Notional 5c"]) for row in session_rows]) if session_rows else 0)
+        session_values.append(median([
+            float_value(row["Weak Side Effective Notional"]) for row in session_rows
+        ]) if session_rows else 0)
         session_samples.append(len({row["Snapshot At"] for row in session_rows}))
         session_observations.append(len(session_rows))
     session_figure = go.Figure(go.Bar(
@@ -754,7 +827,7 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         textposition="outside",
         customdata=[[samples, observations] for samples, observations in zip(session_samples, session_observations)],
         hovertemplate=(
-            "<b>%{x}</b><br>Median weakest-side 5-point depth: $%{y:,.0f}"
+            "<b>%{x}</b><br>Median weaker-side effective depth: $%{y:,.0f}"
             "<br>Book snapshots: %{customdata[0]}"
             "<br>Market observations: %{customdata[1]}<extra></extra>"
         ),
@@ -763,7 +836,7 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         title={"text": "When liquidity is thickest", "x": 0.5},
         template="plotly_white", height=520, showlegend=False,
         xaxis={"title": "Mutually exclusive Eastern-time session"},
-        yaxis={"title": "Median weakest-side 5-point depth ($)", "rangemode": "tozero"},
+        yaxis={"title": "Median weaker-side effective depth ($)", "rangemode": "tozero"},
         margin={"l": 85, "r": 35, "t": 85, "b": 90},
     )
 
@@ -777,10 +850,13 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         ("Spread", "Spread (points)"), ("Bid Shares 5c", "Bid shares, 5pt"),
         ("Bid Notional 5c", "Bid dollars, 5pt"), ("Ask Shares 5c", "Ask shares, 5pt"),
         ("Ask Notional 5c", "Ask dollars, 5pt"),
+        ("Bid Effective Notional", "Effective bid dollars"),
+        ("Ask Effective Notional", "Effective ask dollars"),
+        ("Weak Side Effective Notional", "Weaker-side effective dollars"),
         ("Weak Side Notional 5c", "Weaker-side dollars, 5pt"),
         ("Book Imbalance 5c", "Imbalance, 5pt"),
-        ("Instance Volume", "Physical-instance traded volume"),
-        ("Logical Lifetime Volume", "Logical-lifetime traded volume"),
+        ("Instance Volume", "Current-listing volume"),
+        ("Logical Lifetime Volume", "Continuous-market volume"),
     ]
 
     def table_value(row: dict[str, str], field: str) -> str:
@@ -810,10 +886,12 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
             for field in ["Detected At", "Event Key", "Market Label", "Event Type", "Condition ID", "Related Condition ID"]
         ) + "</tr>")
     available_count = len(available)
-    easiest_row = min(available, key=lambda row: float_value(row.get("Weak Side Notional 5c")), default={})
-    resilient_row = max(available, key=lambda row: float_value(row.get("Weak Side Notional 5c")), default={})
+    easiest_row = min(available, key=lambda row: float_value(row.get("Weak Side Effective Notional")), default={})
+    resilient_row = max(available, key=lambda row: float_value(row.get("Weak Side Effective Notional")), default={})
     distinct_snapshots = len({row.get("Snapshot At") for row in rows})
-    easiest_value = float_value(easiest_row.get("Weak Side Notional 5c"))
+    easiest_value = float_value(easiest_row.get("Weak Side Effective Notional"))
+    resilient_value = float_value(resilient_row.get("Weak Side Effective Notional"))
+    raw_resilient_value = float_value(resilient_row.get("Weak Side Notional 5c"))
     easiest_display = "one-sided ($0)" if easiest_row and easiest_value == 0 else f"${easiest_value:,.0f}"
     session_note = (
         "Session comparisons are preliminary. At least 8–12 snapshots spanning multiple sessions are needed before treating the pattern as evidence."
@@ -821,6 +899,26 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         else "Session bars use the median across all available market observations in each Eastern-time window."
     )
     document = f"""<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Polymarket liquidity and market impact</title><style>body{{font-family:Arial,sans-serif;margin:24px;color:#111827;background:#f9fafb}}main{{max-width:1500px;margin:auto}}.hero,.panel,.card{{background:white;border:1px solid #e5e7eb;border-radius:12px}}.hero{{padding:22px;margin-bottom:18px}}.grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}}.card{{padding:14px}}.kpi{{font-size:24px;font-weight:700;margin-top:6px}}.label,.note{{font-size:12px;color:#6b7280}}.panel{{padding:12px;margin:18px 0}}table{{border-collapse:collapse;width:100%;font-size:12px;margin-top:16px;background:white}}th,td{{border:1px solid #d1d5db;padding:6px;text-align:right}}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){{text-align:left}}th{{background:#f3f4f6;position:sticky;top:0}}.scroll{{overflow:auto;max-height:720px}}p,li{{color:#4b5563;line-height:1.45}}@media(max-width:800px){{.grid{{grid-template-columns:1fr 1fr}}body{{margin:8px}}}}</style></head><body><main><section class=\"hero\"><h1>Polymarket liquidity and market impact</h1><p>Latest book: {html.escape(latest_at)}. The dashboard measures executable Yes-token liquidity—not just displayed probability.</p><div class=\"grid\"><div class=\"card\"><div class=\"label\">Available books</div><div class=\"kpi\">{available_count}</div></div><div class=\"card\"><div class=\"label\">Easiest current 5-point move</div><div class=\"kpi\">{easiest_display}</div><div class=\"note\">{html.escape(str(easiest_row.get('Event Key','')))} · {html.escape(str(easiest_row.get('Market Label','')))}</div></div><div class=\"card\"><div class=\"label\">Most resilient current 5-point book</div><div class=\"kpi\">${float_value(resilient_row.get('Weak Side Notional 5c')):,.0f}</div><div class=\"note\">{html.escape(str(resilient_row.get('Event Key','')))} · {html.escape(str(resilient_row.get('Market Label','')))}</div></div><div class=\"card\"><div class=\"label\">Intraday snapshots collected</div><div class=\"kpi\">{distinct_snapshots}</div></div></div><ul><li><b>Blue</b> is resting bid liquidity: buyers supporting the price against a downward move.</li><li><b>Red</b> is resting ask liquidity: sellers resisting an upward move.</li><li><b>Shares</b> count outcome tokens; <b>dollar notional</b> is the sum of price × shares and better represents economic depth.</li><li><b>Physical-instance volume</b> covers the current Polymarket condition only; <b>logical-lifetime volume</b> sums genuine replacement instances of the same event and market.</li></ul></section><section class=\"panel\">{depth_plot}<p>Use the buttons above the chart to switch between dollars and shares. At very low probabilities, a huge share count can represent modest dollar value; if the best bid is below five cents, this band can also include almost the full bid book.</p></section><section class=\"panel\">{move_plot}<p>Lower bars are easier to push: the metric is the smaller of ask notional through +5 points and bid notional through −5 points. A one-sided book has no displayed resistance in one direction. This is an order-book estimate, not a guarantee against cancellations or hidden liquidity.</p></section><section class=\"panel\">{confidence_plot}<p>Stronger displayed prices sit toward the upper-left: narrower spreads and more executable liquidity on the weaker side. Bubble size reflects physical-instance traded volume.</p></section><section class=\"panel\">{session_plot}<p>{html.escape(session_note)}</p></section><h2>Latest executable-depth table</h2><p>Every five-point depth field refers to currently resting orders within $0.05 probability of the corresponding best quote. Shares and price-weighted dollar notional are shown separately. Best bid and best ask are intentionally omitted.</p><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(label)}</th>' for _, label in table_columns)}</tr></thead><tbody>{''.join(table_rows)}</tbody></table></div><h2>Lifecycle events</h2><p>The condition ID identifies the physical Polymarket contract. A related condition ID points either to the prior physical contract for a true replacement, or to a comparison contract in the same threshold family; the event type and details distinguish those cases. Full history remains append-only, while update summaries report only newly detected events.</p><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(field)}</th>' for field in ['Detected At','Event','Market','Event Type','Condition ID','Related Condition ID'])}</tr></thead><tbody>{''.join(lifecycle_rows)}</tbody></table></div></main></body></html>"""
+    document = (
+        document
+        .replace(
+            f'<div class="label">Most resilient current 5-point book</div><div class="kpi">${raw_resilient_value:,.0f}</div>',
+            f'<div class="label">Most effective liquidity</div><div class="kpi">${resilient_value:,.0f}</div>',
+        )
+        .replace("Easiest current 5-point move", "Least effective liquidity")
+        .replace("Most resilient current 5-point book", "Most effective liquidity")
+        .replace("Physical-instance volume", "Current-listing volume")
+        .replace("physical-instance traded volume", "current-listing volume")
+        .replace("logical-lifetime volume", "continuous-market volume")
+        .replace(
+            "Use the buttons above the chart to switch between dollars and shares.",
+            "Use the buttons above the chart to compare effective dollars, raw five-point dollars, and raw five-point shares. Effective depth gives each order half as much weight for every probability point it sits away from the best quote.",
+        )
+        .replace(
+            "Lower bars are easier to push: the metric is the smaller of ask notional through +5 points and bid notional through −5 points.",
+            "Lower bars are easier to push: the metric is the smaller of exponentially distance-weighted bid and ask dollar depth.",
+        )
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(document, encoding="utf-8")
 
@@ -835,7 +933,7 @@ def run_orderbook_update(data_dir: Path, *, timeout: float = 20, workers: int = 
     ]
     instance_path = data_dir / "market_instances.csv"
     lifecycle_path = data_dir / "market_lifecycle_events.csv"
-    depth_path = data_dir / "orderbook_depth_snapshots.csv"
+    depth_path = depth_partition_path(data_dir, detected_at)
     summary_path = data_dir / "logical_market_summary.csv"
     report_path = data_dir / "orderbook_depth_report.html"
 
@@ -856,7 +954,7 @@ def run_orderbook_update(data_dir: Path, *, timeout: float = 20, workers: int = 
     write_csv(lifecycle_path, LIFECYCLE_FIELDS, lifecycle)
     append_depth(depth_path, depth_rows)
     write_csv(summary_path, SUMMARY_FIELDS, summaries)
-    write_report(report_path, read_csv(depth_path), lifecycle)
+    write_report(report_path, read_depth_history(data_dir), lifecycle)
     return {
         "physical_instances": len(instances),
         "present_markets": sum(is_true(row.get("Present")) for row in instances),

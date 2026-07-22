@@ -9,10 +9,11 @@ intraday-range files.
   market may have multiple instances when Polymarket replaces a contract.
 - `market_lifecycle_events.csv`: append-only detections for appearances, disappearances,
   replacements, closure, order acceptance, and order-book availability transitions.
-- `orderbook_depth_snapshots.csv`: append-only Yes-token book snapshots. Depth is stored at
-  1¢, 2¢, 5¢, and 10¢ from the best quote, in both shares and price-weighted notional. Each
-  observation also records its Eastern hour and mutually exclusive Asia, Europe, U.S., or
-  evening session.
+- `orderbook_depth_snapshots.csv`: the append-only pre-partition baseline.
+- `depth/orderbook_depth_YYYY-MM.csv`: append-only hourly Yes-token book and price snapshots,
+  partitioned monthly. Depth is stored at 1¢, 2¢, 5¢, and 10¢ from the best quote, in both
+  shares and price-weighted notional. Each observation also records its Eastern hour and
+  mutually exclusive Asia, Europe, U.S., or evening session.
 - `logical_market_summary.csv`: one row per stable logical contract with cumulative volume
   across genuine replacement instances.
 - `orderbook_depth_report.html`: interactive current-depth chart plus complete depth and
@@ -56,11 +57,24 @@ corresponding best quote. It is used as an approximate market-resilience measure
 value means one side of the displayed probability is cheaper to move. This is not guaranteed
 execution because orders may cancel and new or hidden liquidity may appear.
 
+The report's default **effective depth** avoids the hard five-cent boundary. Each resting
+order's price-weighted notional receives an exponential weight based on distance from the best
+quote, with a one-probability-point half-life: an order one point away counts 50%, two points
+away 25%, and five points away 3.125%. Raw five-point dollars and shares remain available.
+
 Share depth and dollar depth are different measures. Shares count resting outcome tokens.
 Notional is `price × shares`, summed across the included levels. A very large share count at a
-low probability can therefore represent modest economic depth. `Instance Volume` is the
-Gamma-reported traded volume for one physical condition. `Logical Lifetime Volume` sums that
-volume across true replacement instances of the same event and normalized market label.
+low probability can therefore represent modest economic depth. The report renames `Instance
+Volume` to **Current-listing volume** and `Logical Lifetime Volume` to **Continuous-market
+volume**. The former covers one physical condition; the latter sums true replacement
+instances of the same event and normalized market label.
+
+New hourly depth and price observations are partitioned by month under `orderbook/depth/`.
+The pre-partition `orderbook_depth_snapshots.csv` is retained as a historical baseline and is
+read together with every monthly file. This keeps the independent hourly schema from changing
+the established daily 9:00 AM snapshot, range, and resolution-status files. Monthly hourly
+partitions are intentionally local-only so hourly commits do not inflate Git history; lifecycle
+changes can still be synchronized when detected.
 
 The full lifecycle file remains append-only. The update command's JSON output contains only
 the lifecycle events detected during that run under `new_lifecycle_events`, so routine reports
