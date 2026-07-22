@@ -18,6 +18,7 @@ from polymarket_wti_snapshot import (
     run_snapshot,
     snapshot_targets,
     yes_token_id,
+    stitch_market_histories,
 )
 
 
@@ -54,6 +55,16 @@ class SnapshotTests(unittest.TestCase):
 
     def test_falls_back_to_first_token(self):
         self.assertEqual(yes_token_id({"clobTokenIds": ["first", "second"]}), "first")
+
+    def test_stitches_replacement_histories_at_new_instance_creation(self):
+        histories = {
+            "old": [{"t": 100, "p": 0.2}, {"t": 210, "p": 1.0}],
+            "new": [{"t": 190, "p": 0.4}, {"t": 220, "p": 0.6}],
+        }
+        stitched = stitch_market_histories(
+            [("old", float("-inf")), ("new", 200)], histories
+        )
+        self.assertEqual(stitched, [{"t": 100.0, "p": 0.2}, {"t": 220.0, "p": 0.6}])
 
     def test_selects_latest_price_at_or_before_target(self):
         targets = [
