@@ -164,6 +164,14 @@ disputed, whether it has ever been disputed, the dispute count and status
 history, and whether it is closed or automatically resolved. Past disputes are
 sticky: a later resolved status does not erase the historical dispute flag.
 
+When `--with-charts` is run for all configured events, the command also writes
+`related_houthi_market_comparison.html`. That panel compares hand-selected
+related markets such as Houthi shipping July 31 versus Houthi-Saudi July 31 and
+Bab el-Mandeb August 31 versus Houthi-Saudi July 24. It shows both probabilities,
+their intraday low-high whiskers, and the point-in-time spread. The panel is for
+research and anomaly detection only; similar prices are not treated as
+arbitrage because each contract resolves under its own rules.
+
 ## GitHub snapshot storage
 
 The cumulative `*_9am_snapshot.csv` files, all seven companion range CSVs, and

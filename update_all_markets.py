@@ -9,6 +9,8 @@ from pathlib import Path
 
 from polymarket_resolution_status import refresh_resolution_status
 from polymarket_wti_snapshot import TrackerResult
+from plot_related_markets import DEFAULT_OUTPUT as RELATED_MARKET_CHART
+from plot_related_markets import write_related_market_chart
 from track_market import load_registry, run_event
 
 
@@ -97,6 +99,17 @@ def main() -> int:
         except (OSError, ValueError) as exc:
             status_failures = [str(exc)]
             print(f"resolution-status: failed: {exc}")
+    elif set(args.events) == set(load_registry()):
+        try:
+            count = write_related_market_chart(
+                data_dir=args.data_dir,
+                output=args.data_dir / RELATED_MARKET_CHART,
+                days=args.days,
+            )
+            print(f"related-markets: wrote {count} comparison(s)")
+        except (OSError, ValueError) as exc:
+            status_failures = [str(exc)]
+            print(f"related-markets: failed: {exc}")
     return (
         1
         if any(result.exit_code != 0 for result in results.values()) or status_failures
