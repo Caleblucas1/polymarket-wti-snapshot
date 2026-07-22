@@ -1,5 +1,22 @@
 __pycache__/
 *.py[cod]
 .venv/
-wti_july_2026_9am_snapshot.csv
+# Snapshot CSVs are intentionally versioned so GitHub can serve as a durable
+# second copy and GitHub Actions can update them. Other ad-hoc CSV exports stay
+# ignored.
+*.csv
+!/*_9am_snapshot.csv
+!/*_9am_ranges.csv
+!/market_resolution_status.csv
+!/market_data/catalog/*.csv
+!/market_data/lifecycle/*.csv
+!/market_data/hourly/market_observations_baseline.csv
+# High-frequency monthly observations remain in persistent local storage.
+/market_data/hourly/market_observations_????-??.csv
 wti_7_day_time_series.html
+bab_el_mandeb_7_day_chart.html
+iran_gulf_action_7_day_chart.html
+houthi_shipping_7_day_chart.html
+houthi_saudi_action_7_day_chart.html
+crude_oil_ath_7_day_chart.html
+wti_week_july_13_7_day_chart.html
