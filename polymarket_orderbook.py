@@ -570,6 +570,84 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
     available = [row for row in latest if row.get("Book Status") == "available"]
     historical_available = [row for row in rows if row.get("Book Status") == "available"]
 
+    depth_rows = sorted(
+        available, key=lambda row: (row.get("Event Key", ""), row.get("Market Label", "")),
+    )
+    depth_labels = [f"{row['Event Key']} · {row['Market Label']}" for row in depth_rows]
+    bid_notional = [float_value(row.get("Bid Notional 5c")) for row in depth_rows]
+    ask_notional = [float_value(row.get("Ask Notional 5c")) for row in depth_rows]
+    bid_shares = [float_value(row.get("Bid Shares 5c")) for row in depth_rows]
+    ask_shares = [float_value(row.get("Ask Shares 5c")) for row in depth_rows]
+    depth_customdata = [[
+        float_value(row.get("Bid Notional 5c")),
+        float_value(row.get("Ask Notional 5c")),
+        float_value(row.get("Bid Shares 5c")),
+        float_value(row.get("Ask Shares 5c")),
+        float_value(row.get("Instance Volume")),
+        float_value(row.get("Logical Lifetime Volume")),
+    ] for row in depth_rows]
+    depth_figure = go.Figure()
+    depth_figure.add_trace(go.Bar(
+        x=bid_notional, y=depth_labels, orientation="h",
+        name="BLUE — resting bids (buyers / downward support)",
+        marker={"color": "#2563EB"}, customdata=depth_customdata,
+        hovertemplate=(
+            "<b>%{y}</b><br>Bid-side dollars within 5 points: $%{customdata[0]:,.2f}"
+            "<br>Bid-side shares within 5 points: %{customdata[2]:,.0f}"
+            "<br>Physical-instance traded volume: $%{customdata[4]:,.0f}"
+            "<br>Logical-lifetime traded volume: $%{customdata[5]:,.0f}<extra></extra>"
+        ),
+    ))
+    depth_figure.add_trace(go.Bar(
+        x=ask_notional, y=depth_labels, orientation="h",
+        name="RED — resting asks (sellers / upward resistance)",
+        marker={"color": "#DC2626"}, customdata=depth_customdata,
+        hovertemplate=(
+            "<b>%{y}</b><br>Ask-side dollars within 5 points: $%{customdata[1]:,.2f}"
+            "<br>Ask-side shares within 5 points: %{customdata[3]:,.0f}"
+            "<br>Physical-instance traded volume: $%{customdata[4]:,.0f}"
+            "<br>Logical-lifetime traded volume: $%{customdata[5]:,.0f}<extra></extra>"
+        ),
+    ))
+    depth_figure.add_trace(go.Bar(
+        x=bid_shares, y=depth_labels, orientation="h", visible=False,
+        name="BLUE — resting bid shares (buyers / downward support)",
+        marker={"color": "#2563EB"}, customdata=depth_customdata,
+        hovertemplate=(
+            "<b>%{y}</b><br>Bid-side shares within 5 points: %{customdata[2]:,.0f}"
+            "<br>Bid-side dollars within 5 points: $%{customdata[0]:,.2f}<extra></extra>"
+        ),
+    ))
+    depth_figure.add_trace(go.Bar(
+        x=ask_shares, y=depth_labels, orientation="h", visible=False,
+        name="RED — resting ask shares (sellers / upward resistance)",
+        marker={"color": "#DC2626"}, customdata=depth_customdata,
+        hovertemplate=(
+            "<b>%{y}</b><br>Ask-side shares within 5 points: %{customdata[3]:,.0f}"
+            "<br>Ask-side dollars within 5 points: $%{customdata[1]:,.2f}<extra></extra>"
+        ),
+    ))
+    depth_figure.update_layout(
+        title={"text": "Resting liquidity within five probability points of each best quote", "x": 0.5},
+        template="plotly_white", barmode="group", height=max(900, 31 * len(depth_rows)),
+        xaxis={"title": "Price-weighted resting notional ($)"}, yaxis={"title": ""},
+        legend={"orientation": "h", "y": 1.075, "x": 0},
+        margin={"l": 245, "r": 40, "t": 125, "b": 85},
+        updatemenus=[{
+            "type": "buttons", "direction": "right", "x": 0, "y": 1.12,
+            "buttons": [
+                {"label": "Dollar notional", "method": "update", "args": [
+                    {"visible": [True, True, False, False]},
+                    {"xaxis.title.text": "Price-weighted resting notional ($)"},
+                ]},
+                {"label": "Shares", "method": "update", "args": [
+                    {"visible": [False, False, True, True]},
+                    {"xaxis.title.text": "Resting outcome-token shares"},
+                ]},
+            ],
+        }],
+    )
+
     easiest = sorted(
         available,
         key=lambda row: float_value(row.get("Weak Side Notional 5c")),
@@ -690,14 +768,40 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
     )
 
     config = {"displaylogo": False, "responsive": True}
-    move_plot = move_figure.to_html(include_plotlyjs="cdn", full_html=False, config=config)
+    depth_plot = depth_figure.to_html(include_plotlyjs="cdn", full_html=False, config=config)
+    move_plot = move_figure.to_html(include_plotlyjs=False, full_html=False, config=config)
     confidence_plot = confidence_figure.to_html(include_plotlyjs=False, full_html=False, config=config)
     session_plot = session_figure.to_html(include_plotlyjs=False, full_html=False, config=config)
+    table_columns = [
+        ("Event Key", "Event"), ("Market Label", "Market"), ("Book Status", "Status"),
+        ("Spread", "Spread (points)"), ("Bid Shares 5c", "Bid shares, 5pt"),
+        ("Bid Notional 5c", "Bid dollars, 5pt"), ("Ask Shares 5c", "Ask shares, 5pt"),
+        ("Ask Notional 5c", "Ask dollars, 5pt"),
+        ("Weak Side Notional 5c", "Weaker-side dollars, 5pt"),
+        ("Book Imbalance 5c", "Imbalance, 5pt"),
+        ("Instance Volume", "Physical-instance traded volume"),
+        ("Logical Lifetime Volume", "Logical-lifetime traded volume"),
+    ]
+
+    def table_value(row: dict[str, str], field: str) -> str:
+        value = row.get(field, "")
+        if value in {"", None}:
+            return ""
+        if field == "Spread":
+            return f"{float_value(value) * 100:,.2f}"
+        if field == "Book Imbalance 5c":
+            return f"{float_value(value):+.1%}"
+        if "Notional" in field or "Volume" in field:
+            return f"${float_value(value):,.2f}"
+        if "Shares" in field:
+            return f"{float_value(value):,.0f}"
+        return str(value)
+
     table_rows = []
     for row in sorted(latest, key=lambda value: (value["Event Key"], value["Market Label"])):
         table_rows.append("<tr>" + "".join(
-            f"<td>{html.escape(str(row.get(field, '')))}</td>"
-            for field in ["Event Key", "Market Label", "Book Status", "Best Bid", "Best Ask", "Spread", "Ask Notional 5c", "Bid Notional 5c", "Weak Side Notional 5c", "Book Imbalance 5c", "Instance Volume"]
+            f"<td>{html.escape(table_value(row, field))}</td>"
+            for field, _ in table_columns
         ) + "</tr>")
     lifecycle_rows = []
     for row in lifecycle[-100:]:
@@ -716,12 +820,12 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         if distinct_snapshots < 8 or sum(value > 0 for value in session_values) < 2
         else "Session bars use the median across all available market observations in each Eastern-time window."
     )
-    document = f"""<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Polymarket liquidity and market impact</title><style>body{{font-family:Arial,sans-serif;margin:24px;color:#111827;background:#f9fafb}}main{{max-width:1500px;margin:auto}}.hero,.panel,.card{{background:white;border:1px solid #e5e7eb;border-radius:12px}}.hero{{padding:22px;margin-bottom:18px}}.grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}}.card{{padding:14px}}.kpi{{font-size:24px;font-weight:700;margin-top:6px}}.label,.note{{font-size:12px;color:#6b7280}}.panel{{padding:12px;margin:18px 0}}table{{border-collapse:collapse;width:100%;font-size:12px;margin-top:16px;background:white}}th,td{{border:1px solid #d1d5db;padding:6px;text-align:right}}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){{text-align:left}}th{{background:#f3f4f6;position:sticky;top:0}}.scroll{{overflow:auto;max-height:720px}}p{{color:#4b5563;line-height:1.45}}@media(max-width:800px){{.grid{{grid-template-columns:1fr 1fr}}body{{margin:8px}}}}</style></head><body><main><section class=\"hero\"><h1>Polymarket liquidity and market impact</h1><p>Latest book: {html.escape(latest_at)}. The dashboard measures executable Yes-token liquidity—not just displayed probability.</p><div class=\"grid\"><div class=\"card\"><div class=\"label\">Available books</div><div class=\"kpi\">{available_count}</div></div><div class=\"card\"><div class=\"label\">Easiest current 5-point move</div><div class=\"kpi\">{easiest_display}</div><div class=\"note\">{html.escape(str(easiest_row.get('Event Key','')))} · {html.escape(str(easiest_row.get('Market Label','')))}</div></div><div class=\"card\"><div class=\"label\">Most resilient current 5-point book</div><div class=\"kpi\">${float_value(resilient_row.get('Weak Side Notional 5c')):,.0f}</div><div class=\"note\">{html.escape(str(resilient_row.get('Event Key','')))} · {html.escape(str(resilient_row.get('Market Label','')))}</div></div><div class=\"card\"><div class=\"label\">Intraday snapshots collected</div><div class=\"kpi\">{distinct_snapshots}</div></div></div></section><section class=\"panel\">{move_plot}<p>Lower bars are easier to push: the metric is the smaller of ask notional through +5 points and bid notional through −5 points. A one-sided book has no displayed resistance in one direction. This is an order-book estimate, not a guarantee against cancellations or hidden liquidity.</p></section><section class=\"panel\">{confidence_plot}<p>Stronger displayed prices sit toward the upper-left: narrower spreads and more executable liquidity on the weaker side. Bubble size reflects instance volume.</p></section><section class=\"panel\">{session_plot}<p>{html.escape(session_note)}</p></section><h2>Latest executable-depth table</h2><p>“Up cost” is resting ask notional through five points above the best ask. “Down notional” is resting bid notional through five points below the best bid.</p><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(field)}</th>' for field in ['Event','Market','Status','Best Bid','Best Ask','Spread','Up Cost 5pt','Down Notional 5pt','Weak Side 5pt','Imbalance 5pt','Instance Volume'])}</tr></thead><tbody>{''.join(table_rows)}</tbody></table></div><h2>Lifecycle events</h2><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(field)}</th>' for field in ['Detected At','Event','Market','Event Type','Condition ID','Related Condition ID'])}</tr></thead><tbody>{''.join(lifecycle_rows)}</tbody></table></div></main></body></html>"""
+    document = f"""<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Polymarket liquidity and market impact</title><style>body{{font-family:Arial,sans-serif;margin:24px;color:#111827;background:#f9fafb}}main{{max-width:1500px;margin:auto}}.hero,.panel,.card{{background:white;border:1px solid #e5e7eb;border-radius:12px}}.hero{{padding:22px;margin-bottom:18px}}.grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}}.card{{padding:14px}}.kpi{{font-size:24px;font-weight:700;margin-top:6px}}.label,.note{{font-size:12px;color:#6b7280}}.panel{{padding:12px;margin:18px 0}}table{{border-collapse:collapse;width:100%;font-size:12px;margin-top:16px;background:white}}th,td{{border:1px solid #d1d5db;padding:6px;text-align:right}}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){{text-align:left}}th{{background:#f3f4f6;position:sticky;top:0}}.scroll{{overflow:auto;max-height:720px}}p,li{{color:#4b5563;line-height:1.45}}@media(max-width:800px){{.grid{{grid-template-columns:1fr 1fr}}body{{margin:8px}}}}</style></head><body><main><section class=\"hero\"><h1>Polymarket liquidity and market impact</h1><p>Latest book: {html.escape(latest_at)}. The dashboard measures executable Yes-token liquidity—not just displayed probability.</p><div class=\"grid\"><div class=\"card\"><div class=\"label\">Available books</div><div class=\"kpi\">{available_count}</div></div><div class=\"card\"><div class=\"label\">Easiest current 5-point move</div><div class=\"kpi\">{easiest_display}</div><div class=\"note\">{html.escape(str(easiest_row.get('Event Key','')))} · {html.escape(str(easiest_row.get('Market Label','')))}</div></div><div class=\"card\"><div class=\"label\">Most resilient current 5-point book</div><div class=\"kpi\">${float_value(resilient_row.get('Weak Side Notional 5c')):,.0f}</div><div class=\"note\">{html.escape(str(resilient_row.get('Event Key','')))} · {html.escape(str(resilient_row.get('Market Label','')))}</div></div><div class=\"card\"><div class=\"label\">Intraday snapshots collected</div><div class=\"kpi\">{distinct_snapshots}</div></div></div><ul><li><b>Blue</b> is resting bid liquidity: buyers supporting the price against a downward move.</li><li><b>Red</b> is resting ask liquidity: sellers resisting an upward move.</li><li><b>Shares</b> count outcome tokens; <b>dollar notional</b> is the sum of price × shares and better represents economic depth.</li><li><b>Physical-instance volume</b> covers the current Polymarket condition only; <b>logical-lifetime volume</b> sums genuine replacement instances of the same event and market.</li></ul></section><section class=\"panel\">{depth_plot}<p>Use the buttons above the chart to switch between dollars and shares. At very low probabilities, a huge share count can represent modest dollar value; if the best bid is below five cents, this band can also include almost the full bid book.</p></section><section class=\"panel\">{move_plot}<p>Lower bars are easier to push: the metric is the smaller of ask notional through +5 points and bid notional through −5 points. A one-sided book has no displayed resistance in one direction. This is an order-book estimate, not a guarantee against cancellations or hidden liquidity.</p></section><section class=\"panel\">{confidence_plot}<p>Stronger displayed prices sit toward the upper-left: narrower spreads and more executable liquidity on the weaker side. Bubble size reflects physical-instance traded volume.</p></section><section class=\"panel\">{session_plot}<p>{html.escape(session_note)}</p></section><h2>Latest executable-depth table</h2><p>Every five-point depth field refers to currently resting orders within $0.05 probability of the corresponding best quote. Shares and price-weighted dollar notional are shown separately. Best bid and best ask are intentionally omitted.</p><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(label)}</th>' for _, label in table_columns)}</tr></thead><tbody>{''.join(table_rows)}</tbody></table></div><h2>Lifecycle events</h2><p>The condition ID identifies the physical Polymarket contract. A related condition ID points either to the prior physical contract for a true replacement, or to a comparison contract in the same threshold family; the event type and details distinguish those cases. Full history remains append-only, while update summaries report only newly detected events.</p><div class=\"scroll\"><table><thead><tr>{''.join(f'<th>{html.escape(field)}</th>' for field in ['Detected At','Event','Market','Event Type','Condition ID','Related Condition ID'])}</tr></thead><tbody>{''.join(lifecycle_rows)}</tbody></table></div></main></body></html>"""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(document, encoding="utf-8")
 
 
-def run_orderbook_update(data_dir: Path, *, timeout: float = 20, workers: int = 7) -> dict[str, int]:
+def run_orderbook_update(data_dir: Path, *, timeout: float = 20, workers: int = 7) -> dict[str, Any]:
     detected_at = utc_timestamp()
     session = build_session()
     raw_markets = fetch_all_markets(session, timeout, workers)
@@ -758,5 +862,13 @@ def run_orderbook_update(data_dir: Path, *, timeout: float = 20, workers: int = 
         "present_markets": sum(is_true(row.get("Present")) for row in instances),
         "available_books": sum(row.get("Book Status") == "available" for row in depth_rows),
         "lifecycle_events_added": len(new_events),
+        "new_lifecycle_events": [
+            {
+                "event": row["Event Key"], "market": row["Market Label"],
+                "type": row["Event Type"], "condition_id": row["Condition ID"],
+                "related_condition_id": row["Related Condition ID"],
+            }
+            for row in new_events
+        ],
         "logical_markets": len(summaries),
     }

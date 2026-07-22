@@ -115,6 +115,11 @@ class OrderbookTrackerTests(unittest.TestCase):
             content = path.read_text(encoding="utf-8")
         self.assertIn("Polymarket liquidity and market impact", content)
         self.assertIn("Easiest current 5-point move", content)
+        self.assertIn("resting bid liquidity", content)
+        self.assertIn("Dollar notional", content)
+        self.assertIn("Bid shares, 5pt", content)
+        self.assertNotIn(">Best Bid<", content)
+        self.assertNotIn(">Best Ask<", content)
         self.assertIn("↑ $90", content)
 
     def test_report_labels_one_sided_book_without_hiding_zero_depth(self):
