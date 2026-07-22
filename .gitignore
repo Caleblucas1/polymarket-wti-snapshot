@@ -8,6 +8,7 @@ __pycache__/
 !/*_9am_snapshot.csv
 !/*_9am_ranges.csv
 !/market_resolution_status.csv
+!/orderbook/*.csv
 wti_7_day_time_series.html
 bab_el_mandeb_7_day_chart.html
 iran_gulf_action_7_day_chart.html
