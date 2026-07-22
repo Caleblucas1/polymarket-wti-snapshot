@@ -82,3 +82,4 @@ Detected At,Event Key,Logical Market ID,Threshold Family ID,Market Label,Event T
 2026-07-22T14:54:32Z,wti-week-july-13,wti-week-july-13::down-60,wti-week-july-13::threshold-60,↓ $60,appeared,0x4b18f92b35bfa6baeecfdcaa11710d7d8931f75d41ccd71d99964468ebc7b178,,
 2026-07-22T14:54:32Z,wti-week-july-13,wti-week-july-13::down-65,wti-week-july-13::threshold-65,↓ $65,appeared,0x7cf55658edc4dacdc45fc9517b45d42a3586ec34be1788e67b19f14545d6fe0d,,
 2026-07-22T14:54:32Z,wti-week-july-13,wti-week-july-13::down-70,wti-week-july-13::threshold-70,↓ $70,appeared,0x2e8266572f2a8d3e740c2b43ba2079379640f887ca4c132e1c29bce3ddda816d,,
+2026-07-22T17:46:12Z,wti-july,wti-july::down-85,wti-july::threshold-85,↓ $85,related-threshold-appeared,0x574897029f416bf4b0a30b51b2ffcc512f2d5f940557913189cff2205f27c08d,0x3a869359895989c1dee6f920c203f12791f03c206e86ce48353c46626ee743b1,Same numeric threshold but different direction or proposition; not stitched
