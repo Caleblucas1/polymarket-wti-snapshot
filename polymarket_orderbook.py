@@ -20,6 +20,12 @@ from zoneinfo import ZoneInfo
 import requests
 
 from polymarket_wti_snapshot import build_session, fetch_event, parse_json_array
+from market_data_layout import (
+    MarketDataPaths,
+    SCHEMA_VERSION,
+    write_dataset_manifest,
+    write_event_catalog,
+)
 from track_market import load_registry
 
 
@@ -44,19 +50,28 @@ LIFECYCLE_FIELDS = [
 ]
 
 DEPTH_FIELDS = [
-    "Snapshot At", "Hour ET", "Session", "Book Timestamp", "Event Key", "Event Slug",
+    "Schema Version", "Observed At", "Hour ET", "Session", "Book Timestamp", "Event Key", "Event Slug",
     "Logical Market ID", "Threshold Family ID", "Market Label", "Condition ID",
-    "Token ID", "Outcome", "Book Status", "Best Bid", "Best Ask", "Midpoint",
+    "Token ID", "Outcome", "Book Status", "Best Bid", "Best Ask", "Book Midpoint Probability",
+    "Gamma Last Trade Probability", "Reference Probability", "Reference Price Source",
     "Spread", "Bid Levels", "Ask Levels", "Bid Shares Total", "Ask Shares Total",
     "Bid Notional Total", "Ask Notional Total", "Bid Shares 1c", "Ask Shares 1c",
     "Bid Notional 1c", "Ask Notional 1c", "Bid Shares 2c", "Ask Shares 2c",
     "Bid Notional 2c", "Ask Notional 2c", "Bid Shares 5c", "Ask Shares 5c",
     "Bid Notional 5c", "Ask Notional 5c", "Bid Shares 10c", "Ask Shares 10c",
-    "Bid Notional 10c", "Ask Notional 10c", "Book Hash", "Instance Volume",
-    "Logical Lifetime Volume", "Liquidity", "Last Trade Price", "Weak Side Notional 2c",
+    "Bid Notional 10c", "Ask Notional 10c", "Book Hash", "Current Listing Volume",
+    "Continuous Market Volume", "Liquidity", "Weak Side Notional 2c",
     "Weak Side Notional 5c", "Book Imbalance 5c", "Bid Effective Notional",
     "Ask Effective Notional", "Weak Side Effective Notional",
 ]
+
+LEGACY_DEPTH_ALIASES = {
+    "Snapshot At": "Observed At",
+    "Midpoint": "Book Midpoint Probability",
+    "Last Trade Price": "Gamma Last Trade Probability",
+    "Instance Volume": "Current Listing Volume",
+    "Logical Lifetime Volume": "Continuous Market Volume",
+}
 
 SUMMARY_FIELDS = [
     "Event Key", "Logical Market ID", "Threshold Family ID", "Market Label",
@@ -205,6 +220,25 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return []
     with path.open(newline="", encoding="utf-8-sig") as input_file:
         return [dict(row) for row in csv.DictReader(input_file)]
+
+
+def normalize_observation_row(row: dict[str, str]) -> dict[str, str]:
+    """Upgrade legacy order-book rows in memory without losing any measurement."""
+    normalized = dict(row)
+    for legacy, canonical in LEGACY_DEPTH_ALIASES.items():
+        if not normalized.get(canonical) and normalized.get(legacy):
+            normalized[canonical] = normalized[legacy]
+    normalized["Schema Version"] = normalized.get("Schema Version") or SCHEMA_VERSION
+    midpoint = normalized.get("Book Midpoint Probability", "")
+    last_trade = normalized.get("Gamma Last Trade Probability", "")
+    if not normalized.get("Reference Probability"):
+        normalized["Reference Probability"] = midpoint or last_trade
+    if not normalized.get("Reference Price Source"):
+        if midpoint:
+            normalized["Reference Price Source"] = "book-midpoint"
+        elif last_trade:
+            normalized["Reference Price Source"] = "gamma-last-trade"
+    return normalized
 
 
 def write_csv(path: Path, fields: list[str], rows: Iterable[dict[str, Any]]) -> None:
@@ -375,7 +409,7 @@ def summarize_book(book: dict[str, Any]) -> dict[str, str]:
         "Book Timestamp": str(book.get("timestamp") or ""),
         "Best Bid": number_text(best_bid),
         "Best Ask": number_text(best_ask),
-        "Midpoint": number_text(midpoint),
+        "Book Midpoint Probability": number_text(midpoint),
         "Spread": number_text(best_ask - best_bid if best_bid is not None and best_ask is not None else None),
         "Bid Levels": str(len(bids)),
         "Ask Levels": str(len(asks)),
@@ -483,7 +517,8 @@ def collect_depth_rows(
             status = "available"
         row = {field: "" for field in DEPTH_FIELDS}
         row.update({
-            "Snapshot At": snapshot_at,
+            "Schema Version": SCHEMA_VERSION,
+            "Observed At": snapshot_at,
             "Hour ET": hour_et,
             "Session": session_name,
             "Event Key": instance["Event Key"],
@@ -495,10 +530,10 @@ def collect_depth_rows(
             "Token ID": token_id,
             "Outcome": "Yes",
             "Book Status": status,
-            "Instance Volume": instance.get("Volume", ""),
-            "Logical Lifetime Volume": number_text(lifetime_volume.get(instance["Logical Market ID"])),
+            "Current Listing Volume": instance.get("Volume", ""),
+            "Continuous Market Volume": number_text(lifetime_volume.get(instance["Logical Market ID"])),
             "Liquidity": instance.get("Liquidity", ""),
-            "Last Trade Price": instance.get("Last Trade Price", ""),
+            "Gamma Last Trade Probability": instance.get("Last Trade Price", ""),
         })
         if status == "available":
             row.update(summarize_book(books[token_id]))
@@ -516,6 +551,12 @@ def collect_depth_rows(
                 float_value(row.get("Bid Effective Notional")),
                 float_value(row.get("Ask Effective Notional")),
             ))
+        midpoint = row.get("Book Midpoint Probability", "")
+        last_trade = row.get("Gamma Last Trade Probability", "")
+        row["Reference Probability"] = midpoint or last_trade
+        row["Reference Price Source"] = (
+            "book-midpoint" if midpoint else "gamma-last-trade" if last_trade else ""
+        )
         rows.append(row)
     return rows
 
@@ -551,10 +592,11 @@ def build_logical_summary(instances: list[dict[str, str]]) -> list[dict[str, str
 
 
 def append_depth(path: Path, rows: list[dict[str, str]]) -> None:
-    existing = read_csv(path)
+    existing = [normalize_observation_row(row) for row in read_csv(path)]
+    rows = [normalize_observation_row(row) for row in rows]
     for row in existing:
-        if row.get("Snapshot At") and not row.get("Session"):
-            row["Hour ET"], row["Session"] = session_for_timestamp(row["Snapshot At"])
+        if row.get("Observed At") and not row.get("Session"):
+            row["Hour ET"], row["Session"] = session_for_timestamp(row["Observed At"])
         bid_5c = float_value(row.get("Bid Notional 5c"))
         ask_5c = float_value(row.get("Ask Notional 5c"))
         total_5c = bid_5c + ask_5c
@@ -564,36 +606,47 @@ def append_depth(path: Path, rows: list[dict[str, str]]) -> None:
                 (bid_5c - ask_5c) / total_5c if total_5c else None
             )
     keys = {
-        (row.get("Snapshot At", ""), row.get("Condition ID", ""), row.get("Token ID", ""))
+        (row.get("Observed At", ""), row.get("Condition ID", ""), row.get("Token ID", ""))
         for row in existing
     }
     new_rows = [
         row for row in rows
-        if (row["Snapshot At"], row["Condition ID"], row["Token ID"]) not in keys
+        if (row["Observed At"], row["Condition ID"], row["Token ID"]) not in keys
     ]
     write_csv(path, DEPTH_FIELDS, [*existing, *new_rows])
 
 
 def depth_partition_path(data_dir: Path, snapshot_at: str) -> Path:
-    """Keep hourly history in bounded monthly files instead of one ever-growing CSV."""
+    """Keep hourly observations in bounded monthly files instead of one growing CSV."""
     month = snapshot_at[:7]
     if not re.fullmatch(r"\d{4}-\d{2}", month):
         raise ValueError(f"Invalid snapshot timestamp: {snapshot_at}")
-    return data_dir / "depth" / f"orderbook_depth_{month}.csv"
+    return MarketDataPaths(data_dir).hourly / f"market_observations_{month}.csv"
 
 
 def read_depth_history(data_dir: Path) -> list[dict[str, str]]:
-    """Read the pre-partition baseline plus every monthly depth partition."""
+    """Read canonical observations, with a read-only fallback for the legacy layout."""
+    layout = MarketDataPaths(data_dir)
+    partitions = [
+        path for path in sorted(layout.hourly.glob("market_observations_*.csv"))
+        if path != layout.hourly_baseline
+    ]
     paths = [
+        layout.hourly_baseline,
+        *partitions,
+    ]
+    legacy_paths = [
         data_dir / "orderbook_depth_snapshots.csv",
         *sorted((data_dir / "depth").glob("orderbook_depth_*.csv")),
     ]
+    paths.extend(path for path in legacy_paths if path not in paths)
     rows: list[dict[str, str]] = []
     keys: set[tuple[str, str, str]] = set()
     for path in paths:
-        for row in read_csv(path):
+        for raw_row in read_csv(path):
+            row = normalize_observation_row(raw_row)
             key = (
-                row.get("Snapshot At", ""), row.get("Condition ID", ""),
+                row.get("Observed At", ""), row.get("Condition ID", ""),
                 row.get("Token ID", ""),
             )
             if key not in keys:
@@ -607,8 +660,9 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
 
     if not rows:
         raise ValueError("No order-book snapshots are available to report")
-    latest_at = max(row.get("Snapshot At", "") for row in rows)
-    latest = [row for row in rows if row.get("Snapshot At") == latest_at]
+    rows = [normalize_observation_row(row) for row in rows]
+    latest_at = max(row.get("Observed At", "") for row in rows)
+    latest = [row for row in rows if row.get("Observed At") == latest_at]
     available = [row for row in latest if row.get("Book Status") == "available"]
     historical_available = [row for row in rows if row.get("Book Status") == "available"]
 
@@ -627,8 +681,8 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         float_value(row.get("Ask Notional 5c")),
         float_value(row.get("Bid Shares 5c")),
         float_value(row.get("Ask Shares 5c")),
-        float_value(row.get("Instance Volume")),
-        float_value(row.get("Logical Lifetime Volume")),
+        float_value(row.get("Current Listing Volume")),
+        float_value(row.get("Continuous Market Volume")),
         float_value(row.get("Bid Effective Notional")),
         float_value(row.get("Ask Effective Notional")),
     ] for row in depth_rows]
@@ -767,7 +821,10 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
     palette = ["#2563EB", "#D97706", "#7C3AED", "#0891B2", "#DB2777", "#4F46E5", "#059669"]
     confidence_figure = go.Figure()
     events = sorted({row["Event Key"] for row in available})
-    max_volume = max((float_value(row.get("Instance Volume")) for row in available), default=1)
+    max_volume = max(
+        1.0,
+        max((float_value(row.get("Current Listing Volume")) for row in available), default=0),
+    )
     for index, event_key in enumerate(events):
         event_rows = [
             row for row in available
@@ -779,14 +836,14 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
             mode="markers", name=event_key,
             marker={
                 "color": palette[index % len(palette)], "opacity": 0.78,
-                "size": [8 + 28 * math.sqrt(float_value(row.get("Instance Volume")) / max_volume) for row in event_rows],
+                "size": [8 + 28 * math.sqrt(float_value(row.get("Current Listing Volume")) / max_volume) for row in event_rows],
                 "line": {"color": "#111827", "width": 0.7},
             },
             text=[row["Market Label"] for row in event_rows],
             customdata=[[
                 row.get("Best Bid", ""), row.get("Best Ask", ""),
                 float_value(row.get("Weak Side Notional 5c")),
-                float_value(row.get("Instance Volume")),
+                float_value(row.get("Current Listing Volume")),
             ] for row in event_rows],
             hovertemplate=(
                 "<b>%{text}</b><br>Spread: %{x:.2f} points"
@@ -812,13 +869,13 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
     for session_name in session_order:
         session_rows = [
             row for row in historical_available
-            if (row.get("Session") or session_for_timestamp(row["Snapshot At"])[1]) == session_name
+            if (row.get("Session") or session_for_timestamp(row["Observed At"])[1]) == session_name
             and float_value(row.get("Weak Side Effective Notional")) > 0
         ]
         session_values.append(median([
             float_value(row["Weak Side Effective Notional"]) for row in session_rows
         ]) if session_rows else 0)
-        session_samples.append(len({row["Snapshot At"] for row in session_rows}))
+        session_samples.append(len({row["Observed At"] for row in session_rows}))
         session_observations.append(len(session_rows))
     session_figure = go.Figure(go.Bar(
         x=session_order, y=session_values,
@@ -847,6 +904,8 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
     session_plot = session_figure.to_html(include_plotlyjs=False, full_html=False, config=config)
     table_columns = [
         ("Event Key", "Event"), ("Market Label", "Market"), ("Book Status", "Status"),
+        ("Reference Probability", "Reference probability"),
+        ("Reference Price Source", "Price source"),
         ("Spread", "Spread (points)"), ("Bid Shares 5c", "Bid shares, 5pt"),
         ("Bid Notional 5c", "Bid dollars, 5pt"), ("Ask Shares 5c", "Ask shares, 5pt"),
         ("Ask Notional 5c", "Ask dollars, 5pt"),
@@ -855,8 +914,8 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
         ("Weak Side Effective Notional", "Weaker-side effective dollars"),
         ("Weak Side Notional 5c", "Weaker-side dollars, 5pt"),
         ("Book Imbalance 5c", "Imbalance, 5pt"),
-        ("Instance Volume", "Current-listing volume"),
-        ("Logical Lifetime Volume", "Continuous-market volume"),
+        ("Current Listing Volume", "Current-listing volume"),
+        ("Continuous Market Volume", "Continuous-market volume"),
     ]
 
     def table_value(row: dict[str, str], field: str) -> str:
@@ -865,6 +924,8 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
             return ""
         if field == "Spread":
             return f"{float_value(value) * 100:,.2f}"
+        if field == "Reference Probability":
+            return f"{float_value(value):.1%}"
         if field == "Book Imbalance 5c":
             return f"{float_value(value):+.1%}"
         if "Notional" in field or "Volume" in field:
@@ -888,7 +949,7 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
     available_count = len(available)
     easiest_row = min(available, key=lambda row: float_value(row.get("Weak Side Effective Notional")), default={})
     resilient_row = max(available, key=lambda row: float_value(row.get("Weak Side Effective Notional")), default={})
-    distinct_snapshots = len({row.get("Snapshot At") for row in rows})
+    distinct_snapshots = len({row.get("Observed At") for row in rows})
     easiest_value = float_value(easiest_row.get("Weak Side Effective Notional"))
     resilient_value = float_value(resilient_row.get("Weak Side Effective Notional"))
     raw_resilient_value = float_value(resilient_row.get("Weak Side Notional 5c"))
@@ -926,16 +987,20 @@ def write_report(path: Path, rows: list[dict[str, str]], lifecycle: list[dict[st
 def run_orderbook_update(data_dir: Path, *, timeout: float = 20, workers: int = 7) -> dict[str, Any]:
     detected_at = utc_timestamp()
     session = build_session()
+    layout = MarketDataPaths(data_dir)
+    registry = load_registry()
+    write_event_catalog(layout.event_catalog, registry)
+    write_dataset_manifest(layout.root / "datasets.json")
     raw_markets = fetch_all_markets(session, timeout, workers)
     current = [
         instance_from_market(event_key, event_slug, market, detected_at)
         for event_key, event_slug, market in raw_markets
     ]
-    instance_path = data_dir / "market_instances.csv"
-    lifecycle_path = data_dir / "market_lifecycle_events.csv"
+    instance_path = layout.market_instances
+    lifecycle_path = layout.lifecycle_events
     depth_path = depth_partition_path(data_dir, detected_at)
-    summary_path = data_dir / "logical_market_summary.csv"
-    report_path = data_dir / "orderbook_depth_report.html"
+    summary_path = layout.logical_markets
+    report_path = layout.report
 
     instances, new_events = reconcile_instances(read_csv(instance_path), current, detected_at)
     lifecycle = read_csv(lifecycle_path)

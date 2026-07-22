@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update the independent order-book depth and market-lifecycle schema."""
+"""Update unified hourly market observations and market lifecycle data."""
 
 from __future__ import annotations
 
@@ -11,8 +11,11 @@ from polymarket_orderbook import run_orderbook_update
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Collect order-book depth for all tracked events.")
-    parser.add_argument("--data-dir", type=Path, default=Path("orderbook"))
+    parser = argparse.ArgumentParser(description="Collect hourly market observations for all tracked events.")
+    parser.add_argument(
+        "--data-dir", type=Path, default=Path("market_data"),
+        help="Root of the unified market-data hierarchy (default: market_data)",
+    )
     parser.add_argument("--timeout", type=float, default=20)
     parser.add_argument("--workers", type=int, default=7)
     return parser

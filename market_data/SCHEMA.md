@@ -1,24 +1,30 @@
-# Order-book and market-lifecycle schema
+# Unified market-data schema
 
-This directory is intentionally separate from the daily 9:00 AM probability snapshot and
-intraday-range files.
+This directory groups identities, lifecycle events, hourly prices, order-book liquidity, and
+reports under one namespace. The established root-level 9:00 AM snapshot and range CSVs remain
+the authoritative daily compatibility outputs; `datasets.json` and `catalog/events.csv` make
+their paths, grain, and relationship to the hourly data explicit without duplicating them.
 
 ## Files
 
-- `market_instances.csv`: one row per physical Polymarket condition/token instance. A logical
+- `catalog/events.csv`: one row per configured event, including the exact daily snapshot,
+  range, and chart paths.
+- `catalog/market_instances.csv`: one row per physical Polymarket condition/token instance. A logical
   market may have multiple instances when Polymarket replaces a contract.
-- `market_lifecycle_events.csv`: append-only detections for appearances, disappearances,
+- `lifecycle/market_lifecycle_events.csv`: append-only detections for appearances, disappearances,
   replacements, closure, order acceptance, and order-book availability transitions.
-- `orderbook_depth_snapshots.csv`: the append-only pre-partition baseline.
-- `depth/orderbook_depth_YYYY-MM.csv`: append-only hourly Yes-token book and price snapshots,
+- `hourly/market_observations_baseline.csv`: the append-only pre-partition baseline.
+- `hourly/market_observations_YYYY-MM.csv`: append-only hourly Yes-token price and book observations,
   partitioned monthly. Depth is stored at 1¢, 2¢, 5¢, and 10¢ from the best quote, in both
   shares and price-weighted notional. Each observation also records its Eastern hour and
   mutually exclusive Asia, Europe, U.S., or evening session.
-- `logical_market_summary.csv`: one row per stable logical contract with cumulative volume
+- `catalog/logical_market_summary.csv`: one row per stable logical contract with cumulative volume
   across genuine replacement instances.
-- `orderbook_depth_report.html`: interactive current-depth chart plus complete depth and
-  lifecycle tables. Its primary views rank markets by five-point move cost, compare spread
+- `reports/market_liquidity_report.html`: interactive current-depth chart plus complete depth and
+  lifecycle tables. Its primary views rank markets by distance-weighted effective depth, compare spread
   with executable two-sided depth, and aggregate liquidity by trading session.
+- `datasets.json`: machine-readable declaration of which file is authoritative for each grain
+  and how derived values are calculated.
 
 ## Identity rules
 
@@ -64,15 +70,27 @@ away 25%, and five points away 3.125%. Raw five-point dollars and shares remain 
 
 Share depth and dollar depth are different measures. Shares count resting outcome tokens.
 Notional is `price × shares`, summed across the included levels. A very large share count at a
-low probability can therefore represent modest economic depth. The report renames `Instance
-Volume` to **Current-listing volume** and `Logical Lifetime Volume` to **Continuous-market
-volume**. The former covers one physical condition; the latter sums true replacement
+low probability can therefore represent modest economic depth. **Current Listing Volume**
+covers one physical condition; **Continuous Market Volume** sums true replacement
 instances of the same event and normalized market label.
 
-New hourly depth and price observations are partitioned by month under `orderbook/depth/`.
-The pre-partition `orderbook_depth_snapshots.csv` is retained as a historical baseline and is
-read together with every monthly file. This keeps the independent hourly schema from changing
-the established daily 9:00 AM snapshot, range, and resolution-status files. Monthly hourly
+## Price grains and sources
+
+Hourly prices and liquidity share one observation row, so there is no competing hourly price
+file. `Book Midpoint Probability` is the midpoint of a currently two-sided Yes-token book.
+`Gamma Last Trade Probability` is Polymarket's event metadata and may be older than the
+observation. `Reference Probability` prefers the book midpoint and falls back to the Gamma
+last-trade value; `Reference Price Source` records which source was used.
+
+The daily snapshot is deliberately different: it uses the latest five-minute CLOB
+price-history sample at or before 9:00 AM Eastern. Its companion range is the observed minimum
+and maximum of those five-minute samples during the trailing 24 hours ending at 9:00 AM.
+Hourly observations do not determine the range because they could miss a short intrahour high
+or low. They are retained for session analysis, auditability, and higher-frequency charts.
+
+New hourly observations are partitioned by month under `market_data/hourly/`.
+The pre-partition baseline is read together with every monthly file. The daily 9:00 AM
+snapshot, range, and resolution-status files keep their established schemas and paths. Monthly hourly
 partitions are intentionally local-only so hourly commits do not inflate Git history; lifecycle
 changes can still be synchronized when detected.
 

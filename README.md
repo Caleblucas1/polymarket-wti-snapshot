@@ -164,14 +164,17 @@ disputed, whether it has ever been disputed, the dispute count and status
 history, and whether it is closed or automatically resolved. Past disputes are
 sticky: a later resolved status does not erase the historical dispute flag.
 
-## Order-book depth and market lifecycle
+## Unified hourly market data and lifecycle
 
-Order-book data uses an independent schema under `orderbook/` and does not
-modify the daily snapshot, intraday-range, or resolution-status CSVs. Collect a
-current depth snapshot for every configured event with:
+Market identity, lifecycle, hourly price, order-book liquidity, and reports live
+under `market_data/`. The existing root-level daily snapshot, intraday-range,
+and resolution-status CSVs retain their paths and schemas for compatibility;
+`market_data/datasets.json` declares their grain and authority so the two
+frequencies cannot be confused. Collect a current observation for every
+configured event with:
 
 ```bash
-python update_orderbooks.py --data-dir orderbook
+python update_orderbooks.py --data-dir market_data
 ```
 
 The collector batches public CLOB book requests and stores Yes-token depth in
@@ -194,22 +197,28 @@ acceptance, and order-book state changes are recorded once in the lifecycle
 event file. Each update retains that complete audit history but returns only
 newly detected lifecycle events in its command output.
 
-The report calls `Instance Volume` **Current-listing volume**: traded volume for
-one physical Polymarket condition. It calls `Logical Lifetime Volume`
-**Continuous-market volume**: the sum across genuine replacement conditions
-belonging to the same event and normalized market label. A related condition ID is either the previous condition for a
+Hourly rows call the physical condition's traded volume **Current Listing
+Volume**. **Continuous Market Volume** is the sum across genuine replacement
+conditions belonging to the same event and normalized market label. A related
+condition ID is either the previous condition for a
 true replacement or a comparison condition in the same price-threshold family;
 the lifecycle event type distinguishes those cases.
 
-Hourly runs write depth and price observations into bounded monthly files under
-`orderbook/depth/`. The original baseline file remains readable, while the daily
+Each hourly row stores both price context and liquidity. `Book Midpoint
+Probability` is current two-sided book information; `Gamma Last Trade
+Probability` may be older. `Reference Probability` prefers the midpoint and
+falls back to the last trade, while `Reference Price Source` makes that choice
+explicit. This avoids maintaining a second hourly price source.
+
+Hourly runs write observations into bounded monthly files under
+`market_data/hourly/`. The original baseline remains readable, while the daily
 9:00 AM snapshot/range/status files are not modified. These high-frequency files
 remain in persistent local storage rather than being committed every hour;
 source code and compact lifecycle changes remain suitable for GitHub sync.
 
 Price direction remains part of contract identity: `↑ $80` and `↓ $80` share
 an `$80` comparison family, but are not stitched because they are opposite
-propositions. See `orderbook/SCHEMA.md` for the complete schema and definitions.
+propositions. See `market_data/SCHEMA.md` for the complete schema and definitions.
 
 ## GitHub snapshot storage
 

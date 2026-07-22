@@ -1,1 +1,2 @@
 *_9am_snapshot.csv text eol=lf
+market_data/**/*.csv text eol=lf

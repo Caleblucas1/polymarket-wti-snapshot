@@ -93,28 +93,46 @@ class OrderbookTrackerTests(unittest.TestCase):
 
     def test_hourly_depth_uses_monthly_partitions(self):
         self.assertEqual(
-            depth_partition_path(Path("orderbook"), "2026-07-22T14:00:00Z"),
-            Path("orderbook/depth/orderbook_depth_2026-07.csv"),
+            depth_partition_path(Path("market_data"), "2026-07-22T14:00:00Z"),
+            Path("market_data/hourly/market_observations_2026-07.csv"),
         )
 
     def test_depth_history_combines_baseline_and_monthly_partitions(self):
         with tempfile.TemporaryDirectory() as temp_directory:
             base = Path(temp_directory)
             baseline = {
-                "Snapshot At": "2026-07-22T14:00:00Z", "Condition ID": "old",
+                "Observed At": "2026-07-22T14:00:00Z", "Condition ID": "old",
                 "Token ID": "yes-old", "Book Status": "available",
             }
             hourly = {
-                "Snapshot At": "2026-07-22T15:00:00Z", "Condition ID": "new",
+                "Observed At": "2026-07-22T15:00:00Z", "Condition ID": "new",
                 "Token ID": "yes-new", "Book Status": "available",
             }
-            append_depth(base / "orderbook_depth_snapshots.csv", [baseline])
-            append_depth(depth_partition_path(base, hourly["Snapshot At"]), [hourly])
+            append_depth(base / "hourly" / "market_observations_baseline.csv", [baseline])
+            append_depth(depth_partition_path(base, hourly["Observed At"]), [hourly])
             history = read_depth_history(base)
         self.assertEqual(
-            {row["Snapshot At"] for row in history},
-            {baseline["Snapshot At"], hourly["Snapshot At"]},
+            {row["Observed At"] for row in history},
+            {baseline["Observed At"], hourly["Observed At"]},
         )
+
+    def test_legacy_depth_row_is_upgraded_without_losing_price_or_volume(self):
+        with tempfile.TemporaryDirectory() as temp_directory:
+            base = Path(temp_directory)
+            append_depth(base / "hourly" / "market_observations_baseline.csv", [{
+                "Snapshot At": "2026-07-22T14:00:00Z",
+                "Condition ID": "condition", "Token ID": "yes",
+                "Midpoint": "0.55", "Last Trade Price": "0.54",
+                "Instance Volume": "12", "Logical Lifetime Volume": "34",
+            }])
+            row = read_depth_history(base)[0]
+        self.assertEqual(row["Observed At"], "2026-07-22T14:00:00Z")
+        self.assertEqual(row["Book Midpoint Probability"], "0.55")
+        self.assertEqual(row["Gamma Last Trade Probability"], "0.54")
+        self.assertEqual(row["Reference Probability"], "0.55")
+        self.assertEqual(row["Reference Price Source"], "book-midpoint")
+        self.assertEqual(row["Current Listing Volume"], "12")
+        self.assertEqual(row["Continuous Market Volume"], "34")
 
     def test_assigns_global_sessions_in_eastern_time(self):
         self.assertEqual(
@@ -136,9 +154,9 @@ class OrderbookTrackerTests(unittest.TestCase):
             "Weak Side Notional 2c": "3", "Weak Side Notional 5c": "5",
             "Bid Effective Notional": "4", "Ask Effective Notional": "6",
             "Weak Side Effective Notional": "4",
-            "Book Imbalance 5c": "-0.333", "Snapshot At": "2026-07-22T14:00:00Z",
+            "Book Imbalance 5c": "-0.333", "Observed At": "2026-07-22T14:00:00Z",
             "Session": "U.S. (09–17 ET)",
-            "Instance Volume": "100", "Logical Lifetime Volume": "100",
+            "Current Listing Volume": "100", "Continuous Market Volume": "100",
             "Condition ID": "condition", "Logical Market ID": "wti-july::up-90",
         }
         with tempfile.TemporaryDirectory() as temp_directory:
@@ -165,8 +183,8 @@ class OrderbookTrackerTests(unittest.TestCase):
             "Ask Notional 5c": "18.47", "Weak Side Notional 5c": "0",
             "Bid Effective Notional": "0", "Ask Effective Notional": "7",
             "Weak Side Effective Notional": "0",
-            "Book Imbalance 5c": "-1", "Snapshot At": "2026-07-22T14:00:00Z",
-            "Session": "U.S. (09–17 ET)", "Instance Volume": "100",
+            "Book Imbalance 5c": "-1", "Observed At": "2026-07-22T14:00:00Z",
+            "Session": "U.S. (09–17 ET)", "Current Listing Volume": "100",
             "Condition ID": "condition", "Logical Market ID": "wti-july::down-10",
         }
         with tempfile.TemporaryDirectory() as temp_directory:

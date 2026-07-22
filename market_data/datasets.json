@@ -1,0 +1,16 @@
+{
+  "schema_version": "2",
+  "authority": {
+    "daily_snapshots": "repository-root *_9am_snapshot.csv files",
+    "daily_ranges": "repository-root *_9am_ranges.csv files",
+    "hourly_market_observations": "hourly/market_observations_YYYY-MM.csv partitions",
+    "market_instances": "catalog/market_instances.csv",
+    "logical_markets": "catalog/logical_market_summary.csv",
+    "lifecycle_events": "lifecycle/market_lifecycle_events.csv"
+  },
+  "derivations": {
+    "daily_snapshot": "latest CLOB price-history sample at or before 9am Eastern",
+    "daily_range": "minimum and maximum five-minute CLOB samples in the trailing 24-hour window ending at 9am Eastern",
+    "hourly_reference_probability": "book midpoint when two-sided; otherwise Gamma last-trade probability"
+  }
+}
