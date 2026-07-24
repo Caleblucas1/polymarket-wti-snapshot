@@ -95,3 +95,4 @@ Detected At,Event Key,Logical Market ID,Threshold Family ID,Market Label,Event T
 2026-07-23T13:46:07Z,houthi-shipping,houthi-shipping::july-31,houthi-shipping::july-31,July 31,orders-stopped,0x5afb81cbd0ca3356dbebedd49cf667288207766206238b18b34c500b52c88345,,
 2026-07-23T13:46:07Z,wti-july,wti-july::up-90,wti-july::threshold-90,↑ $90,closed,0x4c63863c9f4449243981ae1748c5ee9d4d8c8f22e25f708a9afd4c86e124f360,,
 2026-07-23T13:46:07Z,wti-july,wti-july::up-90,wti-july::threshold-90,↑ $90,orders-stopped,0x4c63863c9f4449243981ae1748c5ee9d4d8c8f22e25f708a9afd4c86e124f360,,
+2026-07-24T13:21:44Z,wti-july,wti-july::down-90,wti-july::threshold-90,↓ $90,related-threshold-appeared,0x1079c44973db509356875db06aa3b585598068bdc5ff0673584f10dc3255b80a,0x4c63863c9f4449243981ae1748c5ee9d4d8c8f22e25f708a9afd4c86e124f360,Same numeric threshold but different direction or proposition; not stitched
