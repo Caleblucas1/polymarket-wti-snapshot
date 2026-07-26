@@ -99,3 +99,8 @@ Detected At,Event Key,Logical Market ID,Threshold Family ID,Market Label,Event T
 2026-07-25T14:02:38Z,iran-gulf-action,iran-gulf-action::july-21,iran-gulf-action::july-21,July 21,closed,0xa807e5a89d5371adc5b2d62310374dc1a58b34b28276f8d91108d419cee01b51,,
 2026-07-25T14:02:38Z,iran-gulf-action,iran-gulf-action::july-21,iran-gulf-action::july-21,July 21,orders-stopped,0xa807e5a89d5371adc5b2d62310374dc1a58b34b28276f8d91108d419cee01b51,,
 2026-07-25T14:02:38Z,wti-july,wti-july::up-90,wti-july::threshold-90,↑ $90,replaced,0x6a34d52064eef899297491a791f33c49ca84cbad7ccb82d1c7d084c9e826385c,0x4c63863c9f4449243981ae1748c5ee9d4d8c8f22e25f708a9afd4c86e124f360,New physical condition for the same logical contract
+2026-07-26T13:41:44Z,houthi-saudi,houthi-saudi::july-31,houthi-saudi::july-31,July 31,closed,0xad5873e68e236470c7ada70a48e4a1d846e68a5703f352695ea62418781fc9bf,,
+2026-07-26T13:41:44Z,houthi-saudi,houthi-saudi::july-31,houthi-saudi::july-31,July 31,orders-stopped,0xad5873e68e236470c7ada70a48e4a1d846e68a5703f352695ea62418781fc9bf,,
+2026-07-26T13:41:44Z,iran-gulf-action,iran-gulf-action::july-22,iran-gulf-action::july-22,July 22,closed,0x6f5b0c11d2ca15f24e8ec8da647fed7db927d1f5ea6f83b51054a032930f4b49,,
+2026-07-26T13:41:44Z,iran-gulf-action,iran-gulf-action::july-22,iran-gulf-action::july-22,July 22,orders-stopped,0x6f5b0c11d2ca15f24e8ec8da647fed7db927d1f5ea6f83b51054a032930f4b49,,
+2026-07-26T13:41:44Z,wti-july,wti-july::down-90,wti-july::threshold-90,↓ $90,replaced,0xc01ab4e58e374a875a84d0800090e8b858abaacd34ba0ac202ed9807686334f5,0x1079c44973db509356875db06aa3b585598068bdc5ff0673584f10dc3255b80a,New physical condition for the same logical contract
