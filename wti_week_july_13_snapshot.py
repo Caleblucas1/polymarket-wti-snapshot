@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Compatibility command for the weekly WTI tracker."""
+"""Archived compatibility command for the Week of July 13 WTI tracker."""
 
-from track_market import main_for_event
 
+def main() -> int:
+    print(
+        "The Week of July 13 tracker is archived. Its CSVs remain unchanged; "
+        "run wti_week_july_27_snapshot.py for the current weekly market."
+    )
+    return 0
 
 if __name__ == "__main__":
-    raise SystemExit(main_for_event("wti-week-july-13"))
+    raise SystemExit(main())
