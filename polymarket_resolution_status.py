@@ -34,6 +34,9 @@ BASE_FIELDNAMES = [
 ]
 FIELDNAMES = [
     *BASE_FIELDNAMES,
+    "Condition Created At",
+    "Resolved At",
+    "Current Yes Probability",
     "Resolved Outcome",
     "Yes Resolution Probability",
 ]
@@ -62,27 +65,32 @@ def _status_history(market: dict[str, Any]) -> list[str]:
     ]
 
 
-def _resolved_outcome(market: dict[str, Any], current: str) -> tuple[str, str]:
-    """Return the settled outcome and Yes probability when Gamma exposes them."""
-    if current != "resolved" and not _truthy(market.get("closed")):
-        return "", ""
+def _outcome_state(
+    market: dict[str, Any],
+    current: str,
+) -> tuple[str, str, str]:
+    """Return current Yes probability plus terminal outcome fields."""
     outcomes = [str(value).strip() for value in parse_json_array(market.get("outcomes"))]
     raw_prices = parse_json_array(market.get("outcomePrices"))
     if not outcomes or len(raw_prices) != len(outcomes):
-        return "", ""
+        return "", "", ""
     try:
         prices = [float(value) for value in raw_prices]
     except (TypeError, ValueError):
-        return "", ""
-    winner_index = max(range(len(prices)), key=prices.__getitem__)
-    if prices[winner_index] < 0.99:
-        return "", ""
+        return "", "", ""
     yes_index = next(
         (index for index, outcome in enumerate(outcomes) if outcome.lower() == "yes"),
         None,
     )
-    yes_probability = "" if yes_index is None else f"{prices[yes_index] * 100:.1f}"
-    return outcomes[winner_index], yes_probability
+    current_yes_probability = (
+        "" if yes_index is None else f"{prices[yes_index] * 100:.1f}"
+    )
+    if current != "resolved" and not _truthy(market.get("closed")):
+        return current_yes_probability, "", ""
+    winner_index = max(range(len(prices)), key=prices.__getitem__)
+    if prices[winner_index] < 0.99:
+        return current_yes_probability, "", ""
+    return current_yes_probability, outcomes[winner_index], current_yes_probability
 
 
 def status_rows(
@@ -111,7 +119,11 @@ def status_rows(
         current = str(market.get("umaResolutionStatus") or "").strip().lower()
         if not current and history:
             current = history[-1]
-        resolved_outcome, yes_probability = _resolved_outcome(market, current)
+        (
+            current_yes_probability,
+            resolved_outcome,
+            yes_probability,
+        ) = _outcome_state(market, current)
         dispute_count = sum(status == "disputed" for status in history)
         rows.append(
             {
@@ -130,6 +142,13 @@ def status_rows(
                 ),
                 "First Seen": timestamp,
                 "Last Checked": timestamp,
+                "Condition Created At": str(market.get("createdAt") or ""),
+                "Resolved At": str(
+                    market.get("closedTime")
+                    or market.get("umaEndDate")
+                    or ""
+                ),
+                "Current Yes Probability": current_yes_probability,
                 "Resolved Outcome": resolved_outcome,
                 "Yes Resolution Probability": yes_probability,
             }
@@ -169,7 +188,13 @@ def merge_status_rows(
         )
         if len(existing.get("Status History") or "") > len(incoming.get("Status History") or ""):
             merged["Status History"] = existing["Status History"]
-        for field in ("Resolved Outcome", "Yes Resolution Probability"):
+        for field in (
+            "Condition Created At",
+            "Resolved At",
+            "Current Yes Probability",
+            "Resolved Outcome",
+            "Yes Resolution Probability",
+        ):
             if not merged.get(field):
                 merged[field] = existing.get(field, "")
         rows_by_key[key] = merged
