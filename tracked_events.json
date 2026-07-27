@@ -47,12 +47,12 @@
     "range_output": "crude_oil_ath_9am_ranges.csv",
     "chart_output": "crude_oil_ath_7_day_chart.html"
   },
-  "wti-week-july-13": {
-    "title": "What will WTI hit Week of July 13, 2026?",
+  "wti-week-july-27": {
+    "title": "What will WTI hit Week of July 27, 2026?",
     "engine": "price_bin",
-    "slug": "will-wti-hit-week-of-july-13-2026",
-    "output": "wti_week_july_13_9am_snapshot.csv",
-    "range_output": "wti_week_july_13_9am_ranges.csv",
-    "chart_output": "wti_week_july_13_7_day_chart.html"
+    "slug": "will-wti-hit-week-of-july-27-2026",
+    "output": "wti_week_july_27_9am_snapshot.csv",
+    "range_output": "wti_week_july_27_9am_ranges.csv",
+    "chart_output": "wti_week_july_27_7_day_chart.html"
   }
 }
