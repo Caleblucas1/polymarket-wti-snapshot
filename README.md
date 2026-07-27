@@ -129,7 +129,7 @@ python wti_week_july_27_snapshot.py
 
 The Houthi-Saudi and crude-oil all-time-high events use deadline comparison
 charts. The weekly WTI tracker follows the current Week of July 27 event and
-uses the price-bin selector chart with all fourteen thresholds. The previous
+uses the grouped price-bin chart with all fourteen thresholds. The previous
 Week of July 13 files remain stored but are no longer part of the daily update
 or briefing. Each command writes its own cumulative 9:00 AM ET CSV and
 seven-day HTML chart.
@@ -174,6 +174,14 @@ disputed, whether it has ever been disputed, the dispute count and status
 history, whether it is closed or automatically resolved, and the terminal Yes
 probability when available. Past disputes are sticky: a later resolved status
 does not erase the historical dispute flag.
+
+The status inventory also stores each physical condition's creation time,
+resolution time, and current Yes probability. The WTI chart uses those fields
+to split all thresholds into lower- and upper-price panels, mark every observed
+Yes resolution with a red vertical line, and show the newest active replacement
+as a live diamond. A resolved condition's terminal 100% value is never carried
+into later dates: the logical line remains blank until a replacement condition
+exists, then restarts from that replacement's own price.
 
 `market_resolution_events.csv` is an append-only transition log. It timestamps
 newly observed disputes, cleared disputes, and final resolutions. Dense
