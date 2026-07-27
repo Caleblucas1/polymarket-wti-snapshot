@@ -16,6 +16,8 @@ class EventRegistryTests(unittest.TestCase):
         self.assertEqual(set(args.events), set(registry))
         self.assertEqual(len(args.events), 7)
         self.assertTrue(all(config.get("range_output") for config in registry.values()))
+        self.assertIn("wti-week-july-27", registry)
+        self.assertNotIn("wti-week-july-13", registry)
 
     def test_reports_precise_aggregate_statuses(self):
         args = SimpleNamespace(
