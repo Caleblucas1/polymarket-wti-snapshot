@@ -2,7 +2,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from plot_wti_timeseries import create_chart, latest_window, load_ranges, load_snapshot
+from plot_wti_timeseries import (
+    carry_forward_resolved_series,
+    create_chart,
+    latest_window,
+    load_closed_market_labels,
+    load_ranges,
+    load_snapshot,
+)
 
 
 class TimeSeriesDataTests(unittest.TestCase):
@@ -74,6 +81,83 @@ class TimeSeriesDataTests(unittest.TestCase):
         self.assertEqual(list(trace.error_y.arrayminus), [5.0, 8.0])
         self.assertEqual(list(trace.error_y.array), [3.0, 10.0])
         self.assertTrue(trace.error_y.visible)
+
+    def test_each_selector_replaces_the_single_visible_trace(self):
+        figure = create_chart(
+            ["2026-07-26", "2026-07-27"],
+            {
+                "↑ $130": [0.2, 0.1],
+                "↑ $90": [100.0, 100.0],
+                "↑ $80": [100.0, 100.0],
+            },
+        )
+
+        self.assertEqual(len(figure.data), 1)
+        buttons = figure.layout.updatemenus[0].buttons
+        selected = {
+            button.label: list(button.args[0]["y"][0])
+            for button in buttons
+        }
+        self.assertEqual(selected["↑ $130"], [0.2, 0.1])
+        self.assertEqual(selected["↑ $90"], [100.0, 100.0])
+        self.assertEqual(selected["↑ $80"], [100.0, 100.0])
+
+    def test_carries_forward_only_resolved_terminal_series(self):
+        series, carried = carry_forward_resolved_series(
+            {
+                "↑ $80": [40.0, 100.0, None, None],
+                "↑ $130": [1.2, 0.9, None, None],
+            },
+            {"↑ $80"},
+        )
+
+        self.assertEqual(series["↑ $80"], [40.0, 100.0, 100.0, 100.0])
+        self.assertEqual(carried["↑ $80"], [False, False, True, True])
+        self.assertEqual(series["↑ $130"], [1.2, 0.9, None, None])
+
+    def test_loads_closed_resolved_labels_for_one_event(self):
+        content = (
+            "Event Key,Market,Current Status,Closed\n"
+            "wti-july,↑ $80,resolved,true\n"
+            "wti-july,↑ $130,,false\n"
+            "other,↑ $80,resolved,true\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_directory:
+            path = Path(temp_directory) / "status.csv"
+            path.write_text(content, encoding="utf-8")
+            labels = load_closed_market_labels(path, event_key="wti-july")
+
+        self.assertEqual(labels, {"↑ $80"})
+
+    def test_marks_first_up_90_yes_satisfaction(self):
+        satisfaction_at = "2026-07-23T05:15:07-04:00"
+        figure = create_chart(
+            ["2026-07-22", "2026-07-23", "2026-07-24"],
+            {"↑ $90": [69.3, 100.0, 100.0]},
+            satisfaction_at=satisfaction_at,
+        )
+
+        self.assertEqual(len(figure.layout.shapes), 1)
+        marker = figure.layout.shapes[0]
+        self.assertEqual(marker.x0, satisfaction_at)
+        self.assertEqual(marker.x1, satisfaction_at)
+        self.assertEqual(marker.line.color, "#DC2626")
+        self.assertEqual(marker.line.dash, "dash")
+        self.assertTrue(
+            any(
+                "First ↑ $90 Yes satisfied" in annotation.text
+                for annotation in figure.layout.annotations
+            )
+        )
+
+    def test_omits_satisfaction_marker_outside_chart_window(self):
+        figure = create_chart(
+            ["2026-07-24", "2026-07-25"],
+            {"↑ $90": [100.0, 100.0]},
+            satisfaction_at="2026-07-23T05:15:07-04:00",
+        )
+
+        self.assertEqual(len(figure.layout.shapes), 0)
 
 
 if __name__ == "__main__":
