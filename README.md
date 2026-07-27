@@ -183,6 +183,15 @@ as a live diamond. A resolved condition's terminal 100% value is never carried
 into later dates: the logical line remains blank until a replacement condition
 exists, then restarts from that replacement's own price.
 
+When `--with-charts` is run for the full active registry, the command also
+writes `related_houthi_market_comparison.html`. That panel compares
+hand-selected related markets such as Houthi shipping July 31 versus
+Houthi-Saudi July 31 and Bab el-Mandeb August 31 versus Houthi-Saudi July 24.
+It shows both probabilities, intraday low-high whiskers, and the point-in-time
+spread. The panel is for research and anomaly detection only; similar prices
+are not treated as arbitrage because each contract resolves under its own
+rules.
+
 `market_resolution_events.csv` is an append-only transition log. It timestamps
 newly observed disputes, cleared disputes, and final resolutions. Dense
 deadline heatmaps outline disputed cells in red and resolved cells in green.
