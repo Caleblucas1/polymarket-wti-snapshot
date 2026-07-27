@@ -11,6 +11,7 @@ from plot_wti_timeseries import (
     load_ranges,
     load_snapshot,
     mask_inactive_condition_dates,
+    satisfaction_events,
 )
 
 
@@ -99,6 +100,70 @@ class TimeSeriesDataTests(unittest.TestCase):
         self.assertEqual({trace.xaxis for trace in figure.data}, {"x", "x2"})
         self.assertTrue(all(trace.visible is None for trace in figure.data))
 
+    def test_chart_keeps_each_price_bin_bound_to_its_own_values(self):
+        source = {
+            "↑ $80": [100.0, 100.0, None],
+            "↑ $85": [65.0, None, 12.5],
+            "↑ $90": [38.3, 69.3, None],
+            "↑ $130": [0.7, 0.2, 0.1],
+            "↓ $85": [5.0, 50.0, None],
+            "↓ $90": [79.0, 87.0, 100.0],
+        }
+        figure = create_chart(
+            ["2026-07-25", "2026-07-26", "2026-07-27"],
+            source,
+        )
+
+        plotted = {trace.name: list(trace.y) for trace in figure.data}
+        for label, values in source.items():
+            self.assertEqual(plotted[label], values)
+
+    def test_marks_every_yes_resolution_in_the_visible_window(self):
+        eastern = ZoneInfo("America/New_York")
+        conditions = [
+            {
+                "label": "↑ $80",
+                "resolved_at": datetime(2026, 7, 21, 7, tzinfo=eastern),
+                "resolved_yes": True,
+            },
+            {
+                "label": "↑ $85",
+                "resolved_at": datetime(2026, 7, 23, 6, tzinfo=eastern),
+                "resolved_yes": True,
+            },
+            {
+                "label": "↑ $90",
+                "resolved_at": datetime(2026, 7, 24, 5, tzinfo=eastern),
+                "resolved_yes": True,
+            },
+            {
+                "label": "↑ $130",
+                "resolved_at": None,
+                "resolved_yes": False,
+            },
+            {
+                "label": "↓ $90",
+                "resolved_at": datetime(2026, 7, 18, 5, tzinfo=eastern),
+                "resolved_yes": True,
+            },
+        ]
+        figure = create_chart(
+            ["2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24"],
+            {"↑ $80": [100.0, None, None, None], "↑ $90": [40.0, 60.0, None, None]},
+            resolved_events=satisfaction_events(conditions),
+        )
+
+        marker_text = [
+            annotation.text
+            for annotation in figure.layout.annotations
+            if annotation.text and annotation.text.endswith(" Yes")
+        ]
+        self.assertEqual(len(figure.layout.shapes), 3)
+        self.assertIn("↑ $80 Yes", marker_text)
+        self.assertIn("↑ $85 Yes", marker_text)
+        self.assertIn("↑ $90 Yes", marker_text)
+        self.assertNotIn("↓ $90 Yes", marker_text)
+
     def test_masks_resolved_gap_and_uses_latest_active_replacement(self):
         eastern = ZoneInfo("America/New_York")
         conditions = [
@@ -134,6 +199,82 @@ class TimeSeriesDataTests(unittest.TestCase):
             latest_active_points(conditions)["↑ $90"][1],
             15.0,
         )
+
+    def test_replacement_masking_is_per_price_bin_not_global(self):
+        eastern = ZoneInfo("America/New_York")
+        conditions = [
+            {
+                "label": "↑ $80",
+                "condition_id": "up80",
+                "created_at": datetime(2026, 7, 1, tzinfo=eastern),
+                "resolved_at": datetime(2026, 7, 14, 10, tzinfo=eastern),
+                "closed": True,
+            },
+            {
+                "label": "↑ $90",
+                "condition_id": "up90-old",
+                "created_at": datetime(2026, 6, 25, tzinfo=eastern),
+                "resolved_at": datetime(2026, 7, 23, 7, tzinfo=eastern),
+                "closed": True,
+            },
+            {
+                "label": "↑ $90",
+                "condition_id": "up90-new",
+                "created_at": datetime(2026, 7, 27, 12, tzinfo=eastern),
+                "resolved_at": None,
+                "closed": False,
+            },
+        ]
+        masked = mask_inactive_condition_dates(
+            ["2026-07-22", "2026-07-23", "2026-07-27"],
+            {
+                "↑ $80": [100.0, 100.0, 100.0],
+                "↑ $90": [69.3, 100.0, 15.0],
+                "↑ $130": [0.6, 0.4, 0.1],
+            },
+            conditions,
+        )
+
+        self.assertEqual(masked["↑ $80"], [None, None, None])
+        self.assertEqual(masked["↑ $90"], [69.3, None, None])
+        self.assertEqual(masked["↑ $130"], [0.6, 0.4, 0.1])
+
+    def test_latest_active_replacement_is_selected_per_price_bin(self):
+        eastern = ZoneInfo("America/New_York")
+        conditions = [
+            {
+                "label": "↑ $90",
+                "condition_id": "older-active",
+                "created_at": datetime(2026, 7, 24, 12, tzinfo=eastern),
+                "resolved_at": None,
+                "last_checked": datetime(2026, 7, 27, 15, tzinfo=eastern),
+                "closed": False,
+                "current_probability": 22.0,
+            },
+            {
+                "label": "↑ $90",
+                "condition_id": "newest-active",
+                "created_at": datetime(2026, 7, 27, 12, tzinfo=eastern),
+                "resolved_at": None,
+                "last_checked": datetime(2026, 7, 27, 16, tzinfo=eastern),
+                "closed": False,
+                "current_probability": 15.0,
+            },
+            {
+                "label": "↑ $85",
+                "condition_id": "up85-active",
+                "created_at": datetime(2026, 7, 26, 12, tzinfo=eastern),
+                "resolved_at": None,
+                "last_checked": datetime(2026, 7, 27, 16, tzinfo=eastern),
+                "closed": False,
+                "current_probability": 35.0,
+            },
+        ]
+
+        active = latest_active_points(conditions)
+
+        self.assertEqual(active["↑ $90"][1], 15.0)
+        self.assertEqual(active["↑ $85"][1], 35.0)
 
 
 if __name__ == "__main__":
