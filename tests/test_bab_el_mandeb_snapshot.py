@@ -7,6 +7,7 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from polymarket_deadline_snapshot import (
+    apply_terminal_resolutions,
     create_heatmap_chart,
     create_line_chart,
     deadline_sort_key,
@@ -74,6 +75,49 @@ class BabElMandebSnapshotTests(unittest.TestCase):
             ["2026-07-17"], series, "Example", ranges=ranges
         )
         self.assertIn("↕ 20.0–80.0", figure.data[0].text[0][0])
+
+    def test_dense_heatmap_highlights_dispute_and_resolution_cells(self):
+        series = {f"July {day}": [50.0, 40.0] for day in range(1, 10)}
+        figure = create_heatmap_chart(
+            ["2026-07-26", "2026-07-27"],
+            series,
+            "Example",
+            resolution_events=[
+                {
+                    "Market": "July 3",
+                    "Observed Date": "2026-07-27",
+                    "Event Type": "dispute-detected",
+                    "Previous Status": "proposed",
+                    "Current Status": "disputed",
+                    "Dispute Count": "1",
+                },
+                {
+                    "Market": "July 4",
+                    "Observed Date": "2026-07-27",
+                    "Event Type": "resolved",
+                    "Previous Status": "disputed",
+                    "Current Status": "resolved",
+                    "Dispute Count": "1",
+                },
+            ],
+        )
+
+        self.assertEqual(figure.data[1].name, "Dispute observed")
+        self.assertEqual(figure.data[1].marker.line.color, "#DC2626")
+        self.assertEqual(figure.data[2].name, "Resolution observed")
+        self.assertEqual(figure.data[2].marker.line.color, "#059669")
+
+    def test_adds_terminal_resolution_date_without_changing_raw_series(self):
+        dates, series, carried = apply_terminal_resolutions(
+            ["2026-07-22"],
+            {"July 23": [4.7]},
+            probabilities={"July 23": 100.0},
+            closed_dates={"July 23": "2026-07-23"},
+        )
+
+        self.assertEqual(dates, ["2026-07-22", "2026-07-23"])
+        self.assertEqual(series["July 23"], [4.7, 100.0])
+        self.assertEqual(carried["July 23"], [False, True])
 
     def test_backfills_ranges_for_closed_and_open_stored_deadlines(self):
         target = datetime(2026, 7, 17, 9, tzinfo=ZoneInfo("America/New_York"))
