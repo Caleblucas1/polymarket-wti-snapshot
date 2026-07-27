@@ -599,7 +599,7 @@ def parse_args() -> argparse.Namespace:
 
 def write_snapshot_chart(args: argparse.Namespace) -> int:
     """Render the stored WTI snapshot without fetching market history."""
-    from plot_wti_timeseries import write_chart
+    from plot_wti_timeseries import WTI_UP_90_FIRST_SATISFIED_AT, write_chart
 
     title = str(getattr(args, "title", "What price will WTI hit in July 2026?"))
     return write_chart(
@@ -608,6 +608,9 @@ def write_snapshot_chart(args: argparse.Namespace) -> int:
         range_path=getattr(args, "range_output", None),
         days=args.days,
         title_prefix=title,
+        satisfaction_at=WTI_UP_90_FIRST_SATISFIED_AT,
+        resolution_status_path=args.output.parent / "market_resolution_status.csv",
+        event_key=str(getattr(args, "event_key", "wti-july")),
     )
 
 
