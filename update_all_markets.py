@@ -7,6 +7,8 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from plot_related_markets import DEFAULT_OUTPUT as RELATED_MARKET_CHART
+from plot_related_markets import write_related_market_chart
 from publish_market_charts import publish_all_charts
 from polymarket_resolution_status import refresh_resolution_status
 from polymarket_wti_snapshot import TrackerResult
@@ -85,6 +87,17 @@ def main() -> int:
             key for key in args.events
             if results.get(key, TrackerResult("failed", exit_code=1)).exit_code == 0
         ]
+        if set(successful_events) == set(load_registry()):
+            try:
+                count = write_related_market_chart(
+                    data_dir=args.data_dir,
+                    output=args.data_dir / RELATED_MARKET_CHART,
+                    days=args.days,
+                )
+                print(f"related-markets: wrote {count} comparison(s)")
+            except (OSError, ValueError) as exc:
+                chart_publish_failure = str(exc)
+                print(f"related-markets: failed: {exc}")
         try:
             manifest_path, entries = publish_all_charts(
                 args.data_dir, event_keys=successful_events,
