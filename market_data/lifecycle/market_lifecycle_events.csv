@@ -104,3 +104,7 @@ Detected At,Event Key,Logical Market ID,Threshold Family ID,Market Label,Event T
 2026-07-26T13:41:44Z,iran-gulf-action,iran-gulf-action::july-22,iran-gulf-action::july-22,July 22,closed,0x6f5b0c11d2ca15f24e8ec8da647fed7db927d1f5ea6f83b51054a032930f4b49,,
 2026-07-26T13:41:44Z,iran-gulf-action,iran-gulf-action::july-22,iran-gulf-action::july-22,July 22,orders-stopped,0x6f5b0c11d2ca15f24e8ec8da647fed7db927d1f5ea6f83b51054a032930f4b49,,
 2026-07-26T13:41:44Z,wti-july,wti-july::down-90,wti-july::threshold-90,↓ $90,replaced,0xc01ab4e58e374a875a84d0800090e8b858abaacd34ba0ac202ed9807686334f5,0x1079c44973db509356875db06aa3b585598068bdc5ff0673584f10dc3255b80a,New physical condition for the same logical contract
+2026-07-27T13:43:30Z,wti-july,wti-july::down-85,wti-july::threshold-85,↓ $85,closed,0x574897029f416bf4b0a30b51b2ffcc512f2d5f940557913189cff2205f27c08d,,
+2026-07-27T13:43:30Z,wti-july,wti-july::down-85,wti-july::threshold-85,↓ $85,orders-stopped,0x574897029f416bf4b0a30b51b2ffcc512f2d5f940557913189cff2205f27c08d,,
+2026-07-27T13:43:30Z,wti-july,wti-july::down-90,wti-july::threshold-90,↓ $90,closed,0xc01ab4e58e374a875a84d0800090e8b858abaacd34ba0ac202ed9807686334f5,,
+2026-07-27T13:43:30Z,wti-july,wti-july::down-90,wti-july::threshold-90,↓ $90,orders-stopped,0xc01ab4e58e374a875a84d0800090e8b858abaacd34ba0ac202ed9807686334f5,,
