@@ -182,6 +182,29 @@ def market_created_timestamp(market: dict[str, Any]) -> float:
         return float("-inf")
 
 
+def market_closed_timestamp(market: dict[str, Any]) -> float:
+    """Return the physical condition's trading end, or infinity while active."""
+    if not market_is_closed(market):
+        return float("inf")
+    value = (
+        market.get("closedTime")
+        or market.get("umaEndDate")
+        or market.get("updatedAt")
+    )
+    if not value:
+        return float("-inf")
+    normalized = str(value).replace("Z", "+00:00")
+    # Gamma has historically emitted both ``+00`` and ``+00:00:00``.
+    if normalized.endswith("+00"):
+        normalized = f"{normalized}:00"
+    if normalized.endswith("+00:00:00"):
+        normalized = normalized[:-3]
+    try:
+        return datetime.fromisoformat(normalized).timestamp()
+    except ValueError:
+        return float("-inf")
+
+
 def stitch_market_histories(
     instances: Iterable[tuple[str, float]],
     histories: dict[str, list[dict[str, Any]]],
@@ -205,6 +228,38 @@ def stitch_market_histories(
                 stitched.append({"t": timestamp, "p": price})
     stitched.sort(key=lambda item: item["t"])
     return stitched
+
+
+def active_instance_history(
+    instances: Iterable[tuple[str, float, float]],
+    histories: dict[str, list[dict[str, Any]]],
+    target: datetime,
+) -> list[dict[str, float]]:
+    """Return history for the newest physical condition active at ``target``.
+
+    This prevents a resolved 100% condition from leaking into later daily
+    snapshots while no replacement condition is trading.
+    """
+    target_timestamp = target.timestamp()
+    active = [
+        instance
+        for instance in instances
+        if instance[1] <= target_timestamp < instance[2]
+    ]
+    if not active:
+        return []
+    token_id, created_at, closed_at = max(active, key=lambda item: item[1])
+    normalized: list[dict[str, float]] = []
+    for item in histories.get(token_id, []):
+        try:
+            timestamp = float(item["t"])
+            price = float(item["p"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if created_at <= timestamp < closed_at:
+            normalized.append({"t": timestamp, "p": price})
+    normalized.sort(key=lambda item: item["t"])
+    return normalized
 
 
 def prices_at_or_before(
@@ -376,7 +431,7 @@ def collect_rows_and_ranges(
     list[dict[str, str | float | None]],
 ]:
     """Collect snapshots and trailing-24-hour ranges from one history fetch."""
-    market_records: dict[str, list[tuple[str, float]]] = {}
+    market_records: dict[str, list[tuple[str, float, float]]] = {}
     for market in markets:
         label = market.get("groupItemTitle") or market.get("question") or "Unknown market"
         token_id = yes_token_id(market)
@@ -384,7 +439,11 @@ def collect_rows_and_ranges(
             logging.warning("Skipping %s: no CLOB token IDs", label)
             continue
         market_records.setdefault(str(label), []).append(
-            (token_id, market_created_timestamp(market))
+            (
+                token_id,
+                market_created_timestamp(market),
+                market_closed_timestamp(market),
+            )
         )
 
     histories = fetch_histories(
@@ -392,7 +451,7 @@ def collect_rows_and_ranges(
         list(dict.fromkeys(
             token_id
             for instances in market_records.values()
-            for token_id, _ in instances
+            for token_id, _, _ in instances
         )),
         targets,
         timeout,
@@ -400,18 +459,18 @@ def collect_rows_and_ranges(
     rows: list[dict[str, str | float | None]] = []
     range_rows: list[dict[str, str | float | None]] = []
     for label, instances in market_records.items():
-        history = stitch_market_histories(instances, histories)
-        if not history:
+        if not any(histories.get(token_id) for token_id, _, _ in instances):
             logging.warning("Skipping %s: no price history", label)
             continue
 
         row: dict[str, str | float | None] = {label_column: str(label)}
-        for target, price in zip(targets, prices_at_or_before(history, targets)):
+        for target in targets:
+            history = active_instance_history(instances, histories, target)
+            price = prices_at_or_before(history, [target])[0] if history else None
             row[target.date().isoformat()] = None if price is None else round(price * 100, 1)
             low, high = probability_range(history, target)
-            # A resolved or inactive market may have no new observation inside
-            # the window even though its last price remains the snapshot value.
-            # Represent that carried-forward day as a zero-width range.
+            # An active but quiet market may have no observation inside the
+            # range window even though it has a valid latest snapshot.
             if low is None and high is None and price is not None:
                 low = high = price
             range_rows.append(
@@ -608,6 +667,8 @@ def write_snapshot_chart(args: argparse.Namespace) -> int:
         range_path=getattr(args, "range_output", None),
         days=args.days,
         title_prefix=title,
+        resolution_status_path=args.output.parent / "market_resolution_status.csv",
+        event_key=str(getattr(args, "event_key", "wti-july")),
     )
 
 
