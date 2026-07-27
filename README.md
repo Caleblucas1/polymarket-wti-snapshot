@@ -124,13 +124,15 @@ Three additional event commands use the appropriate shared engine:
 ```bash
 python houthi_saudi_action_snapshot.py
 python crude_oil_ath_snapshot.py
-python wti_week_july_13_snapshot.py
+python wti_week_july_27_snapshot.py
 ```
 
 The Houthi-Saudi and crude-oil all-time-high events use deadline comparison
-charts. The weekly WTI event uses the price-bin selector chart and includes all
-fourteen thresholds by default, including bins that have already resolved.
-Each command writes its own cumulative 9:00 AM ET CSV and seven-day HTML chart.
+charts. The weekly WTI tracker follows the current Week of July 27 event and
+uses the grouped price-bin chart with all fourteen thresholds. The previous
+Week of July 13 files remain stored but are no longer part of the daily update
+or briefing. Each command writes its own cumulative 9:00 AM ET CSV and
+seven-day HTML chart.
 
 ## Fast multi-market update
 
@@ -169,8 +171,24 @@ the mutable compatibility filename at the repository root.
 The same command refreshes `market_resolution_status.csv` from Gamma metadata.
 It records each contract's current UMA status, whether it is currently
 disputed, whether it has ever been disputed, the dispute count and status
-history, and whether it is closed or automatically resolved. Past disputes are
-sticky: a later resolved status does not erase the historical dispute flag.
+history, whether it is closed or automatically resolved, and the terminal Yes
+probability when available. Past disputes are sticky: a later resolved status
+does not erase the historical dispute flag.
+
+The status inventory also stores each physical condition's creation time,
+resolution time, and current Yes probability. The WTI chart uses those fields
+to split all thresholds into lower- and upper-price panels, mark every observed
+Yes resolution with a red vertical line, and show the newest active replacement
+as a live diamond. A resolved condition's terminal 100% value is never carried
+into later dates: the logical line remains blank until a replacement condition
+exists, then restarts from that replacement's own price.
+
+`market_resolution_events.csv` is an append-only transition log. It timestamps
+newly observed disputes, cleared disputes, and final resolutions. Dense
+deadline heatmaps outline disputed cells in red and resolved cells in green.
+Because Polymarket does not expose timestamps for status changes that predate
+this tracker, historical disputes discovered at initial setup retain their
+sticky flag but are not assigned an invented chart date.
 
 ## Unified hourly market data and lifecycle
 

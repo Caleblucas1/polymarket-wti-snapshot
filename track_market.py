@@ -59,6 +59,7 @@ def run_event(
         data_dir / str(configured_range_output) if configured_range_output else None
     )
     args = argparse.Namespace(
+        event_key=event_key,
         slug=slug or str(config["slug"]),
         title=str(config["title"]),
         output=resolved_output,
