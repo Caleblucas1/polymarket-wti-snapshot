@@ -56,6 +56,8 @@ class ResolutionStatusTests(unittest.TestCase):
                         "conditionId": "condition",
                         "umaResolutionStatus": "resolved",
                         "closed": True,
+                        "createdAt": "2026-07-20T16:27:00Z",
+                        "closedTime": "2026-07-23 11:17:05+00",
                         "outcomes": '["Yes", "No"]',
                         "outcomePrices": '["1", "0"]',
                     }
@@ -66,6 +68,9 @@ class ResolutionStatusTests(unittest.TestCase):
 
         self.assertEqual(rows[0]["Resolved Outcome"], "Yes")
         self.assertEqual(rows[0]["Yes Resolution Probability"], "100.0")
+        self.assertEqual(rows[0]["Current Yes Probability"], "100.0")
+        self.assertEqual(rows[0]["Condition Created At"], "2026-07-20T16:27:00Z")
+        self.assertEqual(rows[0]["Resolved At"], "2026-07-23 11:17:05+00")
 
     def test_emits_dispute_and_resolution_transitions(self):
         existing = {
