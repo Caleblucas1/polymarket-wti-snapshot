@@ -7,6 +7,7 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from polymarket_wti_snapshot import (
+    active_instance_history,
     all_markets_closed,
     collect_rows_and_ranges,
     fetch_histories,
@@ -65,6 +66,27 @@ class SnapshotTests(unittest.TestCase):
             [("old", float("-inf")), ("new", 200)], histories
         )
         self.assertEqual(stitched, [{"t": 100.0, "p": 0.2}, {"t": 220.0, "p": 0.6}])
+
+    def test_uses_only_the_physical_condition_active_at_target(self):
+        target = datetime.fromtimestamp(250, tz=ZoneInfo("UTC"))
+        histories = {
+            "resolved": [{"t": 190, "p": 1.0}],
+            "replacement": [{"t": 260, "p": 0.2}],
+        }
+        instances = [
+            ("resolved", 100.0, 200.0),
+            ("replacement", 260.0, float("inf")),
+        ]
+
+        self.assertEqual(
+            active_instance_history(instances, histories, target),
+            [],
+        )
+        later = datetime.fromtimestamp(300, tz=ZoneInfo("UTC"))
+        self.assertEqual(
+            active_instance_history(instances, histories, later),
+            [{"t": 260.0, "p": 0.2}],
+        )
 
     def test_selects_latest_price_at_or_before_target(self):
         targets = [
