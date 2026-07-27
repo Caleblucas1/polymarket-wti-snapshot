@@ -1,8 +1,17 @@
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
-from plot_wti_timeseries import create_chart, latest_window, load_ranges, load_snapshot
+from plot_wti_timeseries import (
+    create_chart,
+    latest_active_points,
+    latest_window,
+    load_ranges,
+    load_snapshot,
+    mask_inactive_condition_dates,
+)
 
 
 class TimeSeriesDataTests(unittest.TestCase):
@@ -74,6 +83,57 @@ class TimeSeriesDataTests(unittest.TestCase):
         self.assertEqual(list(trace.error_y.arrayminus), [5.0, 8.0])
         self.assertEqual(list(trace.error_y.array), [3.0, 10.0])
         self.assertTrue(trace.error_y.visible)
+
+    def test_splits_price_bins_into_two_visible_panels(self):
+        figure = create_chart(
+            ["2026-07-26", "2026-07-27"],
+            {
+                "↓ $50": [1.0, 2.0],
+                "↑ $80": [20.0, 30.0],
+                "↑ $90": [40.0, 50.0],
+                "↑ $130": [1.0, 1.0],
+            },
+        )
+
+        self.assertEqual(len(figure.data), 4)
+        self.assertEqual({trace.xaxis for trace in figure.data}, {"x", "x2"})
+        self.assertTrue(all(trace.visible is None for trace in figure.data))
+
+    def test_masks_resolved_gap_and_uses_latest_active_replacement(self):
+        eastern = ZoneInfo("America/New_York")
+        conditions = [
+            {
+                "label": "↑ $90",
+                "condition_id": "old",
+                "created_at": datetime(2026, 6, 25, tzinfo=eastern),
+                "resolved_at": datetime(2026, 7, 23, 7, 17, tzinfo=eastern),
+                "last_checked": datetime(2026, 7, 23, 9, tzinfo=eastern),
+                "closed": True,
+                "resolved_yes": True,
+                "current_probability": 100.0,
+            },
+            {
+                "label": "↑ $90",
+                "condition_id": "new",
+                "created_at": datetime(2026, 7, 27, 12, 27, tzinfo=eastern),
+                "resolved_at": None,
+                "last_checked": datetime(2026, 7, 27, 16, 15, tzinfo=eastern),
+                "closed": False,
+                "resolved_yes": False,
+                "current_probability": 15.0,
+            },
+        ]
+        masked = mask_inactive_condition_dates(
+            ["2026-07-22", "2026-07-23", "2026-07-27"],
+            {"↑ $90": [69.3, 100.0, 100.0]},
+            conditions,
+        )
+
+        self.assertEqual(masked["↑ $90"], [69.3, None, None])
+        self.assertEqual(
+            latest_active_points(conditions)["↑ $90"][1],
+            15.0,
+        )
 
 
 if __name__ == "__main__":
