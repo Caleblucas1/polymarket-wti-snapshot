@@ -1,0 +1,22 @@
+[
+  {
+    "id": "shipping_july31_vs_saudi_july31",
+    "title": "Houthi shipping July 31 vs Saudi action July 31",
+    "relationship": "same-expiry related escalation signal",
+    "left_event": "houthi-shipping",
+    "left_label": "July 31",
+    "right_event": "houthi-saudi",
+    "right_label": "July 31",
+    "note": "Similar expiry and shared Houthi-escalation driver, but different resolution rules: commercial shipping strike/seizure vs strike impacting Saudi territory."
+  },
+  {
+    "id": "bab_aug31_vs_saudi_july24",
+    "title": "Bab el-Mandeb August 31 vs Saudi action July 24",
+    "relationship": "thematic related escalation signal",
+    "left_event": "bab-el-mandeb",
+    "left_label": "August 31",
+    "right_event": "houthi-saudi",
+    "right_label": "July 24",
+    "note": "Both can react to regional Houthi escalation, but the Bab el-Mandeb contract resolves on shipping-flow closure rather than a Saudi strike."
+  }
+]
