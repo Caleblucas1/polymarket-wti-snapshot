@@ -1,2 +1,4 @@
 Observed At,Event Key,Event Title,Market,Condition ID,Event Type,Previous Status,Current Status,Dispute Count
 2026-07-27T09:31:20-04:00,iran-gulf-action,Iran military action against a gulf state on...?,July 23,0xe50789ae873f89bf41daa5791bb6242d33c37466c7ab19ad8c6ec82633a3e6cf,dispute-detected,unknown,disputed,2
+2026-07-28T09:07:19-04:00,iran-gulf-action,Iran military action against a gulf state on...?,July 24,0x1e97a760229f1b1d9a1682d0f4d0c659cfb9e386baacc010f57f5f52be4dff95,resolved,,resolved,0
+2026-07-28T09:07:19-04:00,houthi-saudi,Houthi military action against Saudi Arabia by...?,July 24,0xdd43b704a6d32ca6578c870b76b93e4b493d149db0af6293bebf9732265b2fdf,resolved,,resolved,0
