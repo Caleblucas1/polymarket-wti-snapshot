@@ -310,32 +310,17 @@ def create_chart(
     resolved_events: list[dict[str, Any]] | None = None,
     live_points: dict[str, tuple[str, float]] | None = None,
 ) -> Any:
-    """Build two price-band panels with ranges and condition lifecycle markers."""
+    """Build a single-condition chart with ranges and condition lifecycle markers."""
     import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
 
     labels = sorted(series, key=lambda label: (price_threshold(label), label))
-    thresholds = sorted({price_threshold(label) for label in labels})
-    split_threshold = thresholds[(len(thresholds) - 1) // 2]
-    lower_labels = [label for label in labels if price_threshold(label) <= split_threshold]
-    upper_labels = [label for label in labels if price_threshold(label) > split_threshold]
-    if not upper_labels:
-        upper_labels = lower_labels
-        lower_labels = []
-    panel_for_label = {
-        label: 1 if label in lower_labels else 2
-        for label in labels
-    }
-    figure = make_subplots(
-        rows=2,
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.12,
-        subplot_titles=(
-            f"Lower price conditions (≤ ${split_threshold:g})",
-            f"Upper price conditions (> ${split_threshold:g})",
-        ),
+    default_label = (
+        "↑ $90"
+        if "↑ $90" in series
+        else next((label for label in labels if any(value is not None for value in series[label])), labels[0])
     )
+    default_index = labels.index(default_label)
+    figure = go.Figure()
     palette = [
         "#2563EB",
         "#DC2626",
@@ -353,7 +338,6 @@ def create_chart(
 
     for index, label in enumerate(labels):
         values = series[label]
-        row = panel_for_label[label]
         color = palette[index % len(palette)]
         label_ranges = (ranges or {}).get(label, {})
         trace_dates = list(dates)
@@ -394,6 +378,7 @@ def create_chart(
                 mode="lines+markers",
                 name=label,
                 legendgroup=label,
+                visible=index == default_index,
                 line={
                     "color": color,
                     "width": 2,
@@ -435,12 +420,24 @@ def create_chart(
                     "<br>Prior 24h high: %{customdata[1]}"
                     "<br>%{customdata[2]}<extra></extra>"
                 ),
-            ),
-            row=row,
-            col=1,
+            )
         )
 
-    annotations = list(figure.layout.annotations)
+    price_bin_buttons = []
+    for index, label in enumerate(labels):
+        visibility = [trace_index == index for trace_index in range(len(labels))]
+        price_bin_buttons.append(
+            {
+                "label": label,
+                "method": "update",
+                "args": [
+                    {"visible": visibility},
+                    {"title.text": f"{title_prefix} — {label}"},
+                ],
+            }
+        )
+
+    annotations: list[dict[str, Any]] = []
     shapes: list[dict[str, Any]] = []
     visible_start = date.fromisoformat(min(dates))
     visible_end = date.fromisoformat(max(dates))
@@ -480,22 +477,75 @@ def create_chart(
         )
 
     figure.update_layout(
-        title={"text": title_prefix, "x": 0.5},
-        template="plotly_white",
-        showlegend=True,
-        hovermode="x unified",
-        height=860,
-        margin={"l": 70, "r": 35, "t": 150, "b": 100},
-        legend={
-            "orientation": "h",
-            "yanchor": "bottom",
-            "y": -0.2,
-            "xanchor": "left",
-            "x": 0,
+        title={"text": f"{title_prefix} — {default_label}", "x": 0.5},
+        xaxis={
+            "title": "Daily snapshot at 9:00 AM ET plus latest active-condition reading",
+            "type": "date",
+            "showgrid": False,
         },
+        yaxis={
+            "title": "Implied probability (%)",
+            "rangemode": "tozero",
+            "ticksuffix": "%",
+            "gridcolor": "#E5E7EB",
+        },
+        template="plotly_white",
+        showlegend=False,
+        hovermode="x unified",
+        height=640,
+        margin={"l": 70, "r": 35, "t": 135, "b": 95},
+        updatemenus=[
+            {
+                "buttons": price_bin_buttons,
+                "direction": "down",
+                "showactive": True,
+                "x": 0,
+                "xanchor": "left",
+                "y": 1.18,
+                "yanchor": "top",
+            },
+            {
+                "buttons": [
+                    {
+                        "label": "Auto scale",
+                        "method": "relayout",
+                        "args": [{"yaxis.autorange": True}],
+                    },
+                    {
+                        "label": "0-100% scale",
+                        "method": "relayout",
+                        "args": [{"yaxis.range": [0, 100]}],
+                    },
+                ],
+                "direction": "down",
+                "showactive": True,
+                "x": 0.28,
+                "xanchor": "left",
+                "y": 1.18,
+                "yanchor": "top",
+            },
+        ],
         shapes=shapes,
         annotations=[
             *annotations,
+            {
+                "text": "Price condition",
+                "xref": "paper",
+                "yref": "paper",
+                "x": 0,
+                "y": 1.25,
+                "showarrow": False,
+                "xanchor": "left",
+            },
+            {
+                "text": "Scale",
+                "xref": "paper",
+                "yref": "paper",
+                "x": 0.28,
+                "y": 1.25,
+                "showarrow": False,
+                "xanchor": "left",
+            },
             {
                 "text": (
                     "Red lines: physical conditions resolved Yes. "
@@ -506,24 +556,12 @@ def create_chart(
                 "xref": "paper",
                 "yref": "paper",
                 "x": 0,
-                "y": -0.28,
+                "y": -0.22,
                 "showarrow": False,
                 "xanchor": "left",
                 "font": {"size": 11, "color": "#6B7280"},
             },
         ],
-    )
-    figure.update_xaxes(type="date", showgrid=False)
-    figure.update_xaxes(
-        title_text="9:00 AM ET daily snapshots plus the latest active-condition reading",
-        row=2,
-        col=1,
-    )
-    figure.update_yaxes(
-        title_text="Implied probability (%)",
-        range=[0, 100],
-        ticksuffix="%",
-        gridcolor="#E5E7EB",
     )
     return figure
 

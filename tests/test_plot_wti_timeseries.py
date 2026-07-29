@@ -85,7 +85,7 @@ class TimeSeriesDataTests(unittest.TestCase):
         self.assertEqual(list(trace.error_y.array), [3.0, 10.0])
         self.assertTrue(trace.error_y.visible)
 
-    def test_splits_price_bins_into_two_visible_panels(self):
+    def test_uses_single_condition_dropdown_chart(self):
         figure = create_chart(
             ["2026-07-26", "2026-07-27"],
             {
@@ -97,8 +97,10 @@ class TimeSeriesDataTests(unittest.TestCase):
         )
 
         self.assertEqual(len(figure.data), 4)
-        self.assertEqual({trace.xaxis for trace in figure.data}, {"x", "x2"})
-        self.assertTrue(all(trace.visible is None for trace in figure.data))
+        self.assertEqual({trace.xaxis for trace in figure.data}, {None})
+        self.assertEqual([trace.visible for trace in figure.data].count(True), 1)
+        self.assertFalse(figure.layout.showlegend)
+        self.assertEqual(figure.layout.updatemenus[0].buttons[0].label, "↓ $50")
 
     def test_chart_keeps_each_price_bin_bound_to_its_own_values(self):
         source = {
