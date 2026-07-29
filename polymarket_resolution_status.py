@@ -40,7 +40,7 @@ FIELDNAMES = [
     "Resolved Outcome",
     "Yes Resolution Probability",
 ]
-EVENT_FIELDNAMES = [
+BASE_EVENT_FIELDNAMES = [
     "Observed At",
     "Event Key",
     "Event Title",
@@ -50,6 +50,14 @@ EVENT_FIELDNAMES = [
     "Previous Status",
     "Current Status",
     "Dispute Count",
+]
+EVENT_FIELDNAMES = [
+    *BASE_EVENT_FIELDNAMES,
+    "Resolved At",
+    "Resolved Outcome",
+    "Yes Resolution Probability",
+    "Automatically Resolved",
+    "Resolution Details",
 ]
 
 
@@ -260,6 +268,20 @@ def resolution_transition_events(
         elif previous == "disputed" and current != "disputed":
             event_types.append("dispute-cleared")
         for event_type in event_types:
+            resolution_details = ""
+            if event_type == "resolved":
+                outcome = incoming.get("Resolved Outcome", "") or "unknown outcome"
+                yes_probability = incoming.get("Yes Resolution Probability", "")
+                resolved_at = incoming.get("Resolved At", "")
+                automatic = incoming.get("Automatically Resolved", "")
+                detail_parts = [f"outcome={outcome}"]
+                if yes_probability:
+                    detail_parts.append(f"yes_probability={yes_probability}")
+                if resolved_at:
+                    detail_parts.append(f"resolved_at={resolved_at}")
+                if automatic:
+                    detail_parts.append(f"automatically_resolved={automatic}")
+                resolution_details = "; ".join(detail_parts)
             events.append(
                 {
                     "Observed At": timestamp,
@@ -271,6 +293,11 @@ def resolution_transition_events(
                     "Previous Status": previous,
                     "Current Status": current,
                     "Dispute Count": str(current_disputes),
+                    "Resolved At": incoming.get("Resolved At", ""),
+                    "Resolved Outcome": incoming.get("Resolved Outcome", ""),
+                    "Yes Resolution Probability": incoming.get("Yes Resolution Probability", ""),
+                    "Automatically Resolved": incoming.get("Automatically Resolved", ""),
+                    "Resolution Details": resolution_details,
                 }
             )
     return events
@@ -295,6 +322,11 @@ def bootstrap_current_dispute_events(
                 "Previous Status": "unknown",
                 "Current Status": "disputed",
                 "Dispute Count": row.get("Dispute Count", "0"),
+                "Resolved At": "",
+                "Resolved Outcome": "",
+                "Yes Resolution Probability": "",
+                "Automatically Resolved": "",
+                "Resolution Details": "",
             }
         )
     return events
@@ -310,7 +342,7 @@ def append_resolution_events(
     if path.exists():
         with path.open(newline="", encoding="utf-8-sig") as input_file:
             reader = csv.DictReader(input_file)
-            if not reader.fieldnames or not set(EVENT_FIELDNAMES).issubset(
+            if not reader.fieldnames or not set(BASE_EVENT_FIELDNAMES).issubset(
                 reader.fieldnames
             ):
                 raise ValueError("Existing resolution-events CSV has an incompatible schema")
