@@ -1,6 +1,8 @@
 import contextlib
 import io
+import json
 import unittest
+from pathlib import Path
 
 from narrative_break_signal import (
     Level,
@@ -11,6 +13,35 @@ from narrative_break_signal import (
 
 
 class NarrativeBreakSignalTests(unittest.TestCase):
+    def test_signal_market_catalog_has_unique_urls_and_five_variables(self):
+        catalog = json.loads(Path("signal_market_catalog.json").read_text(encoding="utf-8"))
+        urls = [event["url"] for event in catalog["events"].values()]
+
+        self.assertEqual(len(catalog["variables"]), 5)
+        self.assertEqual(len(urls), 16)
+        self.assertEqual(len(urls), len(set(urls)))
+        self.assertEqual(
+            [variable["key"] for variable in catalog["variables"]],
+            [
+                "diplomacy",
+                "blockade_near_term",
+                "blockade_long_term",
+                "shipping_disruption",
+                "oil_upside",
+            ],
+        )
+
+    def test_batch_questionnaire_contains_all_scenarios_and_readable_headers(self):
+        questionnaire = Path("signal_questionnaire.html").read_text(encoding="utf-8")
+
+        self.assertIn("U.S.–Iran diplomacy and de-escalation odds", questionnaire)
+        self.assertIn("Iranian blockade ends by near-term deadline", questionnaire)
+        self.assertIn("Hormuz and regional shipping-disruption odds", questionnaire)
+        self.assertIn("WTI and crude-oil upside-threshold odds", questionnaire)
+        self.assertIn("for (let i = 0; i < 32; i += 1)", questionnaire)
+        self.assertIn("grayCode(index) ^ 0b11100", questionnaire)
+        self.assertIn("Copy completed answers for ChatGPT", questionnaire)
+
     def test_peace_drop_alone_is_weaker_yellow_when_curve_does_not_confirm(self):
         result = classify_scenario(
             {
