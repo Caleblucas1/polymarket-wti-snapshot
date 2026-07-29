@@ -70,6 +70,10 @@
     "iran_targets_shipping": {
       "label": "Iran successfully targets shipping by…?",
       "url": "https://polymarket.com/event/iran-successfully-targets-shipping-onptptpt-20260625225210236"
+    },
+    "houthis_target_shipping_july_22": {
+      "label": "Houthis successfully target shipping on…?",
+      "url": "https://polymarket.com/event/houthis-successfully-target-shipping-onptptpt-20260722225036915"
     }
   },
   "variables": [
@@ -120,7 +124,8 @@
         "hormuz_transit_july_27",
         "zero_hormuz_transit",
         "bab_el_mandeb_average_transit",
-        "iran_targets_shipping"
+        "iran_targets_shipping",
+        "houthis_target_shipping_july_22"
       ],
       "inverse_event_ids": [
         "hormuz_normal_by_july_31",
