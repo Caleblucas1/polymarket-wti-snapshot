@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from chart_output import plotly_basic_cdn
+from polymarket_deadline_snapshot import (
+    _format_resolution_timestamp,
+    _resolution_method,
+    load_resolution_details,
+)
 from plot_wti_timeseries import load_ranges, load_snapshot
 from track_market import load_registry
 
@@ -43,6 +48,8 @@ class PairSeries:
     right_values: list[float]
     left_ranges: list[tuple[float | None, float | None]]
     right_ranges: list[tuple[float | None, float | None]]
+    left_resolution: dict[str, str] | None = None
+    right_resolution: dict[str, str] | None = None
 
     @property
     def spreads(self) -> list[float]:
@@ -157,6 +164,21 @@ def aligned_pair_series(
         if right_range_path and right_range_path.exists()
         else {}
     )
+    resolution_status_path = data_dir / "market_resolution_status.csv"
+    left_resolution = (
+        load_resolution_details(resolution_status_path, event_key=pair.left_event).get(
+            pair.left_label
+        )
+        if resolution_status_path.exists()
+        else None
+    )
+    right_resolution = (
+        load_resolution_details(resolution_status_path, event_key=pair.right_event).get(
+            pair.right_label
+        )
+        if resolution_status_path.exists()
+        else None
+    )
 
     return PairSeries(
         pair=pair,
@@ -167,6 +189,8 @@ def aligned_pair_series(
         right_ranges=[
             right_ranges_by_label.get(date_string, (None, None)) for date_string in dates
         ],
+        left_resolution=left_resolution,
+        right_resolution=right_resolution,
     )
 
 
@@ -189,6 +213,32 @@ def _range_errors(
             ]
         )
     return lower_errors, upper_errors, customdata
+
+
+def _resolution_hover_values(
+    values: list[float],
+    dates: list[str],
+    resolution: dict[str, str] | None,
+) -> list[str]:
+    """Return observed or resolved point text for related-market hovers."""
+    if not resolution:
+        return [f"Snapshot: {value:.1f}%" for value in values]
+    resolved_at = str(resolution.get("resolved_at") or "")
+    try:
+        resolved_date = resolved_at[:10]
+    except (AttributeError, TypeError):
+        resolved_date = ""
+    if not resolved_date:
+        return [f"Snapshot: {value:.1f}%" for value in values]
+    resolved_text = (
+        f"Resolved: {resolution.get('outcome') or 'Unknown'}<br>"
+        f"Resolution date: {_format_resolution_timestamp(resolved_at)}<br>"
+        f"Resolution method: {_resolution_method(resolution.get('automatic', ''))}"
+    )
+    return [
+        resolved_text if date_string >= resolved_date else f"Snapshot: {value:.1f}%"
+        for date_string, value in zip(dates, values)
+    ]
 
 
 def build_chart(pair_series: list[PairSeries]) -> Any:
@@ -225,6 +275,14 @@ def build_chart(pair_series: list[PairSeries]) -> Any:
             series.right_values,
             series.right_ranges,
         )
+        left_hover = _resolution_hover_values(
+            series.left_values, series.dates, series.left_resolution
+        )
+        right_hover = _resolution_hover_values(
+            series.right_values, series.dates, series.right_resolution
+        )
+        left_customdata = [row + [hover] for row, hover in zip(left_customdata, left_hover)]
+        right_customdata = [row + [hover] for row, hover in zip(right_customdata, right_hover)]
         figure.add_trace(
             go.Scatter(
                 x=series.dates,
@@ -247,9 +305,9 @@ def build_chart(pair_series: list[PairSeries]) -> Any:
                 },
                 hovertemplate=(
                     "<b>%{fullData.name}</b><br>%{x} at 9:00 AM ET"
-                    "<br>Snapshot: %{y:.1f}%"
                     "<br>Prior 24h low: %{customdata[0]}"
-                    "<br>Prior 24h high: %{customdata[1]}<extra></extra>"
+                    "<br>Prior 24h high: %{customdata[1]}"
+                    "<br>%{customdata[2]}<extra></extra>"
                 ),
             ),
             row=row,
@@ -278,9 +336,9 @@ def build_chart(pair_series: list[PairSeries]) -> Any:
                 },
                 hovertemplate=(
                     "<b>%{fullData.name}</b><br>%{x} at 9:00 AM ET"
-                    "<br>Snapshot: %{y:.1f}%"
                     "<br>Prior 24h low: %{customdata[0]}"
-                    "<br>Prior 24h high: %{customdata[1]}<extra></extra>"
+                    "<br>Prior 24h high: %{customdata[1]}"
+                    "<br>%{customdata[2]}<extra></extra>"
                 ),
             ),
             row=row,
