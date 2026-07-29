@@ -32,6 +32,14 @@
     "chart_output": "houthi_shipping_7_day_chart.html",
     "display_chart": false
   },
+  "houthi-shipping-july-22": {
+    "title": "Houthis successfully target shipping on...?",
+    "engine": "deadline",
+    "slug": "houthis-successfully-target-shipping-onptptpt-20260722225036915",
+    "output": "houthi_shipping_july_22_9am_snapshot.csv",
+    "range_output": "houthi_shipping_july_22_9am_ranges.csv",
+    "chart_output": "houthi_shipping_july_22_7_day_chart.html"
+  },
   "houthi-saudi": {
     "title": "Houthi military action against Saudi Arabia by...?",
     "engine": "deadline",
