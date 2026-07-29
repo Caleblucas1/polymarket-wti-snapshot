@@ -45,6 +45,15 @@ class SignalResult:
     missing_components: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class ScenarioCard:
+    key: str
+    title: str
+    expected_level: Level
+    scenario: dict[str, Move]
+    why: str
+
+
 COMPONENTS = {
     "peace_talk_near_term": "Near-term U.S.-Iran peace-talk odds, such as Aug 31.",
     "peace_talk_long_term": "Later peace-talk odds, such as December or year-end if available.",
@@ -58,6 +67,133 @@ COMPONENTS = {
 
 
 MOVE_HELP = ", ".join(move.value for move in Move)
+
+
+PRECLASSIFIED_SCENARIOS: tuple[ScenarioCard, ...] = (
+    ScenarioCard(
+        key="intact-narrative",
+        title="De-escalation narrative intact",
+        expected_level=Level.GREEN,
+        scenario={
+            "peace_talk_near_term": Move.STABLE,
+            "peace_talk_long_term": Move.STABLE,
+            "blockade_near_term": Move.STABLE,
+            "blockade_intermediate": Move.STABLE,
+            "blockade_long_term": Move.STABLE,
+            "shipping_risk": Move.FLAT,
+            "hormuz_normalization": Move.STABLE,
+            "wti_upside_threshold": Move.FLAT,
+        },
+        why="Nothing important is confirming a narrative break.",
+    ),
+    ScenarioCard(
+        key="peace-only-drop",
+        title="Peace-talk odds fall, rest of curve stable",
+        expected_level=Level.WEAKER_YELLOW,
+        scenario={
+            "peace_talk_near_term": Move.DOWN,
+            "peace_talk_long_term": Move.STABLE,
+            "blockade_near_term": Move.STABLE,
+            "blockade_long_term": Move.STABLE,
+            "shipping_risk": Move.FLAT,
+            "wti_upside_threshold": Move.FLAT,
+        },
+        why=(
+            "Peace-talk timing is weaker, but near-term blockade odds and long-dated "
+            "de-escalation odds do not confirm it."
+        ),
+    ),
+    ScenarioCard(
+        key="question-2",
+        title="Near-term drop, long-term stable, weak oil confirmation",
+        expected_level=Level.YELLOW,
+        scenario={
+            "peace_talk_near_term": Move.DOWN,
+            "peace_talk_long_term": Move.STABLE,
+            "blockade_near_term": Move.DOWN,
+            "blockade_long_term": Move.STABLE,
+            "shipping_risk": Move.FLAT,
+            "wti_upside_threshold": Move.SLIGHTLY_UP,
+        },
+        why=(
+            "The market is pushing near-term resolution later, but shipping risk is flat "
+            "and WTI upside-threshold odds are only slightly higher."
+        ),
+    ),
+    ScenarioCard(
+        key="timing-risk",
+        title="Near-term break without physical confirmation",
+        expected_level=Level.ORANGE,
+        scenario={
+            "peace_talk_near_term": Move.DOWN,
+            "peace_talk_long_term": Move.STABLE,
+            "blockade_near_term": Move.DOWN,
+            "blockade_intermediate": Move.DOWN,
+            "blockade_long_term": Move.STABLE,
+            "shipping_risk": Move.FLAT,
+            "wti_upside_threshold": Move.UP,
+        },
+        why=(
+            "Near-term and intermediate timing deteriorate, but long-dated resolution "
+            "odds remain stable and physical-risk markets are not yet confirming."
+        ),
+    ),
+    ScenarioCard(
+        key="shipping-confirms",
+        title="Narrative weakens and shipping risk confirms",
+        expected_level=Level.RED,
+        scenario={
+            "peace_talk_near_term": Move.DOWN,
+            "peace_talk_long_term": Move.STABLE,
+            "blockade_near_term": Move.DOWN,
+            "blockade_long_term": Move.STABLE,
+            "shipping_risk": Move.UP,
+            "hormuz_normalization": Move.DOWN,
+            "wti_upside_threshold": Move.UP,
+        },
+        why=(
+            "Near-term diplomacy and blockade timing weaken while shipping stress and "
+            "oil upside odds move in the bullish oil direction."
+        ),
+    ),
+    ScenarioCard(
+        key="full-curve-break",
+        title="Full de-escalation curve breaks",
+        expected_level=Level.RED,
+        scenario={
+            "peace_talk_near_term": Move.HARD_DOWN,
+            "peace_talk_long_term": Move.DOWN,
+            "blockade_near_term": Move.HARD_DOWN,
+            "blockade_intermediate": Move.DOWN,
+            "blockade_long_term": Move.DOWN,
+            "shipping_risk": Move.UP,
+            "hormuz_normalization": Move.DOWN,
+            "wti_upside_threshold": Move.UP,
+        },
+        why=(
+            "This is no longer only a timing shift; the broader resolution story and "
+            "physical/oil confirmation layers are deteriorating together."
+        ),
+    ),
+    ScenarioCard(
+        key="physical-only-stress",
+        title="Physical-risk markets worsen before diplomacy reprices",
+        expected_level=Level.ORANGE,
+        scenario={
+            "peace_talk_near_term": Move.STABLE,
+            "peace_talk_long_term": Move.STABLE,
+            "blockade_near_term": Move.STABLE,
+            "blockade_long_term": Move.STABLE,
+            "shipping_risk": Move.UP,
+            "hormuz_normalization": Move.DOWN,
+            "wti_upside_threshold": Move.SLIGHTLY_UP,
+        },
+        why=(
+            "Shipping and Hormuz stress matter, but diplomacy/blockade odds have not "
+            "yet repriced enough to call it a narrative break."
+        ),
+    ),
+)
 
 
 def normalize_move(value: Any) -> Move:
@@ -200,7 +336,14 @@ def classify_scenario(raw_scenario: dict[str, Any]) -> SignalResult:
             missing,
         )
 
-    if is_down(peace_near) and is_down(blockade_near) and is_stable(blockade_long):
+    if (
+        is_down(peace_near)
+        and is_down(blockade_near)
+        and is_stable(blockade_long)
+        and not is_up(shipping)
+        and not is_down(hormuz)
+        and wti != Move.UP
+    ):
         return SignalResult(
             Level.YELLOW_ORANGE,
             (
@@ -258,6 +401,66 @@ def print_components() -> None:
     print(f"\nAllowed moves: {MOVE_HELP}")
 
 
+def scenario_cards_by_key() -> dict[str, ScenarioCard]:
+    return {card.key: card for card in PRECLASSIFIED_SCENARIOS}
+
+
+def print_scenarios(*, include_details: bool = False) -> None:
+    print("Pre-classified scenario cards")
+    for card in PRECLASSIFIED_SCENARIOS:
+        print(f"- {card.key}: {card.expected_level.value} - {card.title}")
+        if include_details:
+            print(f"  Why: {card.why}")
+            for component, move in card.scenario.items():
+                print(f"  {component}: {move.value}")
+
+
+def print_scenario_card(card: ScenarioCard, *, as_json: bool = False) -> None:
+    result = classify_scenario(card.scenario)
+    payload = {
+        "key": card.key,
+        "title": card.title,
+        "expected_level": card.expected_level.value,
+        "actual_level": result.level.value,
+        "why": card.why,
+        "scenario": {name: move.value for name, move in card.scenario.items()},
+        "result": result_to_dict(result),
+    }
+    if as_json:
+        print(json.dumps(payload, indent=2))
+        return
+    print(f"{card.key}: {card.title}")
+    print(f"Expected: {card.expected_level.value}")
+    print(f"Classified: {result.level.value}")
+    print(card.why)
+    print("\nComponents:")
+    for component, move in card.scenario.items():
+        print(f"- {component}: {move.value}")
+    print("\nClassifier result:")
+    print_result(result)
+
+
+def run_quiz() -> int:
+    print("Narrative Break Signal scenario quiz")
+    print("Guess the classification before revealing the pre-classified answer.\n")
+    correct = 0
+    for card in PRECLASSIFIED_SCENARIOS:
+        print(f"Scenario: {card.title}")
+        for component, move in card.scenario.items():
+            print(f"- {component}: {move.value}")
+        answer = input("Your classification: ").strip().lower()
+        expected = card.expected_level.value.lower()
+        if answer == expected:
+            correct += 1
+            print("Correct.")
+        else:
+            print(f"Pre-classified as: {card.expected_level.value}")
+        print(card.why)
+        print()
+    print(f"Score: {correct}/{len(PRECLASSIFIED_SCENARIOS)}")
+    return correct
+
+
 def ask_move(name: str, description: str) -> Move:
     while True:
         answer = input(f"{name} ({description}) [{MOVE_HELP}]: ").strip()
@@ -301,12 +504,34 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show component names and allowed move values.",
     )
+    parser.add_argument(
+        "--list-scenarios",
+        action="store_true",
+        help="Show pre-classified scenario cards.",
+    )
+    parser.add_argument(
+        "--scenario",
+        choices=sorted(scenario_cards_by_key()),
+        help="Classify a pre-built scenario card by key.",
+    )
+    parser.add_argument(
+        "--show-scenario-details",
+        action="store_true",
+        help="Include component moves when listing scenarios.",
+    )
+    parser.add_argument(
+        "--quiz",
+        action="store_true",
+        help="Play through the pre-classified scenario cards.",
+    )
     for component in COMPONENTS:
         parser.add_argument(f"--{component.replace('_', '-')}", choices=[m.value for m in Move])
     return parser
 
 
 def scenario_from_args(args: argparse.Namespace) -> dict[str, Any]:
+    if args.scenario:
+        return {name: move.value for name, move in scenario_cards_by_key()[args.scenario].scenario.items()}
     if args.scenario_json:
         return load_scenario(args.scenario_json)
     scenario = {
@@ -324,6 +549,15 @@ def main(argv: Iterable[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.list_components:
         print_components()
+        return 0
+    if args.list_scenarios:
+        print_scenarios(include_details=args.show_scenario_details)
+        return 0
+    if args.quiz:
+        run_quiz()
+        return 0
+    if args.scenario:
+        print_scenario_card(scenario_cards_by_key()[args.scenario], as_json=args.json)
         return 0
     try:
         result = classify_scenario(scenario_from_args(args))
