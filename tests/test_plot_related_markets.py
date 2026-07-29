@@ -144,6 +144,27 @@ class RelatedMarketChartTests(unittest.TestCase):
                 ["Deadline", "2026-07-17"],
                 [{"Deadline": "July 31", "2026-07-17": "33.5"}],
             )
+            write_csv(
+                data_dir / "market_resolution_status.csv",
+                [
+                    "Event Key",
+                    "Market",
+                    "Current Status",
+                    "Resolved At",
+                    "Resolved Outcome",
+                    "Automatically Resolved",
+                ],
+                [
+                    {
+                        "Event Key": "left",
+                        "Market": "July 31",
+                        "Current Status": "resolved",
+                        "Resolved At": "2026-07-17T13:00:00Z",
+                        "Resolved Outcome": "No",
+                        "Automatically Resolved": "true",
+                    }
+                ],
+            )
             registry = {
                 "left": {"output": "left.csv", "range_output": "left_ranges.csv"},
                 "right": {"output": "right.csv", "range_output": "right_ranges.csv"},
@@ -160,6 +181,8 @@ class RelatedMarketChartTests(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertIn("Related Houthi escalation market comparison", html)
         self.assertIn("not as an arbitrage label", html)
+        self.assertIn("Resolved: No", html)
+        self.assertIn("Resolution method: Automatic", html)
 
 
 if __name__ == "__main__":
