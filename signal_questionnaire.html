@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Narrative Break Signal — Batch Calibration</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d9dee8;
+      --paper: #ffffff;
+      --canvas: #f4f6fa;
+      --accent: #3157d5;
+      --important: #fff3b0;
+      --green: #d9f4df;
+      --yellow: #fff2a8;
+      --orange: #ffd4a8;
+      --red: #ffc7c7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { max-width: 1600px; margin: 0 auto; padding: 28px 20px 80px; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.7rem, 3vw, 2.5rem); }
+    h2 { margin-top: 0; font-size: 1.12rem; }
+    p { line-height: 1.5; }
+    .lede { color: var(--muted); max-width: 920px; margin: 0 0 22px; }
+    .panel {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 24px rgba(23, 32, 51, .05);
+    }
+    details { border-top: 1px solid var(--line); padding: 12px 0 0; margin-top: 12px; }
+    summary { cursor: pointer; font-weight: 700; }
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .market-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+    .market-card p { margin: 6px 0; font-size: .9rem; color: var(--muted); }
+    .market-card a { display: block; margin: 6px 0; color: var(--accent); font-size: .9rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+    table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1420px; background: var(--paper); }
+    th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 10px; vertical-align: middle; }
+    th:last-child, td:last-child { border-right: 0; }
+    tr:last-child td { border-bottom: 0; }
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #eaf0ff;
+      text-align: left;
+      font-size: .83rem;
+      line-height: 1.25;
+    }
+    tbody tr.important td { background: var(--important); font-weight: 650; }
+    tbody tr:hover td { filter: brightness(.975); }
+    .scenario { white-space: nowrap; font-weight: 800; }
+    .move { text-align: center; font-weight: 750; }
+    select, input {
+      width: 100%;
+      min-width: 128px;
+      border: 1px solid #b8c0cf;
+      border-radius: 8px;
+      padding: 8px 9px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+    }
+    input { min-width: 190px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; align-items: center; }
+    button {
+      border: 0;
+      border-radius: 9px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    button.secondary { background: #667085; }
+    button.danger { background: #b42318; }
+    #status { color: var(--muted); font-size: .92rem; }
+    textarea {
+      width: 100%;
+      min-height: 240px;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .key { display: inline-block; border-radius: 5px; padding: 2px 7px; font-size: .82rem; font-weight: 750; }
+    .key.green { background: var(--green); }
+    .key.yellow { background: var(--yellow); }
+    .key.orange { background: var(--orange); }
+    .key.red { background: var(--red); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Narrative Break Signal — Batch Calibration</h1>
+  <p class="lede">
+    Review all 32 binary scenarios in one sitting. Every row changes exactly one market variable from the row above.
+    Yellow-highlighted rows are the most important calibration decisions. Your answers are saved in this browser.
+  </p>
+
+  <section class="panel">
+    <h2>How to read the variables</h2>
+    <p>
+      “Up” and “Down” describe the movement in the named market odds—not whether oil itself is bullish or bearish.
+      The market links supporting each variable are listed below.
+    </p>
+    <div id="marketDefinitions" class="market-grid"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Signal-level key</h2>
+    <p>
+      <span class="key green">Green</span>
+      <span class="key yellow">Weaker Yellow</span>
+      <span class="key yellow">Yellow</span>
+      <span class="key yellow">Yellow/Orange</span>
+      <span class="key orange">Orange</span>
+      <span class="key orange">Orange/Red</span>
+      <span class="key red">Red</span>
+    </p>
+  </section>
+
+  <form id="questionnaire">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>U.S.–Iran diplomacy and de-escalation odds</th>
+            <th>Iranian blockade ends by near-term deadline — odds</th>
+            <th>Iranian blockade ends by long-term deadline — odds</th>
+            <th>Hormuz and regional shipping-disruption odds</th>
+            <th>WTI and crude-oil upside-threshold odds</th>
+            <th>Suggested Signal Level</th>
+            <th>Your Signal Level</th>
+            <th>Your Notes</th>
+          </tr>
+        </thead>
+        <tbody id="scenarioRows"></tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <button type="button" id="copyAnswers">Copy completed answers for ChatGPT</button>
+      <button type="button" class="secondary" id="fillSuggested">Accept all suggested levels</button>
+      <button type="button" class="secondary" id="downloadAnswers">Download answers</button>
+      <button type="button" class="danger" id="clearAnswers">Clear my answers</button>
+      <span id="status" role="status" aria-live="polite"></span>
+    </div>
+    <textarea id="answerPreview" readonly placeholder="Your compact batch response will appear here."></textarea>
+  </form>
+</main>
+
+<script>
+const LEVELS = ["", "Green", "Weaker Yellow", "Yellow", "Yellow/Orange", "Orange", "Orange/Red", "Red", "Unsure"];
+const IMPORTANT = new Set(["Q02", "Q05", "Q09", "Q11", "Q13", "Q16", "Q18", "Q23", "Q27", "Q29"]);
+const SUGGESTED = [
+  "Green", "Weaker Yellow", "Orange", "Yellow", "Orange", "Red", "Yellow/Orange", "Yellow",
+  "Orange", "Orange/Red", "Red", "Red", "Yellow/Orange", "Orange/Red", "Yellow/Orange", "Yellow",
+  "Yellow/Orange", "Orange", "Red", "Orange/Red", "Red", "Red", "Red", "Red",
+  "Yellow/Orange", "Orange", "Red", "Orange/Red", "Yellow/Orange", "Orange/Red", "Yellow/Orange", "Weaker Yellow"
+];
+const VARIABLE_HEADERS = [
+  "U.S.–Iran diplomacy and de-escalation odds",
+  "Iranian blockade ends by near-term deadline — odds",
+  "Iranian blockade ends by long-term deadline — odds",
+  "Hormuz and regional shipping-disruption odds",
+  "WTI and crude-oil upside-threshold odds"
+];
+const MARKET_CATALOG = [
+  {
+    header: "U.S.–Iran diplomacy and de-escalation odds",
+    up: "Diplomacy or continued de-escalation becomes more likely.",
+    down: "Diplomacy or continued de-escalation becomes less likely.",
+    markets: [
+      ["Next round of U.S.–Iran peace talks by…?", "https://polymarket.com/event/next-round-of-us-iran-peace-talks-byptptpt-20260623022722982"],
+      ["U.S.–Iran final nuclear deal by…?", "https://polymarket.com/event/us-iran-final-nuclear-deal-by-20260621201254412"],
+      ["Israel–Iran ceasefire continues through…?", "https://polymarket.com/event/israel-x-iran-ceasefire-continues-throughptptpt-20260716224448963"],
+      ["Will the U.S. invade Iran before 2027? (inverse)", "https://polymarket.com/event/will-the-us-invade-iran-before-2027"]
+    ]
+  },
+  {
+    header: "Iranian blockade ends by near-term deadline — odds",
+    up: "The blockade ending by the nearest relevant unresolved deadline becomes more likely.",
+    down: "The blockade ending by the nearest relevant unresolved deadline becomes less likely.",
+    markets: [
+      ["U.S. announces end of Iranian blockade by…? (near-term conditional)", "https://polymarket.com/event/us-announces-end-of-iranian-blockade-byptptpt-20260713152715080"]
+    ]
+  },
+  {
+    header: "Iranian blockade ends by long-term deadline — odds",
+    up: "The blockade ending by the furthest relevant unresolved deadline becomes more likely.",
+    down: "The blockade ending by the furthest relevant unresolved deadline becomes less likely.",
+    markets: [
+      ["U.S. announces end of Iranian blockade by…? (long-term conditional)", "https://polymarket.com/event/us-announces-end-of-iranian-blockade-byptptpt-20260713152715080"]
+    ]
+  },
+  {
+    header: "Hormuz and regional shipping-disruption odds",
+    up: "Disrupted traffic, closures, fees, military action, or successful attacks become more likely.",
+    down: "Normal traffic becomes more likely and disruption outcomes become less likely.",
+    markets: [
+      ["Hormuz traffic returns to normal by July 31 (inverse)", "https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-july-31"],
+      ["Ships transit Hormuz — week of July 20 (higher ranges inverse)", "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-20-20260717154058215"],
+      ["Ships transit Hormuz — week of July 27 (higher ranges inverse)", "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-27-20260724144200302"],
+      ["Zero ships transit Hormuz by…?", "https://polymarket.com/event/0-ships-transit-hormuz-on-any-date-byptpt-20260626172559966"],
+      ["Iran charges Hormuz fees by…?", "https://polymarket.com/event/iran-charges-hormuz-fees-byptptpt-20260625175035466"],
+      ["Bab el-Mandeb effectively closed by…?", "https://polymarket.com/event/bab-el-mandeb-strait-effectively-closed-by"],
+      ["Average Bab el-Mandeb ship transit at end of July (higher ranges inverse)", "https://polymarket.com/event/avgpt-of-ships-transiting-bab-el-mandeb-strait-end-of-july-20260713195907051"],
+      ["Iran successfully targets shipping by…?", "https://polymarket.com/event/iran-successfully-targets-shipping-onptptpt-20260625225210236"],
+      ["Iran military action against a Gulf state", "https://polymarket.com/event/iran-military-action-against-a-gulf-state-onptptpt-20260708212328295"]
+    ]
+  },
+  {
+    header: "WTI and crude-oil upside-threshold odds",
+    up: "Selected WTI or crude-oil upside thresholds become more likely.",
+    down: "Selected WTI or crude-oil upside thresholds become less likely.",
+    markets: [
+      ["What price will WTI hit in July 2026?", "https://polymarket.com/event/what-price-will-wti-hit-in-july-2026"],
+      ["Crude oil all-time high by…?", "https://polymarket.com/event/crude-oil-all-time-high-by"]
+    ]
+  }
+];
+
+function grayCode(index) {
+  return index ^ (index >> 1);
+}
+
+function movesFor(index) {
+  const code = grayCode(index) ^ 0b11100;
+  return [4, 3, 2, 1, 0].map(bit => ((code >> bit) & 1) ? "Up" : "Down");
+}
+
+function optionMarkup(selected = "") {
+  return LEVELS.map(level =>
+    `<option value="${level}"${level === selected ? " selected" : ""}>${level || "Select…"}</option>`
+  ).join("");
+}
+
+function buildDefinitions() {
+  const container = document.getElementById("marketDefinitions");
+  MARKET_CATALOG.forEach(variable => {
+    const card = document.createElement("article");
+    card.className = "market-card";
+    card.innerHTML = `<h3>${variable.header}</h3><p><strong>Up:</strong> ${variable.up}</p><p><strong>Down:</strong> ${variable.down}</p>`;
+    variable.markets.forEach(([label, url]) => {
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = label;
+      card.appendChild(link);
+    });
+    container.appendChild(card);
+  });
+}
+
+function buildRows() {
+  const body = document.getElementById("scenarioRows");
+  for (let i = 0; i < 32; i += 1) {
+    const id = `Q${String(i).padStart(2, "0")}`;
+    const row = document.createElement("tr");
+    if (IMPORTANT.has(id)) row.className = "important";
+    const moves = movesFor(i);
+    row.innerHTML = `
+      <td class="scenario">${IMPORTANT.has(id) ? "★ " : ""}${id}</td>
+      ${moves.map(move => `<td class="move">${move}</td>`).join("")}
+      <td><select data-kind="suggested" data-id="${id}">${optionMarkup(SUGGESTED[i])}</select></td>
+      <td><select data-kind="answer" data-id="${id}">${optionMarkup()}</select></td>
+      <td><input data-kind="note" data-id="${id}" aria-label="${id} notes" placeholder="Optional reason"></td>`;
+    body.appendChild(row);
+  }
+}
+
+function saveState() {
+  const state = {};
+  document.querySelectorAll("[data-kind='answer'], [data-kind='note'], [data-kind='suggested']").forEach(input => {
+    state[`${input.dataset.kind}:${input.dataset.id}`] = input.value;
+  });
+  localStorage.setItem("narrative-break-questionnaire-v1", JSON.stringify(state));
+}
+
+function loadState() {
+  const raw = localStorage.getItem("narrative-break-questionnaire-v1");
+  if (!raw) return;
+  const state = JSON.parse(raw);
+  document.querySelectorAll("[data-kind]").forEach(input => {
+    const key = `${input.dataset.kind}:${input.dataset.id}`;
+    if (Object.prototype.hasOwnProperty.call(state, key)) input.value = state[key];
+  });
+}
+
+function responseText() {
+  const rows = [];
+  for (let i = 0; i < 32; i += 1) {
+    const id = `Q${String(i).padStart(2, "0")}`;
+    const answer = document.querySelector(`[data-kind='answer'][data-id='${id}']`).value;
+    const suggested = document.querySelector(`[data-kind='suggested'][data-id='${id}']`).value;
+    const note = document.querySelector(`[data-kind='note'][data-id='${id}']`).value.trim();
+    if (!answer) continue;
+    const verdict = answer === suggested ? "Agree" : answer;
+    rows.push(`${id}: ${verdict}${note ? ` — ${note}` : ""}`);
+  }
+  return [
+    "Narrative Break Signal — Batch Calibration",
+    `Completed: ${rows.length}/32`,
+    "",
+    ...rows
+  ].join("\n");
+}
+
+function refreshPreview(message = "") {
+  const text = responseText();
+  document.getElementById("answerPreview").value = text;
+  document.getElementById("status").textContent = message || `${text.split("\n").filter(line => /^Q\d\d:/.test(line)).length}/32 answered`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  buildDefinitions();
+  buildRows();
+  loadState();
+  refreshPreview();
+
+  document.getElementById("questionnaire").addEventListener("input", () => {
+    saveState();
+    refreshPreview();
+  });
+
+  document.getElementById("fillSuggested").addEventListener("click", () => {
+    document.querySelectorAll("[data-kind='answer']").forEach(input => {
+      input.value = document.querySelector(`[data-kind='suggested'][data-id='${input.dataset.id}']`).value;
+    });
+    saveState();
+    refreshPreview("All suggested levels accepted. Change only the rows you disagree with.");
+  });
+
+  document.getElementById("copyAnswers").addEventListener("click", async () => {
+    const text = responseText();
+    document.getElementById("answerPreview").value = text;
+    try {
+      await navigator.clipboard.writeText(text);
+      refreshPreview("Copied. Paste the answer block into ChatGPT.");
+    } catch {
+      document.getElementById("answerPreview").select();
+      refreshPreview("Select and copy the answer block below.");
+    }
+  });
+
+  document.getElementById("downloadAnswers").addEventListener("click", () => {
+    const blob = new Blob([responseText()], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "narrative-break-signal-answers.txt";
+    link.click();
+    URL.revokeObjectURL(link.href);
+    refreshPreview("Answers downloaded.");
+  });
+
+  document.getElementById("clearAnswers").addEventListener("click", () => {
+    if (!window.confirm("Clear all of your signal levels and notes?")) return;
+    document.querySelectorAll("[data-kind='answer']").forEach(input => { input.value = ""; });
+    document.querySelectorAll("[data-kind='note']").forEach(input => { input.value = ""; });
+    saveState();
+    refreshPreview("Your answers and notes were cleared.");
+  });
+});
+</script>
+</body>
+</html>
