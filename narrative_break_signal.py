@@ -105,8 +105,8 @@ PRECLASSIFIED_SCENARIOS: tuple[ScenarioCard, ...] = (
     ),
     ScenarioCard(
         key="question-2",
-        title="Near-term drop, long-term stable, weak oil confirmation",
-        expected_level=Level.YELLOW,
+        title="Near-term drop, long-term stable, unmodeled-shock risk",
+        expected_level=Level.YELLOW_ORANGE,
         scenario={
             "peace_talk_near_term": Move.DOWN,
             "peace_talk_long_term": Move.STABLE,
@@ -116,8 +116,10 @@ PRECLASSIFIED_SCENARIOS: tuple[ScenarioCard, ...] = (
             "wti_upside_threshold": Move.SLIGHTLY_UP,
         },
         why=(
-            "The market is pushing near-term resolution later, but shipping risk is flat "
-            "and WTI upside-threshold odds are only slightly higher."
+            "The paired near-term drop in peace talks and blockade resolution implies "
+            "something meaningful may have happened in the near-term narrative, even "
+            "though shipping risk is flat, long-dated odds are stable, and WTI "
+            "upside-threshold odds are only slightly higher."
         ),
     ),
     ScenarioCard(
@@ -323,14 +325,16 @@ def classify_scenario(raw_scenario: dict[str, Any]) -> SignalResult:
         and (peace_long == Move.MISSING or is_stable(peace_long))
     ):
         return SignalResult(
-            Level.YELLOW,
+            Level.YELLOW_ORANGE,
             (
-                "Near-term resolution is being pushed later, but physical-risk markets "
-                "are flat and oil upside is not strongly confirming the move."
+                "Near-term resolution is being pushed later. Physical-risk markets are "
+                "flat and oil upside is not strongly confirming the move, but the paired "
+                "drop in peace-talk and blockade odds may reflect a meaningful near-term "
+                "development outside the included model signals."
             ),
             tuple(matched)
             + (
-                "This matches the calibrated Question 2 rule: near-term drop, long-term stable, weak confirmation.",
+                "This matches the calibrated Question 2 rule: near-term drop, long-term stable, weak confirmation, but possible unmodeled-shock risk.",
             ),
             score,
             missing,
