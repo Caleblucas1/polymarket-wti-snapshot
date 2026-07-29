@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "updated": "2026-07-29",
+  "notes": [
+    "Event pages may contain multiple dated or threshold conditional markets.",
+    "Each supplied event URL is stored once; questionnaire variables reference event IDs.",
+    "The questionnaire remains binary: each variable is rated Up or Down over the selected observation window."
+  ],
+  "events": {
+    "hormuz_normal_by_july_31": {
+      "label": "Strait of Hormuz traffic returns to normal by July 31",
+      "url": "https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-july-31"
+    },
+    "wti_july_2026": {
+      "label": "What price will WTI hit in July 2026?",
+      "url": "https://polymarket.com/event/what-price-will-wti-hit-in-july-2026"
+    },
+    "crude_oil_ath": {
+      "label": "Crude oil all-time high by…?",
+      "url": "https://polymarket.com/event/crude-oil-all-time-high-by"
+    },
+    "israel_iran_ceasefire": {
+      "label": "Israel–Iran ceasefire continues through…?",
+      "url": "https://polymarket.com/event/israel-x-iran-ceasefire-continues-throughptptpt-20260716224448963"
+    },
+    "us_invades_iran": {
+      "label": "Will the U.S. invade Iran before 2027?",
+      "url": "https://polymarket.com/event/will-the-us-invade-iran-before-2027"
+    },
+    "iran_blockade_ends": {
+      "label": "U.S. announces end of Iranian blockade by…?",
+      "url": "https://polymarket.com/event/us-announces-end-of-iranian-blockade-byptptpt-20260713152715080"
+    },
+    "us_iran_nuclear_deal": {
+      "label": "U.S.–Iran final nuclear deal by…?",
+      "url": "https://polymarket.com/event/us-iran-final-nuclear-deal-by-20260621201254412"
+    },
+    "iran_hormuz_fees": {
+      "label": "Iran charges Hormuz fees by…?",
+      "url": "https://polymarket.com/event/iran-charges-hormuz-fees-byptptpt-20260625175035466"
+    },
+    "bab_el_mandeb_closed": {
+      "label": "Bab el-Mandeb Strait effectively closed by…?",
+      "url": "https://polymarket.com/event/bab-el-mandeb-strait-effectively-closed-by"
+    },
+    "iran_gulf_action": {
+      "label": "Iran military action against a Gulf state on/by…?",
+      "url": "https://polymarket.com/event/iran-military-action-against-a-gulf-state-onptptpt-20260708212328295"
+    },
+    "us_iran_peace_talks": {
+      "label": "Next round of U.S.–Iran peace talks by…?",
+      "url": "https://polymarket.com/event/next-round-of-us-iran-peace-talks-byptptpt-20260623022722982"
+    },
+    "hormuz_transit_july_20": {
+      "label": "How many ships transit Hormuz — week of July 20?",
+      "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-20-20260717154058215"
+    },
+    "hormuz_transit_july_27": {
+      "label": "How many ships transit Hormuz — week of July 27?",
+      "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-27-20260724144200302"
+    },
+    "zero_hormuz_transit": {
+      "label": "Zero ships transit Hormuz on any date by…?",
+      "url": "https://polymarket.com/event/0-ships-transit-hormuz-on-any-date-byptpt-20260626172559966"
+    },
+    "bab_el_mandeb_average_transit": {
+      "label": "Average ships transiting Bab el-Mandeb at end of July",
+      "url": "https://polymarket.com/event/avgpt-of-ships-transiting-bab-el-mandeb-strait-end-of-july-20260713195907051"
+    },
+    "iran_targets_shipping": {
+      "label": "Iran successfully targets shipping by…?",
+      "url": "https://polymarket.com/event/iran-successfully-targets-shipping-onptptpt-20260625225210236"
+    }
+  },
+  "variables": [
+    {
+      "key": "diplomacy",
+      "questionnaire_header": "U.S.–Iran diplomacy and de-escalation odds",
+      "up": "Diplomacy or continued de-escalation becomes more likely.",
+      "down": "Diplomacy or continued de-escalation becomes less likely.",
+      "bullish_oil_direction": "down",
+      "source_event_ids": [
+        "us_iran_peace_talks",
+        "us_iran_nuclear_deal",
+        "israel_iran_ceasefire",
+        "us_invades_iran"
+      ],
+      "inverse_event_ids": ["us_invades_iran"]
+    },
+    {
+      "key": "blockade_near_term",
+      "questionnaire_header": "Iranian blockade ends by near-term deadline — odds",
+      "up": "The blockade ending by the selected near-term deadline becomes more likely.",
+      "down": "The blockade ending by the selected near-term deadline becomes less likely.",
+      "bullish_oil_direction": "down",
+      "source_event_ids": ["iran_blockade_ends"],
+      "conditional_market_rule": "Use the nearest relevant unresolved dated contract."
+    },
+    {
+      "key": "blockade_long_term",
+      "questionnaire_header": "Iranian blockade ends by long-term deadline — odds",
+      "up": "The blockade ending by the selected long-term deadline becomes more likely.",
+      "down": "The blockade ending by the selected long-term deadline becomes less likely.",
+      "bullish_oil_direction": "down",
+      "source_event_ids": ["iran_blockade_ends"],
+      "conditional_market_rule": "Use the furthest relevant unresolved dated contract, currently the year-end side of the curve when available."
+    },
+    {
+      "key": "shipping_disruption",
+      "questionnaire_header": "Hormuz and regional shipping-disruption odds",
+      "up": "Disrupted traffic, closures, fees, military action, or successful attacks become more likely.",
+      "down": "Normal traffic becomes more likely and disruption outcomes become less likely.",
+      "bullish_oil_direction": "up",
+      "source_event_ids": [
+        "hormuz_normal_by_july_31",
+        "iran_hormuz_fees",
+        "bab_el_mandeb_closed",
+        "iran_gulf_action",
+        "hormuz_transit_july_20",
+        "hormuz_transit_july_27",
+        "zero_hormuz_transit",
+        "bab_el_mandeb_average_transit",
+        "iran_targets_shipping"
+      ],
+      "inverse_event_ids": [
+        "hormuz_normal_by_july_31",
+        "hormuz_transit_july_20",
+        "hormuz_transit_july_27",
+        "bab_el_mandeb_average_transit"
+      ]
+    },
+    {
+      "key": "oil_upside",
+      "questionnaire_header": "WTI and crude-oil upside-threshold odds",
+      "up": "Selected WTI or crude-oil upside thresholds become more likely.",
+      "down": "Selected WTI or crude-oil upside thresholds become less likely.",
+      "bullish_oil_direction": "up",
+      "source_event_ids": ["wti_july_2026", "crude_oil_ath"],
+      "conditional_market_rule": "Treat selected upside thresholds as a basket rather than relying on one strike."
+    }
+  ]
+}
