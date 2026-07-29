@@ -295,6 +295,25 @@ Run the interactive questionnaire:
 python narrative_break_signal.py
 ```
 
+List the pre-classified starter scenarios:
+
+```bash
+python narrative_break_signal.py --list-scenarios
+python narrative_break_signal.py --list-scenarios --show-scenario-details
+```
+
+Classify one of the starter scenarios:
+
+```bash
+python narrative_break_signal.py --scenario question-2
+```
+
+Play the calibration quiz:
+
+```bash
+python narrative_break_signal.py --quiz
+```
+
 Classify a scenario directly:
 
 ```bash
