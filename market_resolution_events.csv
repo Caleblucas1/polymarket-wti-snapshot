@@ -2,3 +2,7 @@ Observed At,Event Key,Event Title,Market,Condition ID,Event Type,Previous Status
 2026-07-27T09:31:20-04:00,iran-gulf-action,Iran military action against a gulf state on...?,July 23,0xe50789ae873f89bf41daa5791bb6242d33c37466c7ab19ad8c6ec82633a3e6cf,dispute-detected,unknown,disputed,2
 2026-07-28T09:07:19-04:00,iran-gulf-action,Iran military action against a gulf state on...?,July 24,0x1e97a760229f1b1d9a1682d0f4d0c659cfb9e386baacc010f57f5f52be4dff95,resolved,,resolved,0
 2026-07-28T09:07:19-04:00,houthi-saudi,Houthi military action against Saudi Arabia by...?,July 24,0xdd43b704a6d32ca6578c870b76b93e4b493d149db0af6293bebf9732265b2fdf,resolved,,resolved,0
+2026-07-29T09:10:57-04:00,wti-july,What will WTI Crude Oil (WTI) hit in July 2026?,↓ $80,0x6b382feeb97121c8bd5fe0fe0ab8272b955e741ac7117ee691a2460896f43ee7,resolved,proposed,resolved,0
+2026-07-29T09:10:57-04:00,iran-gulf-action,Iran military action against a gulf state on...?,July 25,0xbaab28e6ebff145d042ecfc46aa9eaab3552d6d1351c50c68714e8198e94f6b6,resolved,,resolved,0
+2026-07-29T09:10:57-04:00,iran-gulf-action,Iran military action against a gulf state on...?,July 28,0xe17f375e232325b713db9d909b35c9b7e46784e7d221a4b901b5c0ef617c6f2a,resolved,,resolved,0
+2026-07-29T09:10:57-04:00,wti-week-july-27,What will WTI Crude Oil (WTI) hit Week of July 27 2026?,↓ $80,0x2c55999791561350f889bef5061ed377434da002a07ec57e4dd7551d1abdab40,resolved,proposed,resolved,0
