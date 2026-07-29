@@ -13,7 +13,7 @@ from narrative_break_signal import (
 
 
 class NarrativeBreakSignalTests(unittest.TestCase):
-    def test_signal_market_catalog_has_unique_urls_and_five_variables(self):
+    def test_signal_market_catalog_has_unique_urls_and_five_market_level_variables(self):
         catalog = json.loads(Path("signal_market_catalog.json").read_text(encoding="utf-8"))
         urls = [event["url"] for event in catalog["events"].values()]
 
@@ -28,27 +28,30 @@ class NarrativeBreakSignalTests(unittest.TestCase):
         self.assertEqual(
             [variable["key"] for variable in catalog["variables"]],
             [
-                "diplomacy",
+                "peace_talks_aug_31",
                 "blockade_near_term",
                 "blockade_long_term",
-                "shipping_disruption",
-                "oil_upside",
+                "bab_el_mandeb_closed_aug_31",
+                "wti_100_july",
             ],
         )
 
     def test_batch_questionnaire_contains_all_scenarios_and_readable_headers(self):
         questionnaire = Path("signal_questionnaire.html").read_text(encoding="utf-8")
 
-        self.assertIn("U.S.–Iran diplomacy and de-escalation odds", questionnaire)
-        self.assertIn("Iranian blockade ends by near-term deadline", questionnaire)
-        self.assertIn("Hormuz and regional shipping-disruption odds", questionnaire)
-        self.assertIn("WTI and crude-oil upside-threshold odds", questionnaire)
+        self.assertIn("Next U.S.–Iran peace talks by Aug. 31", questionnaire)
+        self.assertIn("end of Iranian blockade by Aug. 31", questionnaire)
+        self.assertIn("Bab el-Mandeb effectively closed by Aug. 31", questionnaire)
+        self.assertIn("WTI hits $100 in July 2026", questionnaire)
+        self.assertIn('"Flat"', questionnaire)
+        self.assertIn("priorityOnly", questionnaire)
         self.assertIn("for (let i = 0; i < 32; i += 1)", questionnaire)
         self.assertIn("grayCode(index) ^ 0b11100", questionnaire)
         self.assertIn("Copy completed answers for ChatGPT", questionnaire)
-        self.assertIn(
-            "houthis-successfully-target-shipping-onptptpt-20260722225036915",
-            questionnaire,
+        catalog = json.loads(Path("signal_market_catalog.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            catalog["events"]["houthis_target_shipping_july_22"]["question_structure"],
+            "Each conditional asks whether a qualifying incident occurs on one exact calendar date.",
         )
 
     def test_peace_drop_alone_is_weaker_yellow_when_curve_does_not_confirm(self):
