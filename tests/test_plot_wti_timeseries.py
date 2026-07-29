@@ -166,6 +166,13 @@ class TimeSeriesDataTests(unittest.TestCase):
         self.assertIn("↑ $90 Yes", marker_text)
         self.assertNotIn("↓ $90 Yes", marker_text)
 
+        resolution_traces = [
+            trace for trace in figure.data if trace.name == "↑ $80 resolution"
+        ]
+        self.assertEqual(len(resolution_traces), 1)
+        self.assertIn("Resolution method", resolution_traces[0].hovertemplate)
+        self.assertNotIn("terminal", resolution_traces[0].hovertemplate.lower())
+
     def test_masks_resolved_gap_and_uses_latest_active_replacement(self):
         eastern = ZoneInfo("America/New_York")
         conditions = [

@@ -71,6 +71,11 @@ def publish_all_charts(
 ) -> tuple[Path, list[dict[str, str]]]:
     registry = registry or load_registry()
     selected = list(event_keys) if event_keys is not None else list(registry)
+    selected = [
+        event_key
+        for event_key in selected
+        if registry[event_key].get("display_chart", True)
+    ]
     destination = publish_dir or data_dir / "published_charts"
     entries = [
         publish_chart(

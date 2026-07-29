@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from chart_output import plotly_basic_cdn
 from plot_wti_timeseries import load_ranges, load_snapshot
 from track_market import load_registry
 
@@ -378,7 +379,7 @@ def write_related_market_chart(
     output.parent.mkdir(parents=True, exist_ok=True)
     figure.write_html(
         output,
-        include_plotlyjs="cdn",
+        include_plotlyjs=plotly_basic_cdn(),
         full_html=True,
         config={"displaylogo": False, "responsive": True},
     )

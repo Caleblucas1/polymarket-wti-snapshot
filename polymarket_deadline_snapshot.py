@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from chart_output import plotly_basic_cdn
 from plot_wti_timeseries import latest_window, load_ranges, load_snapshot
 from polymarket_wti_snapshot import (
     all_markets_closed,
@@ -34,6 +35,92 @@ from polymarket_wti_snapshot import (
 
 LABEL_COLUMN = "Deadline"
 LINE_CHART_LIMIT = 8
+
+
+def _format_resolution_timestamp(value: str) -> str:
+    """Format an API resolution timestamp for a reader-facing tooltip."""
+    raw = str(value or "").strip()
+    if not raw:
+        return "Unknown"
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=ZoneInfo("UTC"))
+        eastern = parsed.astimezone(ZoneInfo("America/New_York"))
+        return eastern.strftime("%B %d, %Y %I:%M %p ET").replace(" 0", " ")
+    except ValueError:
+        return raw
+
+
+def _resolution_method(value: str) -> str:
+    """Return a concise human-readable resolution method."""
+    normalized = str(value or "").strip().lower()
+    if normalized == "true":
+        return "Automatic"
+    if normalized == "false":
+        return "Manual/UMA"
+    return "Unknown"
+
+
+def _resolution_hover_text(
+    label: str,
+    date_string: str,
+    *,
+    is_carried: bool,
+    resolution_details: dict[str, dict[str, str]] | None,
+    value: float | None,
+) -> str:
+    """Build the point text without exposing an irrelevant terminal probability."""
+    details = (resolution_details or {}).get(label)
+    resolved_at = str((details or {}).get("resolved_at") or "").strip()
+    resolved_date = ""
+    if resolved_at:
+        try:
+            resolved_date = datetime.fromisoformat(
+                resolved_at.replace("Z", "+00:00")
+            ).astimezone(ZoneInfo("America/New_York")).date().isoformat()
+        except ValueError:
+            resolved_date = resolved_at[:10]
+    if details and (is_carried or (resolved_date and date_string >= resolved_date)):
+        outcome = details.get("outcome") or "Unknown"
+        return (
+            f"Resolved: {outcome}<br>"
+            f"Resolution date: {_format_resolution_timestamp(resolved_at)}<br>"
+            f"Resolution method: {_resolution_method(details.get('automatic', ''))}"
+        )
+    if value is None:
+        return "No stored observation"
+    return f"Snapshot: {value:.1f}%<br>Observed 9:00 AM snapshot"
+
+
+def load_resolution_details(
+    path: Path,
+    *,
+    event_key: str,
+) -> dict[str, dict[str, str]]:
+    """Load resolved outcome/date/method metadata for chart hover text."""
+    if not path.exists():
+        return {}
+    with path.open(newline="", encoding="utf-8-sig") as input_file:
+        reader = csv.DictReader(input_file)
+        required = {"Event Key", "Market", "Current Status"}
+        if not reader.fieldnames or not required.issubset(reader.fieldnames):
+            return {}
+        details: dict[str, dict[str, str]] = {}
+        for row in reader:
+            if str(row.get("Event Key") or "").strip() != event_key:
+                continue
+            if str(row.get("Current Status") or "").strip().lower() != "resolved":
+                continue
+            label = str(row.get("Market") or "").strip()
+            if not label:
+                continue
+            details[label] = {
+                "resolved_at": str(row.get("Resolved At") or "").strip(),
+                "outcome": str(row.get("Resolved Outcome") or "").strip(),
+                "automatic": str(row.get("Automatically Resolved") or "").strip(),
+            }
+        return details
 
 
 def load_resolution_probabilities(
@@ -201,6 +288,7 @@ def create_line_chart(
     title: str,
     ranges: dict[str, dict[str, tuple[float | None, float | None]]] | None = None,
     carried_forward: dict[str, list[bool]] | None = None,
+    resolution_details: dict[str, dict[str, str]] | None = None,
 ) -> Any:
     """Build a comparison line chart for a small set of deadline markets."""
     import plotly.graph_objects as go
@@ -225,9 +313,8 @@ def create_line_chart(
         lower_errors: list[float | None] = []
         upper_errors: list[float | None] = []
         customdata: list[list[str]] = []
-        statuses: list[str] = []
-        for value, (low, high), is_carried in zip(
-            series[label], range_values, carried_flags
+        for date_string, value, (low, high), is_carried in zip(
+            dates, series[label], range_values, carried_flags
         ):
             if is_carried and value is not None:
                 low = high = value
@@ -243,10 +330,12 @@ def create_line_chart(
                 [
                     "n/a" if not valid else f"{low:.1f}%",
                     "n/a" if not valid else f"{high:.1f}%",
-                    (
-                        "Resolved result carried forward"
-                        if is_carried
-                        else "Observed 9:00 AM snapshot"
+                    _resolution_hover_text(
+                        label,
+                        date_string,
+                        is_carried=is_carried,
+                        resolution_details=resolution_details,
+                        value=value,
                     ),
                 ]
             )
@@ -277,7 +366,6 @@ def create_line_chart(
                 },
                 hovertemplate=(
                     f"<b>{label}</b><br>%{{x}} at 9:00 AM ET"
-                    "<br>Snapshot: %{y:.1f}%"
                     "<br>Prior 24h low: %{customdata[0]}"
                     "<br>Prior 24h high: %{customdata[1]}"
                     "<br>%{customdata[2]}<extra></extra>"
@@ -309,6 +397,7 @@ def create_heatmap_chart(
     ranges: dict[str, dict[str, tuple[float | None, float | None]]] | None = None,
     carried_forward: dict[str, list[bool]] | None = None,
     resolution_events: list[dict[str, str]] | None = None,
+    resolution_details: dict[str, dict[str, str]] | None = None,
 ) -> Any:
     """Build a readable heatmap for an event with many deadline markets."""
     import plotly.graph_objects as go
@@ -341,10 +430,12 @@ def create_heatmap_chart(
                 [
                     low_text,
                     high_text,
-                    (
-                        "Resolved result carried forward"
-                        if is_carried
-                        else "Observed 9:00 AM snapshot"
+                    _resolution_hover_text(
+                        label,
+                        date_string,
+                        is_carried=is_carried,
+                        resolution_details=resolution_details,
+                        value=value,
                     ),
                 ]
             )
@@ -369,7 +460,6 @@ def create_heatmap_chart(
             customdata=customdata,
             hovertemplate=(
                 "<b>%{y}</b><br>%{x} at 9:00 AM ET"
-                "<br>Snapshot: %{z:.1f}%"
                 "<br>Prior 24h low: %{customdata[0]}"
                 "<br>Prior 24h high: %{customdata[1]}"
                 "<br>%{customdata[2]}<extra></extra>"
@@ -410,14 +500,29 @@ def create_heatmap_chart(
                         event.get("Previous Status") or "unknown",
                         event.get("Current Status") or "unknown",
                         event.get("Dispute Count") or "0",
+                        event.get("Resolved Outcome") or "unknown",
+                        _format_resolution_timestamp(event.get("Resolved At", "")),
+                        _resolution_method(event.get("Automatically Resolved", "")),
                     ]
                     for event in matching
                 ],
                 hovertemplate=(
-                    f"<b>{name}</b><br>%{{y}}<br>Observed: %{{x}}"
-                    "<br>Previous status: %{customdata[0]}"
-                    "<br>Current status: %{customdata[1]}"
-                    "<br>Disputes recorded: %{customdata[2]}<extra></extra>"
+                    (
+                        f"<b>{name}</b><br>%{{y}}<br>Observed: %{{x}}"
+                        "<br>Previous status: %{customdata[0]}"
+                        "<br>Current status: %{customdata[1]}"
+                        "<br>Disputes recorded: %{customdata[2]}"
+                        "<br>Resolved: %{customdata[3]}"
+                        "<br>Resolution date: %{customdata[4]}"
+                        "<br>Resolution method: %{customdata[5]}<extra></extra>"
+                    )
+                    if event_type == "resolved"
+                    else (
+                        f"<b>{name}</b><br>%{{y}}<br>Observed: %{{x}}"
+                        "<br>Previous status: %{customdata[0]}"
+                        "<br>Current status: %{customdata[1]}"
+                        "<br>Disputes recorded: %{customdata[2]}<extra></extra>"
+                    )
                 ),
             )
         )
@@ -445,6 +550,7 @@ def create_chart(
     ranges: dict[str, dict[str, tuple[float | None, float | None]]] | None = None,
     carried_forward: dict[str, list[bool]] | None = None,
     resolution_events: list[dict[str, str]] | None = None,
+    resolution_details: dict[str, dict[str, str]] | None = None,
 ) -> Any:
     """Choose a line chart or heatmap based on the number of contracts."""
     if not series:
@@ -456,6 +562,7 @@ def create_chart(
             title,
             ranges=ranges,
             carried_forward=carried_forward,
+            resolution_details=resolution_details,
         )
     else:
         figure = create_heatmap_chart(
@@ -465,6 +572,7 @@ def create_chart(
             ranges=ranges,
             carried_forward=carried_forward,
             resolution_events=resolution_events,
+            resolution_details=resolution_details,
         )
 
     figure.add_annotation(
@@ -511,9 +619,18 @@ def write_deadline_chart(
     dates, series = load_snapshot(input_path, label_column=LABEL_COLUMN)
     carried_forward: dict[str, list[bool]] | None = None
     resolution_events: list[dict[str, str]] = []
+    resolution_details: dict[str, dict[str, str]] = {}
     if event_key is not None:
         probabilities = (
             load_resolution_probabilities(
+                resolution_status_path,
+                event_key=event_key,
+            )
+            if resolution_status_path is not None
+            else {}
+        )
+        resolution_details = (
+            load_resolution_details(
                 resolution_status_path,
                 event_key=event_key,
             )
@@ -560,11 +677,12 @@ def write_deadline_chart(
         ranges=ranges,
         carried_forward=carried_forward,
         resolution_events=resolution_events,
+        resolution_details=resolution_details,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     figure.write_html(
         output_path,
-        include_plotlyjs="cdn",
+        include_plotlyjs=plotly_basic_cdn(),
         full_html=True,
         config={"displaylogo": False, "responsive": True},
     )

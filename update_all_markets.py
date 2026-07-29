@@ -46,6 +46,7 @@ def main() -> int:
         return 2
 
     results: dict[str, TrackerResult] = {}
+    registry = load_registry()
     worker_count = min(args.workers, len(args.events))
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
@@ -56,7 +57,10 @@ def main() -> int:
                 days=args.days,
                 hour=args.hour,
                 timeout=args.timeout,
-                no_chart=not args.with_charts,
+                no_chart=not (
+                    args.with_charts
+                    and registry[event_key].get("display_chart", True)
+                ),
             ): event_key
             for event_key in args.events
         }
@@ -87,7 +91,7 @@ def main() -> int:
             key for key in args.events
             if results.get(key, TrackerResult("failed", exit_code=1)).exit_code == 0
         ]
-        if set(successful_events) == set(load_registry()):
+        if set(successful_events) == set(registry):
             try:
                 count = write_related_market_chart(
                     data_dir=args.data_dir,
@@ -100,7 +104,11 @@ def main() -> int:
                 print(f"related-markets: failed: {exc}")
         try:
             manifest_path, entries = publish_all_charts(
-                args.data_dir, event_keys=successful_events,
+                args.data_dir,
+                event_keys=[
+                    key for key in successful_events
+                    if registry[key].get("display_chart", True)
+                ],
             )
             print(f"chart-manifest: {manifest_path}")
             for entry in entries:
@@ -109,7 +117,6 @@ def main() -> int:
             chart_publish_failure = str(exc)
             print(f"chart-publish: failed: {exc}")
     else:
-        registry = load_registry()
         selected_registry = {key: registry[key] for key in args.events}
         try:
             changed, total, status_failures = refresh_resolution_status(

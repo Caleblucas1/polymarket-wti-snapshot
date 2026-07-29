@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from chart_output import plotly_basic_cdn
+
 
 DEFAULT_INPUT = Path("wti_july_2026_9am_snapshot.csv")
 DEFAULT_RANGE_INPUT = Path("wti_july_2026_9am_ranges.csv")
@@ -152,6 +154,10 @@ def load_condition_status(
                         str(row.get("Resolved Outcome") or "").strip().lower()
                         == "yes"
                     ),
+                    "resolved_outcome": str(row.get("Resolved Outcome") or "").strip(),
+                    "automatically_resolved": str(
+                        row.get("Automatically Resolved") or ""
+                    ).strip(),
                     "current_probability": current_probability,
                 }
             )
@@ -210,6 +216,24 @@ def satisfaction_events(
         and condition.get("resolved_at") is not None
     ]
     return sorted(events, key=lambda condition: condition["resolved_at"])
+
+
+def resolution_method(value: str) -> str:
+    """Return a reader-facing resolution method."""
+    normalized = str(value or "").strip().lower()
+    if normalized == "true":
+        return "Automatic"
+    if normalized == "false":
+        return "Manual/UMA"
+    return "Unknown"
+
+
+def format_resolution_timestamp(value: datetime | None) -> str:
+    """Format a resolution timestamp for chart hover text."""
+    if value is None:
+        return "Unknown"
+    eastern = value.astimezone(ZoneInfo("America/New_York"))
+    return eastern.strftime("%B %d, %Y %I:%M %p ET").replace(" 0", " ")
 
 
 def latest_active_points(
@@ -423,9 +447,18 @@ def create_chart(
             )
         )
 
+    visible_start = date.fromisoformat(min(dates))
+    visible_end = date.fromisoformat(max(dates))
+    resolution_marker_count = sum(
+        1
+        for event in (resolved_events or [])
+        if event.get("resolved_at") is not None
+        and visible_start <= event["resolved_at"].date() <= visible_end
+    )
     price_bin_buttons = []
     for index, label in enumerate(labels):
         visibility = [trace_index == index for trace_index in range(len(labels))]
+        visibility.extend([True] * resolution_marker_count)
         price_bin_buttons.append(
             {
                 "label": label,
@@ -439,8 +472,6 @@ def create_chart(
 
     annotations: list[dict[str, Any]] = []
     shapes: list[dict[str, Any]] = []
-    visible_start = date.fromisoformat(min(dates))
-    visible_end = date.fromisoformat(max(dates))
     for event_index, event in enumerate(resolved_events or []):
         resolved_at = event.get("resolved_at")
         if (
@@ -474,6 +505,29 @@ def create_chart(
                 "font": {"size": 10, "color": "#B91C1C"},
                 "bgcolor": "rgba(255,255,255,0.82)",
             }
+        )
+        figure.add_trace(
+            go.Scatter(
+                x=[timestamp],
+                y=[0],
+                mode="markers",
+                name=f"{event['label']} resolution",
+                showlegend=False,
+                marker={"size": 14, "color": "rgba(220,38,38,0.02)"},
+                customdata=[
+                    [
+                        event.get("resolved_outcome") or "Yes",
+                        format_resolution_timestamp(resolved_at),
+                        resolution_method(event.get("automatically_resolved", "")),
+                    ]
+                ],
+                hovertemplate=(
+                    f"<b>{event['label']}</b><br>Resolution observed: %{{x}}"
+                    "<br>Resolved: %{customdata[0]}"
+                    "<br>Resolution date: %{customdata[1]}"
+                    "<br>Resolution method: %{customdata[2]}<extra></extra>"
+                ),
+            )
         )
 
     figure.update_layout(
@@ -604,7 +658,7 @@ def write_chart(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     figure.write_html(
         output_path,
-        include_plotlyjs="cdn",
+        include_plotlyjs=plotly_basic_cdn(),
         full_html=True,
         config={"displaylogo": False, "responsive": True},
     )
