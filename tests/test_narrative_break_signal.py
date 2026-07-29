@@ -26,7 +26,7 @@ class NarrativeBreakSignalTests(unittest.TestCase):
         self.assertEqual(result.level, Level.WEAKER_YELLOW)
         self.assertIn("near-term blockade odds did not fall", " ".join(result.matched_rules))
 
-    def test_question_two_calibration_is_yellow(self):
+    def test_question_two_calibration_moves_toward_yellow_orange(self):
         result = classify_scenario(
             {
                 "peace_talk_near_term": "down",
@@ -38,8 +38,9 @@ class NarrativeBreakSignalTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(result.level, Level.YELLOW)
+        self.assertEqual(result.level, Level.YELLOW_ORANGE)
         self.assertIn("calibrated Question 2 rule", " ".join(result.matched_rules))
+        self.assertIn("unmodeled-shock risk", " ".join(result.matched_rules))
 
     def test_near_term_drop_with_shipping_and_wti_confirmation_is_stronger(self):
         result = classify_scenario(
@@ -93,8 +94,8 @@ class NarrativeBreakSignalTests(unittest.TestCase):
             exit_code = main(["--scenario", "question-2"])
 
         self.assertEqual(exit_code, 0)
-        self.assertIn("Expected: Yellow", output.getvalue())
-        self.assertIn("Classified: Yellow", output.getvalue())
+        self.assertIn("Expected: Yellow/Orange", output.getvalue())
+        self.assertIn("Classified: Yellow/Orange", output.getvalue())
 
 
 if __name__ == "__main__":
