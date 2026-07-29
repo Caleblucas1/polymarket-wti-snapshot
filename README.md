@@ -326,7 +326,7 @@ python narrative_break_signal.py \
   --wti-upside-threshold slightly_up
 ```
 
-The calibrated Question 2 rule is stored as Yellow:
+The calibrated Question 2 rule is stored as Yellow/Orange:
 
 ```text
 Near-term peace-talk odds fall
@@ -334,8 +334,12 @@ Near-term peace-talk odds fall
 + long-dated blockade odds stay stable
 + shipping-risk markets stay flat
 + WTI upside-threshold odds are only slightly higher
-= Yellow timing-risk warning
+= Yellow/Orange timing-risk warning
 ```
+
+Stable long-dated odds and flat shipping markets keep it below Orange, but the
+paired near-term drop in peace-talk and blockade odds may reflect a meaningful
+near-term development from outside the included model signals.
 
 ## Test
 
