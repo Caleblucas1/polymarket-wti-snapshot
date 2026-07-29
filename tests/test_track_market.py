@@ -14,9 +14,14 @@ class EventRegistryTests(unittest.TestCase):
         registry = load_registry()
         args = build_parser().parse_args([])
         self.assertEqual(set(args.events), set(registry))
-        self.assertEqual(len(args.events), 7)
+        self.assertEqual(len(args.events), 8)
         self.assertTrue(all(config.get("range_output") for config in registry.values()))
         self.assertIn("wti-week-july-27", registry)
+        self.assertIn("houthi-shipping-july-22", registry)
+        self.assertNotEqual(
+            registry["houthi-shipping"]["output"],
+            registry["houthi-shipping-july-22"]["output"],
+        )
         self.assertNotIn("wti-week-july-13", registry)
 
     def test_reports_precise_aggregate_statuses(self):
