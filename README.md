@@ -70,7 +70,7 @@ python plot_wti_timeseries.py
 
 The chart is saved as `wti_7_day_time_series.html`. It uses the latest seven
 dates in the cumulative CSV. Open it in a browser and use the controls to select
-a WTI price bin or switch between an automatic and fixed 0-100% probability
+a WTI price bin or switch between an automatic and fixed 0–100% probability
 scale. Vertical whiskers show each point's trailing-24-hour low and high when
 the companion range CSV is available.
 
@@ -86,7 +86,7 @@ python plot_wti_timeseries.py \
 ## Bab el-Mandeb effective-closure market
 
 Fetch the four currently open deadline markets for Polymarket's
-"Bab el-Mandeb Strait effectively closed by...?" event and create a seven-day
+“Bab el-Mandeb Strait effectively closed by…?” event and create a seven-day
 comparison chart:
 
 ```bash
@@ -158,7 +158,7 @@ The command reports each event as `appended`, `already current`,
 `fully closed`, or `failed`. Every event also maintains a companion
 `*_9am_ranges.csv` file with the observed five-minute low and high during the
 24 hours ending at each 9:00 AM ET snapshot. Small deadline charts show these
-as whiskers; dense heatmaps show the low-high range in each populated cell and
+as whiskers; dense heatmaps show the low–high range in each populated cell and
 in its hover details.
 
 When charts are enabled, the updater also publishes freshness-verified,
@@ -222,7 +222,7 @@ python update_orderbooks.py --data-dir market_data
 ```
 
 The collector batches public CLOB book requests and stores Yes-token depth in
-shares and price-weighted notional at 1c, 2c, 5c, and 10c from the best quote.
+shares and price-weighted notional at 1¢, 2¢, 5¢, and 10¢ from the best quote.
 Its report opens with clearly labeled blue bid-side support and red ask-side
 resistance, with controls for effective dollars, raw five-point dollars, and
 raw five-point shares. Effective depth applies exponential distance decay with
@@ -260,7 +260,7 @@ Hourly runs write observations into bounded monthly files under
 remain in persistent local storage rather than being committed every hour;
 source code and compact lifecycle changes remain suitable for GitHub sync.
 
-Price direction remains part of contract identity: `up $80` and `down $80` share
+Price direction remains part of contract identity: `↑ $80` and `↓ $80` share
 an `$80` comparison family, but are not stitched because they are opposite
 propositions. See `market_data/SCHEMA.md` for the complete schema and definitions.
 
