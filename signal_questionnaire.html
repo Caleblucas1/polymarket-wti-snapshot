@@ -18,6 +18,7 @@
       --yellow: #fff2a8;
       --orange: #ffd4a8;
       --red: #ffc7c7;
+      --flat: #e5e7eb;
     }
     * { box-sizing: border-box; }
     body {
@@ -106,21 +107,33 @@
     .key.yellow { background: var(--yellow); }
     .key.orange { background: var(--orange); }
     .key.red { background: var(--red); }
+    .key.flat { background: var(--flat); }
+    .questionnaire-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+    .questionnaire-controls label { font-weight: 700; }
+    .questionnaire-controls input { width: auto; min-width: 0; margin-right: 6px; }
+    tr.priority-hidden { display: none; }
   </style>
 </head>
 <body>
 <main>
   <h1>Narrative Break Signal — Batch Calibration</h1>
   <p class="lede">
-    Review all 32 binary scenarios in one sitting. Every row changes exactly one market variable from the row above.
-    Yellow-highlighted rows are the most important calibration decisions. Your answers are saved in this browser.
+    Calibrate five individual market contracts without combining distinct questions into broader signal baskets.
+    The ten most important rows are shown first; you can reveal all 32 binary scenarios at any time. Every row
+    changes exactly one contract from the row above, and your answers are saved in this browser.
   </p>
 
   <section class="panel">
     <h2>How to read the variables</h2>
     <p>
       “Up” and “Down” describe the movement in the named market odds—not whether oil itself is bullish or bearish.
-      The market links supporting each variable are listed below.
+      Each visible variable maps to one named Polymarket contract. The larger market catalog remains available
+      for reference, but those markets are not silently averaged into these columns.
     </p>
     <div id="marketDefinitions" class="market-grid"></div>
   </section>
@@ -129,6 +142,7 @@
     <h2>Signal-level key</h2>
     <p>
       <span class="key green">Green</span>
+      <span class="key flat">Flat</span>
       <span class="key yellow">Weaker Yellow</span>
       <span class="key yellow">Yellow</span>
       <span class="key yellow">Yellow/Orange</span>
@@ -138,17 +152,22 @@
     </p>
   </section>
 
+  <section class="panel questionnaire-controls">
+    <label><input type="checkbox" id="priorityOnly" checked> Show highlighted priority questions only</label>
+    <span id="questionCount">10 of 32 scenarios shown</span>
+  </section>
+
   <form id="questionnaire">
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>Scenario</th>
-            <th>U.S.–Iran diplomacy and de-escalation odds</th>
-            <th>Iranian blockade ends by near-term deadline — odds</th>
-            <th>Iranian blockade ends by long-term deadline — odds</th>
-            <th>Hormuz and regional shipping-disruption odds</th>
-            <th>WTI and crude-oil upside-threshold odds</th>
+            <th>Next U.S.–Iran peace talks by Aug. 31 — odds</th>
+            <th>U.S. announces end of Iranian blockade by Aug. 31 — odds</th>
+            <th>U.S. announces end of Iranian blockade by Dec. 31 — odds</th>
+            <th>Bab el-Mandeb effectively closed by Aug. 31 — odds</th>
+            <th>WTI hits $100 in July 2026 — odds</th>
             <th>Suggested Signal Level</th>
             <th>Your Signal Level</th>
             <th>Your Notes</th>
@@ -160,7 +179,7 @@
 
     <div class="actions">
       <button type="button" id="copyAnswers">Copy completed answers for ChatGPT</button>
-      <button type="button" class="secondary" id="fillSuggested">Accept all suggested levels</button>
+      <button type="button" class="secondary" id="fillSuggested">Accept shown suggested levels</button>
       <button type="button" class="secondary" id="downloadAnswers">Download answers</button>
       <button type="button" class="danger" id="clearAnswers">Clear my answers</button>
       <span id="status" role="status" aria-live="polite"></span>
@@ -170,7 +189,7 @@
 </main>
 
 <script>
-const LEVELS = ["", "Green", "Weaker Yellow", "Yellow", "Yellow/Orange", "Orange", "Orange/Red", "Red", "Unsure"];
+const LEVELS = ["", "Green", "Flat", "Weaker Yellow", "Yellow", "Yellow/Orange", "Orange", "Orange/Red", "Red", "Unsure"];
 const IMPORTANT = new Set(["Q02", "Q05", "Q09", "Q11", "Q13", "Q16", "Q18", "Q23", "Q27", "Q29"]);
 const SUGGESTED = [
   "Green", "Weaker Yellow", "Orange", "Yellow", "Orange", "Red", "Yellow/Orange", "Yellow",
@@ -179,64 +198,51 @@ const SUGGESTED = [
   "Yellow/Orange", "Orange", "Red", "Orange/Red", "Yellow/Orange", "Orange/Red", "Yellow/Orange", "Weaker Yellow"
 ];
 const VARIABLE_HEADERS = [
-  "U.S.–Iran diplomacy and de-escalation odds",
-  "Iranian blockade ends by near-term deadline — odds",
-  "Iranian blockade ends by long-term deadline — odds",
-  "Hormuz and regional shipping-disruption odds",
-  "WTI and crude-oil upside-threshold odds"
+  "Next U.S.–Iran peace talks by Aug. 31 — odds",
+  "U.S. announces end of Iranian blockade by Aug. 31 — odds",
+  "U.S. announces end of Iranian blockade by Dec. 31 — odds",
+  "Bab el-Mandeb effectively closed by Aug. 31 — odds",
+  "WTI hits $100 in July 2026 — odds"
 ];
 const MARKET_CATALOG = [
   {
-    header: "U.S.–Iran diplomacy and de-escalation odds",
-    up: "Diplomacy or continued de-escalation becomes more likely.",
-    down: "Diplomacy or continued de-escalation becomes less likely.",
+    header: "Next U.S.–Iran peace talks by Aug. 31 — odds",
+    up: "A next round of talks by August 31 becomes more likely.",
+    down: "A next round of talks by August 31 becomes less likely.",
     markets: [
-      ["Next round of U.S.–Iran peace talks by…?", "https://polymarket.com/event/next-round-of-us-iran-peace-talks-byptptpt-20260623022722982"],
-      ["U.S.–Iran final nuclear deal by…?", "https://polymarket.com/event/us-iran-final-nuclear-deal-by-20260621201254412"],
-      ["Israel–Iran ceasefire continues through…?", "https://polymarket.com/event/israel-x-iran-ceasefire-continues-throughptptpt-20260716224448963"],
-      ["Will the U.S. invade Iran before 2027? (inverse)", "https://polymarket.com/event/will-the-us-invade-iran-before-2027"]
+      ["Next round of U.S.–Iran peace talks by…? — Aug. 31 contract", "https://polymarket.com/event/next-round-of-us-iran-peace-talks-byptptpt-20260623022722982"]
     ]
   },
   {
-    header: "Iranian blockade ends by near-term deadline — odds",
-    up: "The blockade ending by the nearest relevant unresolved deadline becomes more likely.",
-    down: "The blockade ending by the nearest relevant unresolved deadline becomes less likely.",
+    header: "U.S. announces end of Iranian blockade by Aug. 31 — odds",
+    up: "An announced end to the blockade by August 31 becomes more likely.",
+    down: "An announced end to the blockade by August 31 becomes less likely.",
     markets: [
-      ["U.S. announces end of Iranian blockade by…? (near-term conditional)", "https://polymarket.com/event/us-announces-end-of-iranian-blockade-byptptpt-20260713152715080"]
+      ["U.S. announces end of Iranian blockade by…? — Aug. 31 contract", "https://polymarket.com/event/us-announces-end-of-iranian-blockade-byptptpt-20260713152715080"]
     ]
   },
   {
-    header: "Iranian blockade ends by long-term deadline — odds",
-    up: "The blockade ending by the furthest relevant unresolved deadline becomes more likely.",
-    down: "The blockade ending by the furthest relevant unresolved deadline becomes less likely.",
+    header: "U.S. announces end of Iranian blockade by Dec. 31 — odds",
+    up: "An announced end to the blockade by December 31 becomes more likely.",
+    down: "An announced end to the blockade by December 31 becomes less likely.",
     markets: [
-      ["U.S. announces end of Iranian blockade by…? (long-term conditional)", "https://polymarket.com/event/us-announces-end-of-iranian-blockade-byptptpt-20260713152715080"]
+      ["U.S. announces end of Iranian blockade by…? — Dec. 31 contract", "https://polymarket.com/event/us-announces-end-of-iranian-blockade-byptptpt-20260713152715080"]
     ]
   },
   {
-    header: "Hormuz and regional shipping-disruption odds",
-    up: "Disrupted traffic, closures, fees, military action, or successful attacks become more likely.",
-    down: "Normal traffic becomes more likely and disruption outcomes become less likely.",
+    header: "Bab el-Mandeb effectively closed by Aug. 31 — odds",
+    up: "An effective closure by August 31 becomes more likely.",
+    down: "An effective closure by August 31 becomes less likely.",
     markets: [
-      ["Hormuz traffic returns to normal by July 31 (inverse)", "https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-july-31"],
-      ["Ships transit Hormuz — week of July 20 (higher ranges inverse)", "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-20-20260717154058215"],
-      ["Ships transit Hormuz — week of July 27 (higher ranges inverse)", "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-27-20260724144200302"],
-      ["Zero ships transit Hormuz by…?", "https://polymarket.com/event/0-ships-transit-hormuz-on-any-date-byptpt-20260626172559966"],
-      ["Iran charges Hormuz fees by…?", "https://polymarket.com/event/iran-charges-hormuz-fees-byptptpt-20260625175035466"],
-      ["Bab el-Mandeb effectively closed by…?", "https://polymarket.com/event/bab-el-mandeb-strait-effectively-closed-by"],
-      ["Average Bab el-Mandeb ship transit at end of July (higher ranges inverse)", "https://polymarket.com/event/avgpt-of-ships-transiting-bab-el-mandeb-strait-end-of-july-20260713195907051"],
-      ["Iran successfully targets shipping by…?", "https://polymarket.com/event/iran-successfully-targets-shipping-onptptpt-20260625225210236"],
-      ["Houthis successfully target shipping on…?", "https://polymarket.com/event/houthis-successfully-target-shipping-onptptpt-20260722225036915"],
-      ["Iran military action against a Gulf state", "https://polymarket.com/event/iran-military-action-against-a-gulf-state-onptptpt-20260708212328295"]
+      ["Bab el-Mandeb Strait effectively closed by…? — Aug. 31 contract", "https://polymarket.com/event/bab-el-mandeb-strait-effectively-closed-by"]
     ]
   },
   {
-    header: "WTI and crude-oil upside-threshold odds",
-    up: "Selected WTI or crude-oil upside thresholds become more likely.",
-    down: "Selected WTI or crude-oil upside thresholds become less likely.",
+    header: "WTI hits $100 in July 2026 — odds",
+    up: "WTI reaching $100 during July becomes more likely.",
+    down: "WTI reaching $100 during July becomes less likely.",
     markets: [
-      ["What price will WTI hit in July 2026?", "https://polymarket.com/event/what-price-will-wti-hit-in-july-2026"],
-      ["Crude oil all-time high by…?", "https://polymarket.com/event/crude-oil-all-time-high-by"]
+      ["What price will WTI hit in July 2026? — ↑ $100 contract", "https://polymarket.com/event/what-price-will-wti-hit-in-july-2026"]
     ]
   }
 ];
@@ -279,6 +285,7 @@ function buildRows() {
   for (let i = 0; i < 32; i += 1) {
     const id = `Q${String(i).padStart(2, "0")}`;
     const row = document.createElement("tr");
+    row.dataset.important = IMPORTANT.has(id) ? "true" : "false";
     if (IMPORTANT.has(id)) row.className = "important";
     const moves = movesFor(i);
     row.innerHTML = `
@@ -289,6 +296,15 @@ function buildRows() {
       <td><input data-kind="note" data-id="${id}" aria-label="${id} notes" placeholder="Optional reason"></td>`;
     body.appendChild(row);
   }
+}
+
+function applyQuestionFilter() {
+  const priorityOnly = document.getElementById("priorityOnly").checked;
+  document.querySelectorAll("#scenarioRows tr").forEach(row => {
+    row.classList.toggle("priority-hidden", priorityOnly && row.dataset.important !== "true");
+  });
+  const shown = document.querySelectorAll("#scenarioRows tr:not(.priority-hidden)").length;
+  document.getElementById("questionCount").textContent = `${shown} of 32 scenarios shown`;
 }
 
 function saveState() {
@@ -331,14 +347,22 @@ function responseText() {
 function refreshPreview(message = "") {
   const text = responseText();
   document.getElementById("answerPreview").value = text;
-  document.getElementById("status").textContent = message || `${text.split("\n").filter(line => /^Q\d\d:/.test(line)).length}/32 answered`;
+  const visibleRows = [...document.querySelectorAll("#scenarioRows tr:not(.priority-hidden)")];
+  const visibleAnswered = visibleRows.filter(row => row.querySelector("[data-kind='answer']").value).length;
+  document.getElementById("status").textContent = message || `${visibleAnswered}/${visibleRows.length} shown questions answered`;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   buildDefinitions();
   buildRows();
   loadState();
+  applyQuestionFilter();
   refreshPreview();
+
+  document.getElementById("priorityOnly").addEventListener("change", () => {
+    applyQuestionFilter();
+    refreshPreview();
+  });
 
   document.getElementById("questionnaire").addEventListener("input", () => {
     saveState();
@@ -346,11 +370,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("fillSuggested").addEventListener("click", () => {
-    document.querySelectorAll("[data-kind='answer']").forEach(input => {
+    document.querySelectorAll("#scenarioRows tr:not(.priority-hidden) [data-kind='answer']").forEach(input => {
       input.value = document.querySelector(`[data-kind='suggested'][data-id='${input.dataset.id}']`).value;
     });
     saveState();
-    refreshPreview("All suggested levels accepted. Change only the rows you disagree with.");
+    refreshPreview("Suggested levels accepted for the questions currently shown.");
   });
 
   document.getElementById("copyAnswers").addEventListener("click", async () => {
