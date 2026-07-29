@@ -3,8 +3,10 @@
   "updated": "2026-07-29",
   "notes": [
     "Event pages may contain multiple dated or threshold conditional markets.",
-    "Each supplied event URL is stored once; questionnaire variables reference event IDs.",
-    "The questionnaire remains binary: each variable is rated Up or Down over the selected observation window."
+    "Each supplied event URL is stored once; questionnaire variables reference one exact conditional contract.",
+    "The questionnaire inputs remain binary: each contract is rated Up or Down over the selected observation window.",
+    "Flat is available as an overall signal-level response, not as a third scenario-input state.",
+    "The Houthi 'on...?' event is day-specific and is not a continuation of the older cumulative 'by...?' event."
   ],
   "events": {
     "hormuz_normal_by_july_31": {
@@ -72,24 +74,21 @@
       "url": "https://polymarket.com/event/iran-successfully-targets-shipping-onptptpt-20260625225210236"
     },
     "houthis_target_shipping_july_22": {
-      "label": "Houthis successfully target shipping on…?",
-      "url": "https://polymarket.com/event/houthis-successfully-target-shipping-onptptpt-20260722225036915"
+      "label": "Houthis successfully target shipping on…? (day-specific)",
+      "url": "https://polymarket.com/event/houthis-successfully-target-shipping-onptptpt-20260722225036915",
+      "question_structure": "Each conditional asks whether a qualifying incident occurs on one exact calendar date.",
+      "not_a_continuation_of": "https://polymarket.com/event/houthis-successfully-target-shipping-byptptpt-20260708165455691"
     }
   },
   "variables": [
     {
-      "key": "diplomacy",
-      "questionnaire_header": "U.S.–Iran diplomacy and de-escalation odds",
-      "up": "Diplomacy or continued de-escalation becomes more likely.",
-      "down": "Diplomacy or continued de-escalation becomes less likely.",
+      "key": "peace_talks_aug_31",
+      "questionnaire_header": "Next U.S.–Iran peace talks by Aug. 31 — odds",
+      "up": "A next round of talks by August 31 becomes more likely.",
+      "down": "A next round of talks by August 31 becomes less likely.",
       "bullish_oil_direction": "down",
-      "source_event_ids": [
-        "us_iran_peace_talks",
-        "us_iran_nuclear_deal",
-        "israel_iran_ceasefire",
-        "us_invades_iran"
-      ],
-      "inverse_event_ids": ["us_invades_iran"]
+      "source_event_ids": ["us_iran_peace_talks"],
+      "conditional_market": "August 31"
     },
     {
       "key": "blockade_near_term",
@@ -98,7 +97,7 @@
       "down": "The blockade ending by the selected near-term deadline becomes less likely.",
       "bullish_oil_direction": "down",
       "source_event_ids": ["iran_blockade_ends"],
-      "conditional_market_rule": "Use the nearest relevant unresolved dated contract."
+      "conditional_market": "August 31"
     },
     {
       "key": "blockade_long_term",
@@ -107,41 +106,25 @@
       "down": "The blockade ending by the selected long-term deadline becomes less likely.",
       "bullish_oil_direction": "down",
       "source_event_ids": ["iran_blockade_ends"],
-      "conditional_market_rule": "Use the furthest relevant unresolved dated contract, currently the year-end side of the curve when available."
+      "conditional_market": "December 31"
     },
     {
-      "key": "shipping_disruption",
-      "questionnaire_header": "Hormuz and regional shipping-disruption odds",
-      "up": "Disrupted traffic, closures, fees, military action, or successful attacks become more likely.",
-      "down": "Normal traffic becomes more likely and disruption outcomes become less likely.",
+      "key": "bab_el_mandeb_closed_aug_31",
+      "questionnaire_header": "Bab el-Mandeb effectively closed by Aug. 31 — odds",
+      "up": "An effective closure by August 31 becomes more likely.",
+      "down": "An effective closure by August 31 becomes less likely.",
       "bullish_oil_direction": "up",
-      "source_event_ids": [
-        "hormuz_normal_by_july_31",
-        "iran_hormuz_fees",
-        "bab_el_mandeb_closed",
-        "iran_gulf_action",
-        "hormuz_transit_july_20",
-        "hormuz_transit_july_27",
-        "zero_hormuz_transit",
-        "bab_el_mandeb_average_transit",
-        "iran_targets_shipping",
-        "houthis_target_shipping_july_22"
-      ],
-      "inverse_event_ids": [
-        "hormuz_normal_by_july_31",
-        "hormuz_transit_july_20",
-        "hormuz_transit_july_27",
-        "bab_el_mandeb_average_transit"
-      ]
+      "source_event_ids": ["bab_el_mandeb_closed"],
+      "conditional_market": "August 31"
     },
     {
-      "key": "oil_upside",
-      "questionnaire_header": "WTI and crude-oil upside-threshold odds",
-      "up": "Selected WTI or crude-oil upside thresholds become more likely.",
-      "down": "Selected WTI or crude-oil upside thresholds become less likely.",
+      "key": "wti_100_july",
+      "questionnaire_header": "WTI hits $100 in July 2026 — odds",
+      "up": "WTI reaching $100 during July becomes more likely.",
+      "down": "WTI reaching $100 during July becomes less likely.",
       "bullish_oil_direction": "up",
-      "source_event_ids": ["wti_july_2026", "crude_oil_ath"],
-      "conditional_market_rule": "Treat selected upside thresholds as a basket rather than relying on one strike."
+      "source_event_ids": ["wti_july_2026"],
+      "conditional_market": "↑ $100"
     }
   ]
 }
