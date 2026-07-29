@@ -61,6 +61,36 @@ class PublishMarketChartsTests(unittest.TestCase):
             self.assertTrue(Path(first[0]["published_chart"]).exists())
             self.assertTrue(Path(second[0]["published_chart"]).exists())
 
+    def test_registry_can_suppress_a_resolved_market_chart(self):
+        registry = {
+            "visible": {
+                "output": "visible.csv",
+                "chart_output": "visible.html",
+            },
+            "closed": {
+                "output": "closed.csv",
+                "chart_output": "closed.html",
+                "display_chart": False,
+            },
+        }
+        with tempfile.TemporaryDirectory() as temp_directory:
+            root = Path(temp_directory)
+            (root / "visible.csv").write_text(
+                "Market,2026-07-22\nA,1\n", encoding="utf-8"
+            )
+            (root / "visible.html").write_text(
+                "<html>2026-07-22</html>", encoding="utf-8"
+            )
+            (root / "closed.csv").write_text(
+                "Market,2026-07-22\nA,1\n", encoding="utf-8"
+            )
+            (root / "closed.html").write_text(
+                "<html>2026-07-22</html>", encoding="utf-8"
+            )
+            _, entries = publish_all_charts(root, registry=registry)
+
+        self.assertEqual([entry["event"] for entry in entries], ["visible"])
+
 
 if __name__ == "__main__":
     unittest.main()

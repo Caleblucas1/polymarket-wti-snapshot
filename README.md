@@ -151,9 +151,10 @@ chart generation with:
 python update_all_markets.py --data-dir .
 ```
 
-Use `--with-charts` to regenerate all seven event charts from the stored CSVs,
+Use `--with-charts` to regenerate the displayed event charts from the stored CSVs,
 including on a day when no date needs to be appended. CSV-only remains the
-faster default. The command reports each event as `appended`, `already current`,
+faster default, and the chart pass uses Plotly's smaller basic browser bundle.
+The command reports each event as `appended`, `already current`,
 `fully closed`, or `failed`. Every event also maintains a companion
 `*_9am_ranges.csv` file with the observed five-minute low and high during the
 24 hours ending at each 9:00 AM ET snapshot. Small deadline charts show these
@@ -177,11 +178,19 @@ does not erase the historical dispute flag.
 
 The status inventory also stores each physical condition's creation time,
 resolution time, and current Yes probability. The WTI chart uses those fields
-to split all thresholds into lower- and upper-price panels, mark every observed
-Yes resolution with a red vertical line, and show the newest active replacement
-as a live diamond. A resolved condition's terminal 100% value is never carried
+with the readable single-condition dropdown, marks every observed Yes
+resolution with a red vertical line, and shows the newest active replacement as
+a live diamond. A resolved condition's terminal 100% value is never carried
 into later dates: the logical line remains blank until a replacement condition
 exists, then restarts from that replacement's own price.
+
+Every resolved conditional's chart tooltip reports the resolved outcome, the
+actual resolution date/time, and whether Gamma identified it as automatic or
+manual/UMA. It intentionally does not show terminal probability as a separate
+tooltip field because that value is no longer decision-relevant after
+resolution. The fully resolved Houthi shipping and Houthi-Saudi markets remain
+in the authoritative CSV and status histories but are excluded from the daily
+chart manifest.
 
 When `--with-charts` is run for the full active registry, the command also
 writes `related_houthi_market_comparison.html`. That panel compares

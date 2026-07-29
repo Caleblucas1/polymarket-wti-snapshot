@@ -65,6 +65,30 @@ class BabElMandebSnapshotTests(unittest.TestCase):
         self.assertEqual(list(figure.data[0].error_y.arrayminus), [30.0])
         self.assertEqual(list(figure.data[0].error_y.array), [30.0])
 
+    def test_resolved_line_hover_uses_outcome_date_and_method_without_terminal_probability(self):
+        figure = create_line_chart(
+            ["2026-07-27", "2026-07-28"],
+            {"July 25": [25.0, 0.0]},
+            "Example",
+            carried_forward={"July 25": [False, True]},
+            resolution_details={
+                "July 25": {
+                    "resolved_at": "2026-07-28T22:37:00Z",
+                    "outcome": "No",
+                    "automatic": "true",
+                }
+            },
+        )
+
+        hover = figure.data[0].hovertemplate
+        self.assertNotIn("terminal", hover.lower())
+        self.assertIn("%{customdata[2]}", hover)
+        self.assertEqual(
+            figure.data[0].customdata[1][2],
+            "Resolved: No<br>Resolution date: July 28, 2026 6:37 PM ET<br>"
+            "Resolution method: Automatic",
+        )
+
     def test_dense_heatmap_shows_intraday_range(self):
         series = {f"July {day}": [50.0] for day in range(1, 10)}
         ranges = {
@@ -98,6 +122,9 @@ class BabElMandebSnapshotTests(unittest.TestCase):
                     "Previous Status": "disputed",
                     "Current Status": "resolved",
                     "Dispute Count": "1",
+                    "Resolved Outcome": "No",
+                    "Resolved At": "2026-07-28T22:37:00Z",
+                    "Automatically Resolved": "true",
                 },
             ],
         )
@@ -106,6 +133,8 @@ class BabElMandebSnapshotTests(unittest.TestCase):
         self.assertEqual(figure.data[1].marker.line.color, "#DC2626")
         self.assertEqual(figure.data[2].name, "Resolution observed")
         self.assertEqual(figure.data[2].marker.line.color, "#059669")
+        self.assertIn("Resolution method", figure.data[2].hovertemplate)
+        self.assertNotIn("terminal", figure.data[2].hovertemplate.lower())
 
     def test_adds_terminal_resolution_date_without_changing_raw_series(self):
         dates, series, carried = apply_terminal_resolutions(
