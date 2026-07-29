@@ -18,8 +18,13 @@ class NarrativeBreakSignalTests(unittest.TestCase):
         urls = [event["url"] for event in catalog["events"].values()]
 
         self.assertEqual(len(catalog["variables"]), 5)
-        self.assertEqual(len(urls), 16)
+        self.assertEqual(len(urls), 17)
         self.assertEqual(len(urls), len(set(urls)))
+        self.assertIn(
+            "https://polymarket.com/event/"
+            "houthis-successfully-target-shipping-onptptpt-20260722225036915",
+            urls,
+        )
         self.assertEqual(
             [variable["key"] for variable in catalog["variables"]],
             [
@@ -41,6 +46,10 @@ class NarrativeBreakSignalTests(unittest.TestCase):
         self.assertIn("for (let i = 0; i < 32; i += 1)", questionnaire)
         self.assertIn("grayCode(index) ^ 0b11100", questionnaire)
         self.assertIn("Copy completed answers for ChatGPT", questionnaire)
+        self.assertIn(
+            "houthis-successfully-target-shipping-onptptpt-20260722225036915",
+            questionnaire,
+        )
 
     def test_peace_drop_alone_is_weaker_yellow_when_curve_does_not_confirm(self):
         result = classify_scenario(
