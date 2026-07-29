@@ -8,23 +8,27 @@ The script uses Polymarket's public Gamma and CLOB APIs; no API key is required.
 
 ## Narrative-break signal questionnaire
 
-Open `signal_questionnaire.html` in a browser to calibrate all 32 binary signal
-scenarios in one batch. The scenarios use Gray-code ordering, so exactly one
-market variable changes from each row to the next. Each row has:
+Open `signal_questionnaire.html` in a browser to calibrate market-level signal
+scenarios in one batch. The form defaults to the ten highlighted priority
+questions and can reveal all 32 scenarios. The scenarios use Gray-code
+ordering, so exactly one market contract changes from each row to the next.
+Each row has:
 
-- complete, human-readable market-variable headers;
+- complete, human-readable headers naming one specific contract per column;
 - a pre-selected suggested signal level;
-- a dropdown for the user's signal level;
+- a dropdown for the user's signal level, including `Flat`;
 - an optional notes field.
 
 The yellow-highlighted rows are the most important calibration decisions. The
 page saves answers in the browser and produces a compact response that can be
 copied into ChatGPT all at once.
 
-`signal_market_catalog.json` is the authoritative mapping from questionnaire
-variables to the supplied Polymarket event pages. It preserves the distinction
-between event pages and their dated or threshold conditional markets,
-deduplicates repeated URLs, and records inverse-direction inputs explicitly.
+`signal_market_catalog.json` is the authoritative list of supplied Polymarket
+event pages. The questionnaire selects five individual conditional contracts
+from that catalog; it does not average unrelated markets into broad diplomacy,
+shipping, or oil baskets. The remaining events stay available as reference
+markets and can replace a questionnaire contract later without losing their
+identity.
 
 ## Setup
 
@@ -210,8 +214,9 @@ manual/UMA. It intentionally does not show terminal probability as a separate
 tooltip field because that value is no longer decision-relevant after
 resolution. The fully resolved older Houthi shipping and Houthi-Saudi markets
 remain in the authoritative CSV and status histories but are excluded from the
-daily chart manifest. The July 22 successor Houthi-shipping event is tracked
-separately and remains eligible for daily chart publication.
+daily chart manifest. The July 22 Houthi-shipping event is a separate
+day-specific question and remains eligible for daily chart publication. It is
+not a continuation of the resolved cumulative-by-deadline event.
 
 When `--with-charts` is run for the full active registry, the command also
 writes `related_houthi_market_comparison.html`. That panel compares
