@@ -6,6 +6,26 @@ for the seven most recent calendar-day snapshots.
 
 The script uses Polymarket's public Gamma and CLOB APIs; no API key is required.
 
+## Narrative-break signal questionnaire
+
+Open `signal_questionnaire.html` in a browser to calibrate all 32 binary signal
+scenarios in one batch. The scenarios use Gray-code ordering, so exactly one
+market variable changes from each row to the next. Each row has:
+
+- complete, human-readable market-variable headers;
+- a pre-selected suggested signal level;
+- a dropdown for the user's signal level;
+- an optional notes field.
+
+The yellow-highlighted rows are the most important calibration decisions. The
+page saves answers in the browser and produces a compact response that can be
+copied into ChatGPT all at once.
+
+`signal_market_catalog.json` is the authoritative mapping from questionnaire
+variables to the supplied Polymarket event pages. It preserves the distinction
+between event pages and their dated or threshold conditional markets,
+deduplicates repeated URLs, and records inverse-direction inputs explicitly.
+
 ## Setup
 
 Python 3.10 or newer is required.
