@@ -164,7 +164,7 @@ python track_market.py houthi-saudi
 ```
 
 The older event-specific commands remain available as compatibility wrappers.
-For all seven persistent daily CSVs, update events concurrently and skip unused
+For all eight persistent daily CSVs, update events concurrently and skip unused
 chart generation with:
 
 ```bash
@@ -208,9 +208,10 @@ Every resolved conditional's chart tooltip reports the resolved outcome, the
 actual resolution date/time, and whether Gamma identified it as automatic or
 manual/UMA. It intentionally does not show terminal probability as a separate
 tooltip field because that value is no longer decision-relevant after
-resolution. The fully resolved Houthi shipping and Houthi-Saudi markets remain
-in the authoritative CSV and status histories but are excluded from the daily
-chart manifest.
+resolution. The fully resolved older Houthi shipping and Houthi-Saudi markets
+remain in the authoritative CSV and status histories but are excluded from the
+daily chart manifest. The July 22 successor Houthi-shipping event is tracked
+separately and remains eligible for daily chart publication.
 
 When `--with-charts` is run for the full active registry, the command also
 writes `related_houthi_market_comparison.html`. That panel compares
