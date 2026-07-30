@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from chart_output import plotly_basic_cdn
+from chart_output import plotly_cdn_for_figure
 from plot_wti_timeseries import latest_window, load_ranges, load_snapshot
 from polymarket_wti_snapshot import (
     all_markets_closed,
@@ -682,7 +682,7 @@ def write_deadline_chart(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     figure.write_html(
         output_path,
-        include_plotlyjs=plotly_basic_cdn(),
+        include_plotlyjs=plotly_cdn_for_figure(figure),
         full_html=True,
         config={"displaylogo": False, "responsive": True},
     )
