@@ -100,6 +100,32 @@ class BabElMandebSnapshotTests(unittest.TestCase):
         )
         self.assertIn("↕ 20.0–80.0", figure.data[0].text[0][0])
 
+    def test_dense_heatmap_html_loads_heatmap_compatible_bundle(self):
+        with tempfile.TemporaryDirectory() as temp_directory:
+            root = Path(temp_directory)
+            snapshot = root / "snapshot.csv"
+            chart = root / "chart.html"
+            snapshot.write_text(
+                "Deadline,2026-07-17\n"
+                + "".join(
+                    f"July {day},{day}.0\n"
+                    for day in range(1, 10)
+                ),
+                encoding="utf-8",
+            )
+
+            write_deadline_chart(
+                snapshot,
+                chart,
+                days=7,
+                title="Dense market",
+            )
+            html = chart.read_text(encoding="utf-8")
+
+        self.assertIn("plotly-cartesian-", html)
+        self.assertNotIn("plotly-basic-", html)
+        self.assertIn('"type":"heatmap"', html)
+
     def test_dense_heatmap_highlights_dispute_and_resolution_cells(self):
         series = {f"July {day}": [50.0, 40.0] for day in range(1, 10)}
         figure = create_heatmap_chart(
