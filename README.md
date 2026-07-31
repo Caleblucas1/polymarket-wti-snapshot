@@ -30,6 +30,23 @@ shipping, or oil baskets. The remaining events stay available as reference
 markets and can replace a questionnaire contract later without losing their
 identity.
 
+## Durable daily signal review records
+
+The five-contract signal dashboard records each generated observation through
+`signal_review.persist_observation()`. The default append-only store is
+`signal_records/observations.jsonl`. Each line preserves the cutoff timestamp,
+raw probabilities, comparable prior-day and seven-day changes, level and change
+read-throughs, the signal classification, the definition version, and a
+fingerprint of the source catalog.
+
+Records are duplicate-safe by cutoff timestamp, so rerunning the same daily
+update does not create a second evidence row. The dashboard's dropdown ratings
+and notes remain annotations: they can be exported for later calibration, but
+cannot change the stored evidence or silently change the contract definitions.
+
+The generated HTML dashboard is intentionally an ephemeral scratch artifact;
+the JSONL observation store is the durable project record.
+
 ## Setup
 
 Python 3.10 or newer is required.
@@ -327,6 +344,23 @@ List the pre-classified starter scenarios:
 python narrative_break_signal.py --list-scenarios
 python narrative_break_signal.py --list-scenarios --show-scenario-details
 ```
+
+### Daily signal review and calibration guardrail
+
+The five exact contracts are recorded as an append-only evidence layer by
+`signal_review.py`. Each observation stores the current probability, prior-day
+probability, one-day and seven-day changes, the catalog fingerprint, and the
+definition version. A user's daily rating is an annotation on that record; it
+cannot overwrite the odds, contract identity, or rule-based oil read-through.
+
+The daily market dashboard presents a dropdown for each exact contract and an
+overall rating. Ratings are intentionally comparative—`Much more bullish`,
+`More bullish`, `Unchanged`, `More bearish`, `Much more bearish`,
+`Conflicted / mixed`, or `Insufficient evidence`—and are saved separately from
+the raw evidence. Export the reviewed record after completing the dashboard so
+later backtests can compare the user's judgment with subsequent market moves.
+The objective one-day change uses the same Eastern cutoff on the prior day;
+the seven-day chart remains anchored to the comparable 9:00 AM observations.
 
 Classify one of the starter scenarios:
 
