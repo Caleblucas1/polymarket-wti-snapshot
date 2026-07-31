@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Narrative Break Signal — Batch Calibration</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d9dee8;
+      --paper: #ffffff;
+      --canvas: #f4f6fa;
+      --accent: #3157d5;
+      --important: #fff3b0;
+      --green: #d9f4df;
+      --yellow: #fff2a8;
+      --orange: #ffd4a8;
+      --red: #ffc7c7;
+      --flat: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { max-width: 1600px; margin: 0 auto; padding: 28px 20px 80px; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.7rem, 3vw, 2.5rem); }
+    h2 { margin-top: 0; font-size: 1.12rem; }
+    p { line-height: 1.5; }
+    .lede { color: var(--muted); max-width: 920px; margin: 0 0 22px; }
+    .panel {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 24px rgba(23, 32, 51, .05);
+    }
+    details { border-top: 1px solid var(--line); padding: 12px 0 0; margin-top: 12px; }
+    summary { cursor: pointer; font-weight: 700; }
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .market-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+    .market-card p { margin: 6px 0; font-size: .9rem; color: var(--muted); }
+    .market-card a { display: block; margin: 6px 0; color: var(--accent); font-size: .9rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+    table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1420px; background: var(--paper); }
+    th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 10px; vertical-align: middle; }
+    th:last-child, td:last-child { border-right: 0; }
+    tr:last-child td { border-bottom: 0; }
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #eaf0ff;
+      text-align: left;
+      font-size: .83rem;
+      line-height: 1.25;
+    }
+    tbody tr.important td { background: var(--important); font-weight: 650; }
+    tbody tr:hover td { filter: brightness(.975); }
+    .scenario { white-space: nowrap; font-weight: 800; }
+    .move { text-align: center; font-weight: 750; }
+    select, input {
+      width: 100%;
+      min-width: 128px;
+      border: 1px solid #b8c0cf;
+      border-radius: 8px;
+      padding: 8px 9px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+    }
+    input { min-width: 190px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; align-items: center; }
+    button {
+      border: 0;
+      border-radius: 9px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    button.secondary { background: #667085; }
+    button.danger { background: #b42318; }
+    #status { color: var(--muted); font-size: .92rem; }
+    textarea {
+      width: 100%;
+      min-height: 240px;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .key { display: inline-block; border-radius: 5px; padding: 2px 7px; font-size: .82rem; font-weight: 750; }
+    .key.green { background: var(--green); }
+    .key.yellow { background: var(--yellow); }
+    .key.orange { background: var(--orange); }
+    .key.red { background: var(--red); }
+    .key.flat { background: var(--flat); }
+    .questionnaire-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+    .questionnaire-controls label { font-weight: 700; }
+    .questionnaire-controls input { width: auto; min-width: 0; margin-right: 6px; }
+    tr.priority-hidden { display: none; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Narrative Break Signal — Batch Calibration</h1>
+  <p class="lede">
+    Calibrate five individual market contracts without combining distinct questions into broader signal baskets.
+    The ten most important rows are shown first; you can reveal all 32 binary scenarios at any time. Every row
+    changes exactly one contract from the row above, and your answers are saved in this browser.
+  </p>
+
+  <section class="panel">
+    <h2>How to read the variables</h2>
+    <p>
+      “Up” and “Down” describe the movement in the named market odds—not whether oil itself is bullish or bearish.
+      Each visible variable maps to one named Polymarket contract. The larger market catalog remains available
+      for reference, but those markets are not silently averaged into these columns.
+    </p>
+    <div id="marketDefinitions" class="market-grid"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Signal-level key</h2>
+    <p>
+      <span class="key green">Green</span>
+      <span class="key flat">Flat</span>
+      <span class="key yellow">Weaker Yellow</span>
+      <span class="key yellow">Yellow</span>
+      <span class="key yellow">Yellow/Orange</span>
+      <span class="key orange">Orange</span>
+      <span class="key orange">Orange/Red</span>
+      <span class="key red">Red</span>
+    </p>
+  </section>
+
+  <section class="panel questionnaire-controls">
+    <label><input type="checkbox" id="priorityOnly" checked> Show highlighted priority questions only</label>
+    <span id="questionCount">10 of 32 scenarios shown</span>
+  </section>
+
+  <form id="questionnaire">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Next U.S.–Iran peace talks by Aug. 31 — odds</th>
+            <th>U.S. announces end of Iranian blockade by Aug. 31 — odds</th>
+            <th>U.S. announces end of Iranian blockade by Dec. 31 — odds</th>
+            <th>Bab el-Mandeb effectively closed by Aug. 31 — odds</th>
+            <th>WTI hits $100 in July 2026 — odds</th>
+            <th>Suggested Signal Level</th>
+            <th>Your Signal Level</th>
+            <th>Your Notes</th>
+          </tr>
+        </thead>
+        <tbody id="scenarioRows"></tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <button type="button" id="copyAnswers">Copy completed answers for ChatGPT</button>
+      <button type="button" class="secondary" id="fillSuggested">Accept shown suggested levels</button>
+      <button type="button" class="secondary" id="downloadAnswers">Download answers</button>
+      <button type="button" class="danger" id="clearAnswers">Clear my answers</button>
+      <span id="status" role="status" aria-live="polite"></span>
+    </div>
+    <textarea id="answerPreview" readonly placeholder="Your compact batch response will appear here."></textarea>
+  </form>
+</main>
+
+<script>
+const LEVELS = ["", "Green", "Flat", "Weaker Yellow", "Yellow", "Yellow/Orange", "Orange", "Orange/Red", "Red", "Unsure"];
+const IMPORTANT = new Set(["Q02", "Q05", "Q09", "Q11", "Q13", "Q16", "Q18", "Q23", "Q27", "Q29"]);
+const SUGGESTED = [
+  "Green", "Weaker Yellow", "Orange", "Yellow", "Orange", "Red", "Yellow/Orange", "Yellow",
+  "Orange", "Orange/Red", "Red", "Red", "Yellow/Orange", "Orange/Red", "Yellow/Orange", "Yellow",
+  "Yellow/Orange", "Orange", "Red", "Orange/Red", "Red", "Red", "Red", "Red",
+  "Yellow/Orange", "Orange", "Red", "Orange/Red", "Yellow/Orange", "Orange/Red", "Yellow/Orange", "Weaker Yellow"
+];
+const VARIABLE_HEADERS = [
+  "Next U.S.–Iran peace talks by Aug. 31 — odds",
+  "U.S. announces end of Iranian blockade by Aug. 31 — odds",
+  "U.S. announces end of Iranian blockade by Dec. 31 — odds",
+  "Bab el-Mandeb effectively closed by Aug. 31 — odds",
+  "WTI hits $100 in July 2026 — odds"
+];
+const MARKET_CATALOG = [
+  {
+    header: "Next U.S.–Iran peace talks by Aug. 31 — odds",
+    up: "A next round of talks by August 31 becomes more likely.",
+    down: "A next round of talks by August 31 becomes less likely.",
+    markets: [
+      ["Next round of U.S.–Iran peace talks by…? — Aug. 31 contract", "https://polymarket.com/event/next-round-of-us-iran-peace-talks-byptptpt-20260623022722982"]
+    ]
+  },
+  {
+    header: "U.S. announces end of Iranian blockade by Aug. 31 — odds",
+    up: "An announced end to the blockade by August 31 becomes more likely.",
+    down: "An announced end to the blockade by August 31 becomes less likely.",
+    markets: [
+      ["U.S. announces end of Iranian blockade by…? — Aug. 31 contract", "https://polymarket.com/event/us-announces-end-of-iranian-blockade-byptptpt-20260713152715080"]
+    ]
+  },
+  {
+    header: "U.S. announces end of Iranian blockade by Dec. 31 — odds",
+    up: "An announced end to the blockade by December 31 becomes more likely.",
+    down: "An announced end to the blockade by December 31 becomes less likely.",
+    markets: [
+      ["U.S. announces end of Iranian blockade by…? — Dec. 31 contract", "https://polymarket.com/event/us-announces-end-of-iranian-blockade-byptptpt-20260713152715080"]
+    ]
+  },
+  {
+    header: "Bab el-Mandeb effectively closed by Aug. 31 — odds",
+    up: "An effective closure by August 31 becomes more likely.",
+    down: "An effective closure by August 31 becomes less likely.",
+    markets: [
+      ["Bab el-Mandeb Strait effectively closed by…? — Aug. 31 contract", "https://polymarket.com/event/bab-el-mandeb-strait-effectively-closed-by"]
+    ]
+  },
+  {
+    header: "WTI hits $100 in July 2026 — odds",
+    up: "WTI reaching $100 during July becomes more likely.",
+    down: "WTI reaching $100 during July becomes less likely.",
+    markets: [
+      ["What price will WTI hit in July 2026? — ↑ $100 contract", "https://polymarket.com/event/what-price-will-wti-hit-in-july-2026"]
+    ]
+  }
+];
+
+function grayCode(index) {
+  return index ^ (index >> 1);
+}
+
+function movesFor(index) {
+  const code = grayCode(index) ^ 0b11100;
+  return [4, 3, 2, 1, 0].map(bit => ((code >> bit) & 1) ? "Up" : "Down");
+}
+
+function optionMarkup(selected = "") {
+  return LEVELS.map(level =>
+    `<option value="${level}"${level === selected ? " selected" : ""}>${level || "Select…"}</option>`
+  ).join("");
+}
+
+function buildDefinitions() {
+  const container = document.getElementById("marketDefinitions");
+  MARKET_CATALOG.forEach(variable => {
+    const card = document.createElement("article");
+    card.className = "market-card";
+    card.innerHTML = `<h3>${variable.header}</h3><p><strong>Up:</strong> ${variable.up}</p><p><strong>Down:</strong> ${variable.down}</p>`;
+    variable.markets.forEach(([label, url]) => {
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = label;
+      card.appendChild(link);
+    });
+    container.appendChild(card);
+  });
+}
+
+function buildRows() {
+  const body = document.getElementById("scenarioRows");
+  for (let i = 0; i < 32; i += 1) {
+    const id = `Q${String(i).padStart(2, "0")}`;
+    const row = document.createElement("tr");
+    row.dataset.important = IMPORTANT.has(id) ? "true" : "false";
+    if (IMPORTANT.has(id)) row.className = "important";
+    const moves = movesFor(i);
+    row.innerHTML = `
+      <td class="scenario">${IMPORTANT.has(id) ? "★ " : ""}${id}</td>
+      ${moves.map(move => `<td class="move">${move}</td>`).join("")}
+      <td><select data-kind="suggested" data-id="${id}">${optionMarkup(SUGGESTED[i])}</select></td>
+      <td><select data-kind="answer" data-id="${id}">${optionMarkup()}</select></td>
+      <td><input data-kind="note" data-id="${id}" aria-label="${id} notes" placeholder="Optional reason"></td>`;
+    body.appendChild(row);
+  }
+}
+
+function applyQuestionFilter() {
+  const priorityOnly = document.getElementById("priorityOnly").checked;
+  document.querySelectorAll("#scenarioRows tr").forEach(row => {
+    row.classList.toggle("priority-hidden", priorityOnly && row.dataset.important !== "true");
+  });
+  const shown = document.querySelectorAll("#scenarioRows tr:not(.priority-hidden)").length;
+  document.getElementById("questionCount").textContent = `${shown} of 32 scenarios shown`;
+}
+
+function saveState() {
+  const state = {};
+  document.querySelectorAll("[data-kind='answer'], [data-kind='note'], [data-kind='suggested']").forEach(input => {
+    state[`${input.dataset.kind}:${input.dataset.id}`] = input.value;
+  });
+  localStorage.setItem("narrative-break-questionnaire-v1", JSON.stringify(state));
+}
+
+function loadState() {
+  const raw = localStorage.getItem("narrative-break-questionnaire-v1");
+  if (!raw) return;
+  const state = JSON.parse(raw);
+  document.querySelectorAll("[data-kind]").forEach(input => {
+    const key = `${input.dataset.kind}:${input.dataset.id}`;
+    if (Object.prototype.hasOwnProperty.call(state, key)) input.value = state[key];
+  });
+}
+
+function responseText() {
+  const rows = [];
+  for (let i = 0; i < 32; i += 1) {
+    const id = `Q${String(i).padStart(2, "0")}`;
+    const answer = document.querySelector(`[data-kind='answer'][data-id='${id}']`).value;
+    const suggested = document.querySelector(`[data-kind='suggested'][data-id='${id}']`).value;
+    const note = document.querySelector(`[data-kind='note'][data-id='${id}']`).value.trim();
+    if (!answer) continue;
+    const verdict = answer === suggested ? "Agree" : answer;
+    rows.push(`${id}: ${verdict}${note ? ` — ${note}` : ""}`);
+  }
+  return [
+    "Narrative Break Signal — Batch Calibration",
+    `Completed: ${rows.length}/32`,
+    "",
+    ...rows
+  ].join("\n");
+}
+
+function refreshPreview(message = "") {
+  const text = responseText();
+  document.getElementById("answerPreview").value = text;
+  const visibleRows = [...document.querySelectorAll("#scenarioRows tr:not(.priority-hidden)")];
+  const visibleAnswered = visibleRows.filter(row => row.querySelector("[data-kind='answer']").value).length;
+  document.getElementById("status").textContent = message || `${visibleAnswered}/${visibleRows.length} shown questions answered`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  buildDefinitions();
+  buildRows();
+  loadState();
+  applyQuestionFilter();
+  refreshPreview();
+
+  document.getElementById("priorityOnly").addEventListener("change", () => {
+    applyQuestionFilter();
+    refreshPreview();
+  });
+
+  document.getElementById("questionnaire").addEventListener("input", () => {
+    saveState();
+    refreshPreview();
+  });
+
+  document.getElementById("fillSuggested").addEventListener("click", () => {
+    document.querySelectorAll("#scenarioRows tr:not(.priority-hidden) [data-kind='answer']").forEach(input => {
+      input.value = document.querySelector(`[data-kind='suggested'][data-id='${input.dataset.id}']`).value;
+    });
+    saveState();
+    refreshPreview("Suggested levels accepted for the questions currently shown.");
+  });
+
+  document.getElementById("copyAnswers").addEventListener("click", async () => {
+    const text = responseText();
+    document.getElementById("answerPreview").value = text;
+    try {
+      await navigator.clipboard.writeText(text);
+      refreshPreview("Copied. Paste the answer block into ChatGPT.");
+    } catch {
+      document.getElementById("answerPreview").select();
+      refreshPreview("Select and copy the answer block below.");
+    }
+  });
+
+  document.getElementById("downloadAnswers").addEventListener("click", () => {
+    const blob = new Blob([responseText()], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "narrative-break-signal-answers.txt";
+    link.click();
+    URL.revokeObjectURL(link.href);
+    refreshPreview("Answers downloaded.");
+  });
+
+  document.getElementById("clearAnswers").addEventListener("click", () => {
+    if (!window.confirm("Clear all of your signal levels and notes?")) return;
+    document.querySelectorAll("[data-kind='answer']").forEach(input => { input.value = ""; });
+    document.querySelectorAll("[data-kind='note']").forEach(input => { input.value = ""; });
+    saveState();
+    refreshPreview("Your answers and notes were cleared.");
+  });
+});
+</script>
+</body>
+</html>

@@ -6,6 +6,47 @@ for the seven most recent calendar-day snapshots.
 
 The script uses Polymarket's public Gamma and CLOB APIs; no API key is required.
 
+## Narrative-break signal questionnaire
+
+Open `signal_questionnaire.html` in a browser to calibrate market-level signal
+scenarios in one batch. The form defaults to the ten highlighted priority
+questions and can reveal all 32 scenarios. The scenarios use Gray-code
+ordering, so exactly one market contract changes from each row to the next.
+Each row has:
+
+- complete, human-readable headers naming one specific contract per column;
+- a pre-selected suggested signal level;
+- a dropdown for the user's signal level, including `Flat`;
+- an optional notes field.
+
+The yellow-highlighted rows are the most important calibration decisions. The
+page saves answers in the browser and produces a compact response that can be
+copied into ChatGPT all at once.
+
+`signal_market_catalog.json` is the authoritative list of supplied Polymarket
+event pages. The questionnaire selects five individual conditional contracts
+from that catalog; it does not average unrelated markets into broad diplomacy,
+shipping, or oil baskets. The remaining events stay available as reference
+markets and can replace a questionnaire contract later without losing their
+identity.
+
+## Durable daily signal review records
+
+The five-contract signal dashboard records each generated observation through
+`signal_review.persist_observation()`. The default append-only store is
+`signal_records/observations.jsonl`. Each line preserves the cutoff timestamp,
+raw probabilities, comparable prior-day and seven-day changes, level and change
+read-throughs, the signal classification, the definition version, and a
+fingerprint of the source catalog.
+
+Records are duplicate-safe by cutoff timestamp, so rerunning the same daily
+update does not create a second evidence row. The dashboard's dropdown ratings
+and notes remain annotations: they can be exported for later calibration, but
+cannot change the stored evidence or silently change the contract definitions.
+
+The generated HTML dashboard is intentionally an ephemeral scratch artifact;
+the JSONL observation store is the durable project record.
+
 ## Setup
 
 Python 3.10 or newer is required.
@@ -144,7 +185,7 @@ python track_market.py houthi-saudi
 ```
 
 The older event-specific commands remain available as compatibility wrappers.
-For all seven persistent daily CSVs, update events concurrently and skip unused
+For all eight persistent daily CSVs, update events concurrently and skip unused
 chart generation with:
 
 ```bash
@@ -188,9 +229,11 @@ Every resolved conditional's chart tooltip reports the resolved outcome, the
 actual resolution date/time, and whether Gamma identified it as automatic or
 manual/UMA. It intentionally does not show terminal probability as a separate
 tooltip field because that value is no longer decision-relevant after
-resolution. The fully resolved Houthi shipping and Houthi-Saudi markets remain
-in the authoritative CSV and status histories but are excluded from the daily
-chart manifest.
+resolution. The fully resolved older Houthi shipping and Houthi-Saudi markets
+remain in the authoritative CSV and status histories but are excluded from the
+daily chart manifest. The July 22 Houthi-shipping event is a separate
+day-specific question and remains eligible for daily chart publication. It is
+not a continuation of the resolved cumulative-by-deadline event.
 
 When `--with-charts` is run for the full active registry, the command also
 writes `related_houthi_market_comparison.html`. That panel compares
@@ -295,6 +338,42 @@ Run the interactive questionnaire:
 python narrative_break_signal.py
 ```
 
+List the pre-classified starter scenarios:
+
+```bash
+python narrative_break_signal.py --list-scenarios
+python narrative_break_signal.py --list-scenarios --show-scenario-details
+```
+
+### Daily signal review and calibration guardrail
+
+The five exact contracts are recorded as an append-only evidence layer by
+`signal_review.py`. Each observation stores the current probability, prior-day
+probability, one-day and seven-day changes, the catalog fingerprint, and the
+definition version. A user's daily rating is an annotation on that record; it
+cannot overwrite the odds, contract identity, or rule-based oil read-through.
+
+The daily market dashboard presents a dropdown for each exact contract and an
+overall rating. Ratings are intentionally comparative—`Much more bullish`,
+`More bullish`, `Unchanged`, `More bearish`, `Much more bearish`,
+`Conflicted / mixed`, or `Insufficient evidence`—and are saved separately from
+the raw evidence. Export the reviewed record after completing the dashboard so
+later backtests can compare the user's judgment with subsequent market moves.
+The objective one-day change uses the same Eastern cutoff on the prior day;
+the seven-day chart remains anchored to the comparable 9:00 AM observations.
+
+Classify one of the starter scenarios:
+
+```bash
+python narrative_break_signal.py --scenario question-2
+```
+
+Play the calibration quiz:
+
+```bash
+python narrative_break_signal.py --quiz
+```
+
 Classify a scenario directly:
 
 ```bash
@@ -307,7 +386,7 @@ python narrative_break_signal.py \
   --wti-upside-threshold slightly_up
 ```
 
-The calibrated Question 2 rule is stored as Yellow:
+The calibrated Question 2 rule is stored as Yellow/Orange:
 
 ```text
 Near-term peace-talk odds fall
@@ -315,8 +394,12 @@ Near-term peace-talk odds fall
 + long-dated blockade odds stay stable
 + shipping-risk markets stay flat
 + WTI upside-threshold odds are only slightly higher
-= Yellow timing-risk warning
+= Yellow/Orange timing-risk warning
 ```
+
+Stable long-dated odds and flat shipping markets keep it below Orange, but the
+paired near-term drop in peace-talk and blockade odds may reflect a meaningful
+near-term development from outside the included model signals.
 
 ## Test
 
