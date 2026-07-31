@@ -1,11 +1,13 @@
 {
   "version": 1,
+  "definition_version": "five-exact-contracts-v1",
   "updated": "2026-07-29",
   "notes": [
     "Event pages may contain multiple dated or threshold conditional markets.",
     "Each supplied event URL is stored once; questionnaire variables reference one exact conditional contract.",
     "The questionnaire inputs remain binary: each contract is rated Up or Down over the selected observation window.",
     "Flat is available as an overall signal-level response, not as a third scenario-input state.",
+    "The five exact contract definitions are evidence schema, not user-editable daily annotations. Daily ratings and notes are stored separately from raw observations.",
     "The Houthi 'on...?' event is day-specific and is not a continuation of the older cumulative 'by...?' event."
   ],
   "events": {
