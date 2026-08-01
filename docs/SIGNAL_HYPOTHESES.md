@@ -34,14 +34,16 @@ A `frozen` canonical hypothesis specifies all of the following:
 - definition version.
 
 A `blocked` hypothesis preserves the supported parts of the source claim while
-listing every unresolved field in `blocking_fields`. A blocked record is not
-eligible for dataset construction or backtesting. This is intentional: missing
-information is recorded rather than replaced by persuasive-sounding precision.
+listing every unresolved field in `blocking_fields`. A blocked canonical record
+is not eligible for dataset construction or backtesting. A blocked enhanced
+record preserves future scope without allowing it to contaminate the simpler
+canonical test.
 
-## Current version 1 status
+## Current status
 
-Six canonical definitions are frozen for research dataset construction:
+Seven canonical definitions are frozen for research dataset construction:
 
+- `POLICY-US-LEGISLATION-001`
 - `ANALYST-AAPL-001`
 - `TECH-HMA-001`
 - `TECH-MVWAP-BTC-001`
@@ -49,16 +51,46 @@ Six canonical definitions are frozen for research dataset construction:
 - `MICRO-ASIA-SNDK-001`
 - `FLOW-MON-BTC-001`
 
-Two remain blocked:
+One canonical definition remains blocked:
 
-- `POLICY-SEMIS-001` — the source does not yet fix the eligible announcement
-  universe, expected direction, executable entry or held-out boundary.
 - `CROSS-ASSET-REBOUND-001` — the four rebound components are implemented, but a
   mechanical common-shock detector, event reference, maximum horizon and
   aggregation rule must be frozen before event collection can be unbiased.
 
 Frozen means the research rule is fixed. It does **not** mean the signal is
 validated, profitable, production-ready or authorized for real-money trading.
+
+## U.S. legislative policy alpha
+
+The earlier `POLICY-SEMIS-001` label described one example rather than the true
+selection universe. It is now retained as an alias for
+`POLICY-US-LEGISLATION-001`.
+
+The signal asks whether newly available U.S. federal legislative language can
+earn the right to influence capital allocation. The canonical version starts
+with **just-passed legislation**, because final congressional passage and the
+operative text can be timestamped objectively.
+
+A candidate event must pass five gates before it can create a research trade:
+
+1. final congressional passage in identical operative form;
+2. a direct binding economic mechanism;
+3. a pre-entry company or subindustry exposure mapping;
+4. quantifiable materiality using contemporaneously available official
+   information;
+5. implementation or binding effect expected within 24 months.
+
+The exposure mapping and direction must be sealed before entry without using
+post-event prices. The primary entry is the next regular-session open after the
+versioned policy-impact memo is completed, and the primary exit is the fifth
+regular-session close.
+
+The user's intended **about-to-pass** use case is preserved as a blocked enhanced
+variant. It cannot freeze until the repository has objective rules for scheduled
+votes, passage probability, amendment risk, text finality, pre-vote mapping and
+entry timing. This is canonical before enhanced in practice: first prove that the
+system can interpret completed legislation honestly, then test whether it can
+anticipate passage.
 
 ## Source claim versus research definition
 
@@ -98,8 +130,9 @@ file may authorize real-money trading.
 
 ```bash
 python signal_cli.py hypotheses
+python signal_cli.py hypothesis POLICY-US-LEGISLATION-001
+python signal_cli.py hypothesis POLICY-SEMIS-001
 python signal_cli.py hypothesis FLOW-MON-BTC-001
-python signal_cli.py hypothesis S-010
 python signal_cli.py validate
 python -m unittest tests.test_signal_hypotheses -v
 ```
@@ -109,7 +142,6 @@ plus each definition fingerprint.
 
 ## Next step
 
-Step 2 will build reproducible, versioned datasets only for the six currently
-eligible canonical definitions. Dataset manifests must bind raw sources,
-transformations and hashes to the exact hypothesis fingerprint that requested the
-data.
+Step 2 will build reproducible, versioned datasets for the seven eligible
+canonical definitions. Dataset manifests must bind raw sources, transformations
+and hashes to the exact hypothesis fingerprint that requested the data.

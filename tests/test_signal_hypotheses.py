@@ -22,22 +22,45 @@ class SignalHypothesisTests(unittest.TestCase):
     def test_current_hypotheses_are_valid_and_cover_registry(self):
         self.assertEqual([], validate_hypotheses())
         summary = summarize_statuses(statuses())
-        self.assertEqual(8, summary["total"])
-        self.assertEqual(6, summary["frozen_canonical"])
-        self.assertEqual(2, summary["blocked_canonical"])
-        self.assertEqual(6, summary["dataset_eligible"])
+        self.assertEqual(9, summary["total"])
+        self.assertEqual(7, summary["frozen_canonical"])
+        self.assertEqual(1, summary["blocked_canonical"])
+        self.assertEqual(7, summary["dataset_eligible"])
         self.assertFalse(summary["real_money_trading_authorized"])
 
-    def test_blocked_records_preserve_missing_information_instead_of_inventing_it(self):
-        rows = {row["registry_id"]: row for row in load_hypotheses()}
-        self.assertEqual("blocked", rows["POLICY-SEMIS-001"]["freeze_status"])
-        self.assertIn("expected return direction", rows["POLICY-SEMIS-001"]["blocking_fields"])
-        self.assertIsNone(rows["POLICY-SEMIS-001"]["entry_rule"])
-        self.assertEqual("blocked", rows["CROSS-ASSET-REBOUND-001"]["freeze_status"])
-        self.assertIn(
-            "mechanical common-shock detector",
-            rows["CROSS-ASSET-REBOUND-001"]["blocking_fields"],
+    def test_policy_alpha_freezes_post_passage_and_blocks_pre_passage_extension(self):
+        rows = [
+            row
+            for row in load_hypotheses()
+            if row["registry_id"] == "POLICY-US-LEGISLATION-001"
+        ]
+        canonical = next(row for row in rows if row["variant"] == "canonical")
+        enhanced = next(row for row in rows if row["variant"] == "enhanced")
+
+        self.assertEqual("frozen", canonical["freeze_status"])
+        self.assertEqual([], canonical["blocking_fields"])
+        self.assertIn("all five pre-entry gates", canonical["trigger_rule"])
+        self.assertIn("final congressional passage", canonical["trigger_rule"])
+        self.assertIn("next regular-session open", canonical["entry_rule"])
+        self.assertEqual("blocked", enhanced["freeze_status"])
+        self.assertIn("mechanical passage-probability threshold", enhanced["blocking_fields"])
+        self.assertIsNone(enhanced["entry_rule"])
+
+    def test_policy_alpha_resolves_old_semiconductor_alias(self):
+        value = get_hypothesis("POLICY-SEMIS-001")
+        self.assertEqual("POLICY-US-LEGISLATION-001", value["registry_id"])
+        self.assertEqual("frozen", value["freeze_status"])
+        self.assertTrue(value["dataset_eligible"])
+
+    def test_cross_asset_record_preserves_missing_information(self):
+        row = next(
+            row
+            for row in load_hypotheses()
+            if row["registry_id"] == "CROSS-ASSET-REBOUND-001"
+            and row["variant"] == "canonical"
         )
+        self.assertEqual("blocked", row["freeze_status"])
+        self.assertIn("mechanical common-shock detector", row["blocking_fields"])
 
     def test_frozen_hypothesis_is_resolvable_by_legacy_id_and_has_fingerprint(self):
         value = get_hypothesis("S-010")

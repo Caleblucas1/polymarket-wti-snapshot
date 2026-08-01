@@ -159,12 +159,20 @@ correlated signals. Before aggregate evidence affects capital, the system must:
 ## Current registry
 
 `signal_candidates.json` is schema version 2. It includes the supplied bookmark
-candidates and resolves the working-label collision around “S-009”:
+candidates and preserves aliases when a signal's true scope becomes clearer:
 
+- legacy `S-001` is the durable `POLICY-US-LEGISLATION-001` legislative
+  policy-alpha signal; `POLICY-SEMIS-001` remains an alias because the
+  semiconductor policy example was the signal's original working label;
 - legacy `S-009` remains the crypto-versus-equity rebound candidate;
 - BTC month-end deleveraging is the durable `FLOW-MON-BTC-001` record with
   legacy sequential ID `S-010`;
 - `SALSA-MONTH-END` and `MONTH-END-BTC` are accepted aliases.
+
+The legislative signal's canonical version begins with just-passed bills. Its
+about-to-pass extension remains blocked as an enhanced variant until passage
+probability, amendment risk, text finality and entry timing can be measured
+prospectively. This is an explicit application of canonical before enhanced.
 
 No current signal has live capital rights.
 
@@ -172,11 +180,12 @@ No current signal has live capital rights.
 
 ```bash
 python signal_cli.py list
-python signal_cli.py show FLOW-MON-BTC-001
+python signal_cli.py show POLICY-US-LEGISLATION-001
+python signal_cli.py hypothesis POLICY-SEMIS-001
 python signal_cli.py gate FLOW-MON-BTC-001
 python signal_cli.py families
 python signal_cli.py validate
-python -m unittest discover -s tests -p 'test_signal_research.py' -v
+python -m unittest discover -s tests -p 'test_signal_*.py' -v
 ```
 
 ## Change control
