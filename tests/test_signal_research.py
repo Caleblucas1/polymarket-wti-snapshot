@@ -16,9 +16,9 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(s009.metadata["rebound_components"], 4)
         self.assertEqual(s009.metadata["maximum_volatility_lookback"], 30)
 
-    def test_unextracted_sources_are_not_overstated(self):
-        self.assertEqual(get_candidate("S-002").status, "needs_source_extraction")
-        self.assertEqual(get_candidate("S-004").status, "needs_source_extraction")
+    def test_unverified_claims_are_not_promoted(self):
+        self.assertEqual(get_candidate("S-001").status, "needs_source_extraction")
+        self.assertFalse(get_candidate("S-008").metadata["independently_verified"])
 
 
 class ConfidenceTests(unittest.TestCase):
