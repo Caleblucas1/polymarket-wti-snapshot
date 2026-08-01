@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "benchmark_id": "POLICY-HISTORICAL-INTERPRETATION-001",
   "registry_id": "POLICY-US-LEGISLATION-001",
   "status": "implemented_awaiting_case_population",
@@ -47,8 +47,67 @@
     "post_event_prices_prohibited_before_memo_seal": true,
     "memo_hash_required_before_outcome_reveal": true,
     "all_source_publication_timestamps_preserved": true,
+    "source_stance_tagging_required": true,
+    "contradictory_evidence_review_required": true,
     "retrospective_reporting_role": "Post-outcome mainstream, trade-publication and niche reporting may explain realized transmission only after the memo is sealed."
   },
+  "evidence_record_schema": {
+    "required_fields": [
+      "evidence_id",
+      "source_url",
+      "title",
+      "publisher",
+      "published_at_utc",
+      "accessed_at_utc",
+      "source_type",
+      "evidence_stance",
+      "affected_claims",
+      "temporal_role",
+      "reliability",
+      "summary",
+      "archive_reference",
+      "notes"
+    ],
+    "allowed_stances": [
+      "supports",
+      "contradicts",
+      "mixed",
+      "neutral_context"
+    ],
+    "allowed_temporal_roles": [
+      "pre_cutoff_input",
+      "post_outcome_reveal"
+    ],
+    "allowed_source_types": [
+      "official_text",
+      "official_summary",
+      "official_fiscal_estimate",
+      "agency_rule_or_guidance",
+      "company_disclosure",
+      "mainstream_news",
+      "trade_publication",
+      "niche_news",
+      "academic_research",
+      "market_data",
+      "other"
+    ],
+    "allowed_reliability": [
+      "primary",
+      "high",
+      "medium",
+      "low"
+    ],
+    "affected_claims_rule": "Supporting, contradicting and mixed evidence must identify at least one affected claim. Neutral context may use an empty list.",
+    "immutability_rule": "Evidence records are append-only. A correction creates a superseding record and preserves the original evidence_id."
+  },
+  "required_contradictory_evidence_review_fields": [
+    "review_completed_at_utc",
+    "search_scope",
+    "contradictory_evidence_ids",
+    "mixed_evidence_ids",
+    "no_contradictory_evidence_found",
+    "reviewer_notes"
+  ],
   "required_input_packet_fields": [
     "case_id",
     "law_name",
@@ -57,11 +116,7 @@
     "passage_timestamp_utc",
     "signature_timestamp_utc",
     "information_cutoff_utc",
-    "official_text_sources",
-    "official_summary_sources",
-    "official_fiscal_or_agency_sources",
-    "pre_cutoff_news_sources",
-    "pre_cutoff_company_disclosures",
+    "pre_cutoff_evidence_records",
     "tradable_universe_at_cutoff",
     "point_in_time_financial_data_version",
     "input_packet_hash"
@@ -94,9 +149,8 @@
     "benchmark_returns",
     "after_cost_abnormal_returns",
     "operating_performance_changes",
-    "company_disclosures_after_event",
-    "mainstream_reporting_after_event",
-    "trade_and_niche_reporting_after_event",
+    "post_outcome_evidence_records",
+    "contradictory_evidence_review",
     "implementation_timeline",
     "competing_market_explanations",
     "outcome_packet_hash"
@@ -143,8 +197,10 @@
     "Do not treat correct legal interpretation as proof of trading alpha.",
     "Do not treat a profitable stock move as proof that the legal interpretation caused it.",
     "Do not exclude failed intuitive trades, no-trade conclusions or ambiguous cases from the benchmark.",
+    "Do not omit, downgrade or bury contradictory evidence without an explicit source-level record and review note.",
     "Do not authorize real-money trading from this benchmark."
   ],
   "case_registry_path": "signal_records/policy_historical_cases.json",
-  "documentation_path": "docs/SIGNAL_POLICY_HISTORICAL_BENCHMARK.md"
+  "documentation_path": "docs/SIGNAL_POLICY_HISTORICAL_BENCHMARK.md",
+  "evidence_documentation_path": "docs/SIGNAL_POLICY_EVIDENCE_STANCE.md"
 }
