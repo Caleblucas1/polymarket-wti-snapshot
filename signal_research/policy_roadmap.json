@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "roadmap_id": "POLICY-ROADMAP-001",
+  "registry_id": "POLICY-US-LEGISLATION-001",
+  "as_of": "2026-08-01",
+  "status": "active",
+  "real_money_trading_authorized": false,
+  "governing_question": "Can this signal earn and keep the right to influence capital allocation?",
+  "governing_principle": "canonical_before_enhanced",
+  "steps": [
+    {
+      "step": 1,
+      "key": "freeze_post_passage_rule",
+      "status": "completed",
+      "dependencies": [],
+      "purpose": "Freeze the simple just-passed legislative interpretation rule before historical or prospective evaluation.",
+      "completion_criteria": [
+        "canonical hypothesis is frozen",
+        "entry, exit, benchmark, costs, invalidation and out-of-sample boundary are defined",
+        "real-money trading remains unauthorized"
+      ],
+      "artifacts": [
+        "signal_hypotheses.json",
+        "docs/SIGNAL_HYPOTHESES.md"
+      ]
+    },
+    {
+      "step": 2,
+      "key": "build_diverse_historical_legislation_set",
+      "status": "ready_to_start",
+      "dependencies": [1],
+      "purpose": "Lock a diverse historical case universe before reviewing outcomes.",
+      "completion_criteria": [
+        "at least 24 cases are selected and locked",
+        "all required event categories are represented",
+        "all required case types are represented",
+        "case selection precedes post-event outcome review"
+      ],
+      "artifacts": [
+        "signal_records/policy_historical_cases.json",
+        "signal_research/policy_historical_benchmark.json"
+      ]
+    },
+    {
+      "step": 3,
+      "key": "reconstruct_point_in_time_cases",
+      "status": "blocked_by_dependency",
+      "dependencies": [2],
+      "purpose": "Reconstruct each case using only information available at the declared cutoff.",
+      "completion_criteria": [
+        "every selected case has a point-in-time packet",
+        "source publication timestamps are preserved",
+        "input packet hashes validate",
+        "no post-cutoff prices or retrospective articles are present"
+      ],
+      "artifacts": [
+        "signal_records/policy_historical_cases.json"
+      ]
+    },
+    {
+      "step": 4,
+      "key": "generate_and_seal_blinded_impact_memos",
+      "status": "blocked_by_dependency",
+      "dependencies": [3],
+      "purpose": "Generate and seal policy-impact memos before outcomes are visible.",
+      "completion_criteria": [
+        "every reconstructed case has a versioned sealed memo",
+        "beneficiaries, losers, no-trade conclusions, mechanism, materiality, timing, benchmark and invalidation are recorded",
+        "memo hashes validate and original versions are preserved"
+      ],
+      "artifacts": [
+        "signal_records/policy_historical_cases.json"
+      ]
+    },
+    {
+      "step": 5,
+      "key": "reveal_outcomes_and_explanatory_reporting",
+      "status": "blocked_by_dependency",
+      "dependencies": [4],
+      "purpose": "Reveal market, operating and explanatory evidence only after the memo is sealed.",
+      "completion_criteria": [
+        "1, 5, 20 and 60-session outcomes are recorded",
+        "after-cost benchmark-adjusted returns are recorded",
+        "mainstream, trade-publication and niche reporting are stored in the reveal packet",
+        "outcome packet hashes validate"
+      ],
+      "artifacts": [
+        "signal_records/policy_historical_cases.json"
+      ]
+    },
+    {
+      "step": 6,
+      "key": "score_interpretation_and_investment_separately",
+      "status": "blocked_by_dependency",
+      "dependencies": [5],
+      "purpose": "Score legal interpretation separately from market usefulness.",
+      "completion_criteria": [
+        "interpretation accuracy is scored from 0 to 100",
+        "investment usefulness is scored independently from 0 to 100",
+        "attribution review distinguishes law effects from competing explanations",
+        "no single case grants capital rights"
+      ],
+      "artifacts": [
+        "signal_research/policy_historical_benchmark.json",
+        "signal_records/policy_historical_cases.json"
+      ]
+    },
+    {
+      "step": 7,
+      "key": "improve_framework_from_errors",
+      "status": "blocked_by_dependency",
+      "dependencies": [6],
+      "purpose": "Use the resulting errors to improve later framework versions without rewriting prior results.",
+      "completion_criteria": [
+        "errors are assigned to a predeclared taxonomy",
+        "each revision cites source cases",
+        "original memos and scores remain unchanged",
+        "framework changes receive a new version and apply prospectively"
+      ],
+      "artifacts": [
+        "signal_records/policy_framework_revisions.json"
+      ]
+    },
+    {
+      "step": 8,
+      "key": "begin_untouched_prospective_post_passage_testing",
+      "status": "blocked_by_readiness_gate",
+      "dependencies": [7],
+      "purpose": "Begin untouched prospective testing on newly passed legislation after historical comprehension is demonstrated.",
+      "completion_criteria": [
+        "historical readiness gate passes",
+        "prospective activation timestamp is frozen before eligible legislation",
+        "every prospective case is captured without outcome knowledge",
+        "paper research only; no real-money authorization"
+      ],
+      "artifacts": [
+        "signal_records/policy_prospective_cases.json"
+      ]
+    }
+  ],
+  "historical_readiness_gate": {
+    "version": 1,
+    "purpose": "Permit untouched prospective research, not capital deployment.",
+    "minimum_selected_cases": 24,
+    "minimum_scored_cases": 24,
+    "required_event_categories": [
+      "tax",
+      "appropriation_or_subsidy",
+      "procurement",
+      "trade_or_tariff",
+      "regulation",
+      "sanctions_or_export_control",
+      "healthcare_or_reimbursement",
+      "energy_or_environment"
+    ],
+    "required_case_types": [
+      "clear beneficiary",
+      "clear harmed exposure",
+      "diffuse or no-trade effect",
+      "anticipated or already-priced effect",
+      "delayed or weakened implementation",
+      "intuitive trade that failed",
+      "second-order supplier, customer or competitor effect"
+    ],
+    "minimum_mean_interpretation_accuracy": 70,
+    "maximum_hindsight_audit_failures": 0,
+    "all_packet_hashes_must_validate": true,
+    "investment_usefulness_is_diagnostic_not_a_gate": true,
+    "capital_rights_after_pass": "research_only"
+  },
+  "change_control": {
+    "roadmap_changes_require_version_bump": true,
+    "threshold_changes_after_case_selection_are_prohibited": true,
+    "historical_results_must_not_be_rewritten": true,
+    "framework_revisions_apply_prospectively": true
+  }
+}
