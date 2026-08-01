@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "signal_research/backtest_s010_btc_time_of_day.py"
+      - "signal_research/backtest_s010_rolling_regimes.py"
       - "docs/SIGNAL_S010_S011_RESEARCH_PLAN.md"
       - ".github/workflows/s010-btc-time-of-day-backtest.yml"
   workflow_dispatch:
@@ -20,8 +21,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Compile backtest
-        run: python -m py_compile signal_research/backtest_s010_btc_time_of_day.py
+      - name: Compile backtests
+        run: |
+          python -m py_compile signal_research/backtest_s010_btc_time_of_day.py
+          python -m py_compile signal_research/backtest_s010_rolling_regimes.py
       - name: Run historical backtest
         run: |
           python signal_research/backtest_s010_btc_time_of_day.py \
@@ -29,9 +32,16 @@ jobs:
             --end 2026-06-30 \
             --cost-bps 14 \
             --output artifacts/S010_BTC_TIME_OF_DAY.json
-      - name: Upload auditable result
+      - name: Run rolling-regime analysis
+        run: |
+          python signal_research/backtest_s010_rolling_regimes.py \
+            --start 2024-01-01 \
+            --end 2026-06-30 \
+            --cost-bps 14 \
+            --output artifacts/S010_BTC_ROLLING_REGIMES.json
+      - name: Upload auditable results
         uses: actions/upload-artifact@v4
         with:
           name: s010-btc-time-of-day-${{ github.run_id }}
-          path: artifacts/S010_BTC_TIME_OF_DAY.json
+          path: artifacts/S010_BTC_*.json
           retention-days: 90
