@@ -12,7 +12,7 @@
     {
       "id": "SF-001",
       "name": "precise_resolvable_questions",
-      "implementation_status": "implemented_in_standard_and_template",
+      "implementation_status": "validator_enforced_for_countable_records",
       "signals_application": "Every signal forecast requires target, probability or value, horizon, cutoff and scoring rule.",
       "polymarket_application": "Every tracked market requires an independent project forecast and mechanical resolution rule.",
       "metric": "share_of_scored_forecasts_with_complete_resolution_fields",
@@ -21,7 +21,7 @@
     {
       "id": "SF-002",
       "name": "outside_view_and_base_rates",
-      "implementation_status": "implemented_in_template",
+      "implementation_status": "validator_enforced_for_countable_records",
       "signals_application": "Compare signal output with base-rate-only and ensemble benchmarks.",
       "polymarket_application": "Record a reference class before case-specific adjustment.",
       "metric": "share_of_forecasts_with_explicit_base_rate",
@@ -30,7 +30,7 @@
     {
       "id": "SF-003",
       "name": "decomposition",
-      "implementation_status": "implemented_in_template",
+      "implementation_status": "validator_enforced_for_countable_records",
       "signals_application": "Break forecasts into causal drivers rather than relying on one narrative.",
       "polymarket_application": "Decompose conditional-event probability, conditional outcome and expected magnitude.",
       "metric": "share_of_material_forecasts_with_driver_decomposition",
@@ -39,7 +39,7 @@
     {
       "id": "SF-004",
       "name": "disconfirming_evidence",
-      "implementation_status": "implemented_in_template",
+      "implementation_status": "validator_enforced_for_countable_records",
       "signals_application": "Preserve contradictory evidence and invalidation conditions.",
       "polymarket_application": "Record the strongest case against the project's divergence from market odds.",
       "metric": "share_of_forecasts_with_nonempty_disconfirming_evidence",
@@ -48,7 +48,7 @@
     {
       "id": "SF-005",
       "name": "proportional_updates",
-      "implementation_status": "implemented_in_template",
+      "implementation_status": "chronology_and_value_chain_enforced",
       "signals_application": "Every confidence or forecast change requires timestamped evidence and delta.",
       "polymarket_application": "Track project updates separately from market-price changes.",
       "metric": "share_of_material_updates_with_reason_and_probability_delta",
@@ -57,7 +57,7 @@
     {
       "id": "SF-006",
       "name": "scoring_and_calibration",
-      "implementation_status": "standard_defined_not_yet_automated",
+      "implementation_status": "automated_in_ci_reports",
       "signals_application": "Measure signal forecast improvement against frozen benchmarks overall and by regime.",
       "polymarket_application": "Score project and market probabilities at resolution using Brier score.",
       "metric": "resolved_forecasts_scored_with_benchmark",
@@ -66,7 +66,7 @@
     {
       "id": "SF-007",
       "name": "immutable_forecast_history",
-      "implementation_status": "template_defined",
+      "implementation_status": "validator_enforced_and_update_chain_checked",
       "signals_application": "Prospective forecasts and updates remain append-only.",
       "polymarket_application": "Never replace old project probabilities with revised values.",
       "metric": "share_of_forecasts_with_preserved_original_and_update_history",
@@ -75,7 +75,7 @@
     {
       "id": "SF-008",
       "name": "postmortems",
-      "implementation_status": "taxonomy_defined_not_yet_automated",
+      "implementation_status": "taxonomy_defined_and_compliance_reported",
       "signals_application": "Classify whether failures came from signal, regime, timing, leakage, costs or forecast process.",
       "polymarket_application": "Separate direction, timing, calibration and resolution-interpretation errors.",
       "metric": "share_of_resolved_material_forecasts_with_postmortem",
@@ -93,18 +93,26 @@
     {
       "id": "SF-010",
       "name": "continuous_process_learning",
-      "implementation_status": "monthly_review_defined",
+      "implementation_status": "automated_accuracy_and_process_reports_monthly_review_pending",
       "signals_application": "Review performance and process compliance by signal family and regime.",
       "polymarket_application": "Review project-versus-market calibration and recurring error categories.",
       "metric": "monthly_review_completed",
       "target": 1.0
     }
   ],
+  "implemented_automation": [
+    "Machine-readable forecast schema and strict business-rule validator.",
+    "Automatic Brier, absolute-error and squared-error scoring at resolution.",
+    "Project-versus-benchmark and project-versus-Polymarket comparisons.",
+    "Calibration buckets for project and market probabilities.",
+    "Breakdowns by project, market regime and asset class.",
+    "Process-compliance reporting and CI enforcement.",
+    "Auditable JSON and Markdown workflow artifacts."
+  ],
   "next_implementation_steps": [
-    "Add a validator for required forecast fields.",
-    "Add automatic Brier scoring when binary markets resolve.",
-    "Add calibration-bucket and project-versus-market reports.",
-    "Create the first live forecast records from existing Signals and Polymarket questions.",
-    "Run a monthly process-and-accuracy review."
+    "Create the first live prospective forecast records after probabilities, cutoffs and benchmarks are explicitly supplied.",
+    "Add independent-judgment and aggregation fields before ensemble forecasting begins.",
+    "Run the first monthly process-and-accuracy review after a sufficient number of forecasts resolve.",
+    "Consider automated resolution ingestion only where the resolution source is unambiguous and independently verifiable."
   ]
 }
