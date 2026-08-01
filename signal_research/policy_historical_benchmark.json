@@ -63,6 +63,7 @@
       "evidence_stance",
       "affected_claims",
       "temporal_role",
+      "available_before_memo_seal",
       "reliability",
       "summary",
       "archive_reference",
@@ -98,6 +99,7 @@
       "low"
     ],
     "affected_claims_rule": "Supporting, contradicting and mixed evidence must identify at least one affected claim. Neutral context may use an empty list.",
+    "late_discovery_rule": "Any post-outcome source that was already available before the memo seal must be listed as late-discovered pre-cutoff evidence so the omission is visible and auditable.",
     "immutability_rule": "Evidence records are append-only. A correction creates a superseding record and preserves the original evidence_id."
   },
   "required_contradictory_evidence_review_fields": [
@@ -105,6 +107,7 @@
     "search_scope",
     "contradictory_evidence_ids",
     "mixed_evidence_ids",
+    "late_discovered_pre_cutoff_evidence_ids",
     "no_contradictory_evidence_found",
     "reviewer_notes"
   ],
