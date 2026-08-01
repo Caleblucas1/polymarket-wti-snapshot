@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "POLICY-HISTORICAL-INTERPRETATION-001",
+  "registry_id": "POLICY-US-LEGISLATION-001",
+  "status": "implemented_awaiting_case_population",
+  "as_of": "2026-08-01",
+  "real_money_trading_authorized": false,
+  "governing_question": "Can this signal earn and keep the right to influence capital allocation?",
+  "governing_principle": "canonical_before_enhanced",
+  "objective": "Test whether the system can understand enacted U.S. federal legislation from point-in-time information, map economically material beneficiaries and losers before observing outcomes, and distinguish legal interpretation accuracy from investment usefulness.",
+  "phase_order": [
+    "case_selection_locked",
+    "point_in_time_packet_locked",
+    "policy_impact_memo_sealed",
+    "outcome_packet_revealed",
+    "case_scored",
+    "lessons_recorded"
+  ],
+  "case_selection": {
+    "selection_must_precede_outcome_review": true,
+    "minimum_event_categories": [
+      "tax",
+      "appropriation_or_subsidy",
+      "procurement",
+      "trade_or_tariff",
+      "regulation",
+      "sanctions_or_export_control",
+      "healthcare_or_reimbursement",
+      "energy_or_environment"
+    ],
+    "required_case_types": [
+      "clear beneficiary",
+      "clear harmed exposure",
+      "diffuse or no-trade effect",
+      "anticipated or already-priced effect",
+      "delayed or weakened implementation",
+      "intuitive trade that failed",
+      "second-order supplier, customer or competitor effect"
+    ],
+    "anti_cherry_pick_rule": "The case list and category labels must be locked before reading post-event price performance or retrospective explanatory reporting.",
+    "no_fame_requirement": "Cases may be nationally prominent or niche, but selection cannot depend on knowing that a famous trade worked."
+  },
+  "temporal_firewall": {
+    "information_cutoff_required": true,
+    "pre_cutoff_sources_only_in_input_packet": true,
+    "post_cutoff_news_prohibited_before_memo_seal": true,
+    "post_event_prices_prohibited_before_memo_seal": true,
+    "memo_hash_required_before_outcome_reveal": true,
+    "all_source_publication_timestamps_preserved": true,
+    "retrospective_reporting_role": "Post-outcome mainstream, trade-publication and niche reporting may explain realized transmission only after the memo is sealed."
+  },
+  "required_input_packet_fields": [
+    "case_id",
+    "law_name",
+    "public_law_or_bill_identifier",
+    "operative_text_version",
+    "passage_timestamp_utc",
+    "signature_timestamp_utc",
+    "information_cutoff_utc",
+    "official_text_sources",
+    "official_summary_sources",
+    "official_fiscal_or_agency_sources",
+    "pre_cutoff_news_sources",
+    "pre_cutoff_company_disclosures",
+    "tradable_universe_at_cutoff",
+    "point_in_time_financial_data_version",
+    "input_packet_hash"
+  ],
+  "required_sealed_memo_fields": [
+    "memo_version",
+    "memo_sealed_at_utc",
+    "memo_hash",
+    "predicted_beneficiaries",
+    "predicted_harmed_exposures",
+    "predicted_no_trade_exposures",
+    "expected_direction",
+    "economic_mechanism",
+    "materiality_basis",
+    "expected_realization_horizon",
+    "primary_trade_expression",
+    "benchmark",
+    "entry_rule",
+    "exit_rule",
+    "invalidation_conditions",
+    "confidence_before_outcome",
+    "known_competing_explanations"
+  ],
+  "required_outcome_packet_fields": [
+    "outcome_revealed_at_utc",
+    "market_returns_1d",
+    "market_returns_5d",
+    "market_returns_20d",
+    "market_returns_60d",
+    "benchmark_returns",
+    "after_cost_abnormal_returns",
+    "operating_performance_changes",
+    "company_disclosures_after_event",
+    "mainstream_reporting_after_event",
+    "trade_and_niche_reporting_after_event",
+    "implementation_timeline",
+    "competing_market_explanations",
+    "outcome_packet_hash"
+  ],
+  "scoring": {
+    "interpretation_accuracy": {
+      "purpose": "Measure whether the system correctly understood what the law changed, independent of whether the security made money.",
+      "component_weights": {
+        "operative_text_and_legal_mechanism": 25,
+        "beneficiary_and_loser_mapping": 25,
+        "directional_effect": 15,
+        "materiality_estimate": 15,
+        "implementation_timing": 10,
+        "invalidation_and_competing_explanations": 10
+      }
+    },
+    "investment_usefulness": {
+      "purpose": "Measure whether the sealed interpretation identified an executable exposure with abnormal after-cost value.",
+      "component_weights": {
+        "directional_market_result": 20,
+        "benchmark_adjusted_result": 20,
+        "after_cost_result": 15,
+        "magnitude_and_timing_alignment": 15,
+        "operating_performance_alignment": 15,
+        "attribution_quality": 15
+      }
+    },
+    "scores_must_remain_separate": true,
+    "no_capital_rights_from_single_case": true,
+    "score_range": [0, 100]
+  },
+  "case_stage_rules": {
+    "selected": "Case selection is locked, but the point-in-time packet is incomplete.",
+    "packet_locked": "The point-in-time input packet and its hash are complete; no outcome information may be present.",
+    "memo_sealed": "The policy-impact memo is complete and hashed; no outcome information may be present.",
+    "outcome_revealed": "The sealed memo exists and the post-event outcome packet has been opened.",
+    "scored": "Both score families and written attribution review are complete.",
+    "retired": "The case remains in the audit trail but is excluded for a documented data or design defect."
+  },
+  "prohibited_practices": [
+    "Do not select cases because the subsequent winner is already known.",
+    "Do not use post-event prices, earnings, company commentary or retrospective articles before the memo is sealed.",
+    "Do not rewrite the memo after outcome reveal; corrections require a new version and preserve the original.",
+    "Do not treat correct legal interpretation as proof of trading alpha.",
+    "Do not treat a profitable stock move as proof that the legal interpretation caused it.",
+    "Do not exclude failed intuitive trades, no-trade conclusions or ambiguous cases from the benchmark.",
+    "Do not authorize real-money trading from this benchmark."
+  ],
+  "case_registry_path": "signal_records/policy_historical_cases.json",
+  "documentation_path": "docs/SIGNAL_POLICY_HISTORICAL_BENCHMARK.md"
+}
