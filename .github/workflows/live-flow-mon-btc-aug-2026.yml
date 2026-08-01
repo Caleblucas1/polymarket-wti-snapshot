@@ -8,6 +8,7 @@ on:
       - "signal_research/live_tests/FLOW-MON-BTC-2026-08.json"
       - "signal_records/live/FLOW-MON-BTC-2026-08.json"
       - "tests/test_signal_live_flow_mon_btc.py"
+      - "tests/test_signal_live_flow_mon_btc_resilient.py"
       - ".github/workflows/live-flow-mon-btc-aug-2026.yml"
   push:
     branches: [main]
@@ -45,14 +46,17 @@ jobs:
 
       - name: Run focused unit tests and compile collectors
         run: |
-          python -m unittest tests.test_signal_live_flow_mon_btc -v
+          python -m unittest \
+            tests.test_signal_live_flow_mon_btc \
+            tests.test_signal_live_flow_mon_btc_resilient \
+            -v
           python -m py_compile \
             signal_research/live_flow_mon_btc.py \
             signal_research/live_flow_mon_btc_resilient.py
 
       - name: Collect frozen live shadow observation
         run: |
-          python signal_research/live_flow_mon_btc_resilient.py \
+          python -m signal_research.live_flow_mon_btc_resilient \
             --config signal_research/live_tests/FLOW-MON-BTC-2026-08.json \
             --record signal_records/live/FLOW-MON-BTC-2026-08.json
 
