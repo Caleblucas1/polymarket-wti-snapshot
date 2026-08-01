@@ -1,15 +1,23 @@
 {
-  "version": 1,
-  "definition_version": "five-exact-contracts-v1",
-  "updated": "2026-07-29",
+  "version": 2,
+  "definition_version": "all-active-contracts-v1",
+  "updated": "2026-08-01",
   "notes": [
     "Event pages may contain multiple dated or threshold conditional markets.",
-    "Each supplied event URL is stored once; questionnaire variables reference one exact conditional contract.",
+    "Each supplied event URL is stored once, while every currently active contract on that page is an exact signal row.",
     "The questionnaire inputs remain binary: each contract is rated Up or Down over the selected observation window.",
     "Flat is available as an overall signal-level response, not as a third scenario-input state.",
-    "The five exact contract definitions are evidence schema, not user-editable daily annotations. Daily ratings and notes are stored separately from raw observations.",
+    "The five first-examined contracts are highlighted for convenience, not treated as primary signals. Every active contract uses the same evidence schema and daily review controls.",
     "The Houthi 'on...?' event is day-specific and is not a continuation of the older cumulative 'by...?' event."
   ],
+  "contract_policy": {
+    "scope": "every-active-contract",
+    "event_is_container": true,
+    "contract_is_signal_unit": true,
+    "aggregate_event_probabilities": false,
+    "highlighted_contracts_are_primary": false,
+    "fully_resolved_events_have_no_active_signal_rows": true
+  },
   "events": {
     "hormuz_normal_by_july_31": {
       "label": "Strait of Hormuz traffic returns to normal by July 31",
@@ -130,3 +138,4 @@
     }
   ]
 }
+
