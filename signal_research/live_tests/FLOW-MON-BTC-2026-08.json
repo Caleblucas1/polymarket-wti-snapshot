@@ -30,6 +30,7 @@
     "note": "The fee and slippage schedule is a conservative frozen research assumption for comparability, not a representation of any user's account tier or realized fill."
   },
   "data_sources": {
+    "base_url": "https://fapi.binance.com",
     "live_api_base_url": "https://fapi.binance.com",
     "aggregate_trades_endpoint": "/fapi/v1/aggTrades",
     "klines_endpoint": "/fapi/v1/klines",
