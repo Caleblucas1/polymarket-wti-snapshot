@@ -129,7 +129,12 @@ Priority order:
 3. Reconstruct S-008 timing precisely and test the claimed regime break and
    post-break decay.
 4. Backtest S-005, S-006 and S-007 with frozen rule variants and held-out periods.
-5. Extract the attached media for S-002 and S-004 before assigning a hypothesis.
+5. Complete exact source extraction and event-universe rules for S-001 before
+   advancing it from Candidate.
+
+Signal IDs S-002 and S-004 are reserved because the conversation's working labels
+were superseded by the fully specified S-006 and S-007 records. They are not
+separate hypotheses and must not be double-counted.
 
 No weighted aggregate should be added to S-009 until the canonical signal shows
 incremental out-of-sample predictive value.
