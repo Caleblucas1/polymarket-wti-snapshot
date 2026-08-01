@@ -26,7 +26,7 @@ jobs:
         run: |
           python signal_research/backtest_s010_btc_time_of_day.py \
             --start 2024-01-01 \
-            --end 2026-07-31 \
+            --end 2026-06-30 \
             --cost-bps 14 \
             --output artifacts/S010_BTC_TIME_OF_DAY.json
       - name: Upload auditable result
