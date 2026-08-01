@@ -20,6 +20,11 @@ from signal_research.hypotheses import (
     validate_hypotheses,
 )
 from signal_research.models import ConfidenceEvidence
+from signal_research.policy_benchmark import (
+    get_case as get_policy_case,
+    summarize_benchmark,
+    validate_benchmark,
+)
 from signal_research.rebound import ReboundConfig, evaluate_rebound
 from signal_research.registry import get_candidate, load_candidates, validate_registry
 
@@ -79,18 +84,29 @@ def command_hypothesis(args: argparse.Namespace) -> None:
     _print_json(get_hypothesis(args.identifier))
 
 
+def command_policy_benchmark(_: argparse.Namespace) -> None:
+    _print_json(summarize_benchmark())
+
+
+def command_policy_case(args: argparse.Namespace) -> None:
+    _print_json(get_policy_case(args.case_id))
+
+
 def command_validate(_: argparse.Namespace) -> None:
     registry_errors = validate_registry()
     hypothesis_errors = validate_hypotheses()
+    policy_benchmark_errors = validate_benchmark()
     errors = [
         *(f"registry: {error}" for error in registry_errors),
         *(f"hypotheses: {error}" for error in hypothesis_errors),
+        *(f"policy_benchmark: {error}" for error in policy_benchmark_errors),
     ]
     if errors:
         _print_json({"valid": False, "errors": errors})
         raise SystemExit(1)
     candidates = load_candidates()
     hypothesis_summary = summarize_statuses(hypothesis_statuses())
+    policy_summary = summarize_benchmark()
     _print_json({
         "valid": True,
         "signals": len(candidates),
@@ -100,6 +116,7 @@ def command_validate(_: argparse.Namespace) -> None:
         "frozen_canonical_hypotheses": hypothesis_summary["frozen_canonical"],
         "blocked_canonical_hypotheses": hypothesis_summary["blocked_canonical"],
         "dataset_eligible_signals": hypothesis_summary["dataset_eligible"],
+        "historical_policy_benchmark": policy_summary,
         "real_money_trading_authorized": False,
     })
 
@@ -169,6 +186,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     hypothesis_parser.add_argument("identifier", help="Registry ID, legacy ID or alias")
     hypothesis_parser.set_defaults(func=command_hypothesis)
+
+    policy_benchmark_parser = subparsers.add_parser(
+        "policy-benchmark",
+        help="Summarize the blinded historical policy interpretation benchmark",
+    )
+    policy_benchmark_parser.set_defaults(func=command_policy_benchmark)
+
+    policy_case_parser = subparsers.add_parser(
+        "policy-case",
+        help="Show one historical policy benchmark case",
+    )
+    policy_case_parser.add_argument("case_id", help="Historical policy benchmark case ID")
+    policy_case_parser.set_defaults(func=command_policy_case)
 
     validate_parser = subparsers.add_parser(
         "validate", help="Validate registry, governance and hypothesis invariants"
