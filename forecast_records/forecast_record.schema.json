@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Caleblucas1/polymarket-wti-snapshot/forecast_records/forecast_record.schema.json",
+  "title": "Forecast record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "forecast_id",
+    "project",
+    "status",
+    "question",
+    "target",
+    "resolution",
+    "initial_forecast",
+    "outside_view",
+    "decomposition",
+    "evidence",
+    "applicability",
+    "updates",
+    "polymarket_comparison",
+    "scoring",
+    "postmortem",
+    "audit"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "forecast_id": {"type": "string", "minLength": 1},
+    "project": {"enum": ["signals", "polymarket"]},
+    "status": {"enum": ["draft", "open", "resolved", "void"]},
+    "question": {"type": "string"},
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_or_asset", "forecast_type", "horizon_start_utc", "horizon_end_utc", "information_cutoff_utc"],
+      "properties": {
+        "event_or_asset": {"type": "string"},
+        "forecast_type": {"enum": ["binary_probability", "numeric"]},
+        "horizon_start_utc": {"type": "string"},
+        "horizon_end_utc": {"type": "string"},
+        "information_cutoff_utc": {"type": "string"}
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "rule", "resolved_at_utc", "outcome"],
+      "properties": {
+        "source": {"type": "string"},
+        "rule": {"type": "string"},
+        "resolved_at_utc": {"type": ["string", "null"]},
+        "outcome": {"type": ["number", "boolean", "null"]}
+      }
+    },
+    "initial_forecast": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_at_utc", "probability", "numeric_value", "distribution", "benchmark_name", "benchmark_value"],
+      "properties": {
+        "created_at_utc": {"type": "string"},
+        "probability": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "numeric_value": {"type": ["number", "null"]},
+        "distribution": {"type": ["object", "array", "null"]},
+        "benchmark_name": {"type": "string"},
+        "benchmark_value": {"type": ["number", "null"]}
+      }
+    },
+    "outside_view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference_class", "base_rate", "source_notes"],
+      "properties": {
+        "reference_class": {"type": "string"},
+        "base_rate": {"type": ["number", "null"]},
+        "source_notes": {"type": "string"}
+      }
+    },
+    "decomposition": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["driver", "estimated_state", "effect_on_forecast", "weight_or_probability"],
+        "properties": {
+          "driver": {"type": "string"},
+          "estimated_state": {"type": "string"},
+          "effect_on_forecast": {"enum": ["up", "down", "flat", "mixed"]},
+          "weight_or_probability": {"type": ["number", "null"]}
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supporting", "disconfirming", "alternative_scenarios"],
+      "properties": {
+        "supporting": {"type": "array", "items": {"type": "string"}},
+        "disconfirming": {"type": "array", "items": {"type": "string"}},
+        "alternative_scenarios": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "applicability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["market_regime", "asset_classes", "invalidating_conditions"],
+      "properties": {
+        "market_regime": {"type": "array", "items": {"type": "string"}},
+        "asset_classes": {"type": "array", "items": {"type": "string"}},
+        "invalidating_conditions": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "updates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "timestamp_utc",
+          "old_probability",
+          "new_probability",
+          "old_numeric_value",
+          "new_numeric_value",
+          "new_evidence",
+          "evidence_was_expected",
+          "regime_changed",
+          "market_moved_first"
+        ],
+        "properties": {
+          "timestamp_utc": {"type": "string"},
+          "old_probability": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+          "new_probability": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+          "old_numeric_value": {"type": ["number", "null"]},
+          "new_numeric_value": {"type": ["number", "null"]},
+          "new_evidence": {"type": "string"},
+          "evidence_was_expected": {"type": "boolean"},
+          "regime_changed": {"type": "boolean"},
+          "market_moved_first": {"type": ["boolean", "null"]}
+        }
+      }
+    },
+    "polymarket_comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["market_slug", "market_probability_at_cutoff", "project_minus_market_probability"],
+      "properties": {
+        "market_slug": {"type": ["string", "null"]},
+        "market_probability_at_cutoff": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "project_minus_market_probability": {"type": ["number", "null"], "minimum": -1, "maximum": 1}
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_metric", "project_score", "benchmark_score", "relative_improvement", "out_of_sample"],
+      "properties": {
+        "primary_metric": {"enum": ["brier", "absolute_error", "squared_error"]},
+        "project_score": {"type": ["number", "null"]},
+        "benchmark_score": {"type": ["number", "null"]},
+        "relative_improvement": {"type": ["number", "null"]},
+        "out_of_sample": {"type": "boolean"}
+      }
+    },
+    "postmortem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed", "error_categories", "what_worked", "what_failed", "process_changes"],
+      "properties": {
+        "completed": {"type": "boolean"},
+        "error_categories": {"type": "array", "items": {"type": "string"}},
+        "what_worked": {"type": "string"},
+        "what_failed": {"type": "string"},
+        "process_changes": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["immutable_original_preserved", "real_money_trading_authorized"],
+      "properties": {
+        "immutable_original_preserved": {"const": true},
+        "real_money_trading_authorized": {"const": false}
+      }
+    }
+  }
+}
