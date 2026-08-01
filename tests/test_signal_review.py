@@ -12,6 +12,13 @@ from signal_review import (
     oil_readthrough,
     persist_observation,
 )
+from signal_contracts import (
+    ACTIVE_CONTRACT_DEFINITION_VERSION,
+    EVENT_SIGNAL_POLICIES,
+    contract_signal_metadata,
+    exact_contract_key,
+    validate_catalog_events,
+)
 
 
 class SignalReviewTests(unittest.TestCase):
@@ -105,10 +112,10 @@ class SignalReviewTests(unittest.TestCase):
     def test_all_seventeen_supplied_markets_round_trip_as_distinct_evidence(self):
         """Every supplied event remains identifiable in a durable observation.
 
-        The five exact contracts drive the rule-based signal, but the catalog's
-        17 event pages are the source universe. This test prevents a future
-        refactor from silently dropping, merging, or renaming one of those
-        source markets when evidence is normalized for persistence.
+        The five first-examined contracts are only a highlighted view. The 17
+        event pages are the source universe, and each active contract is an
+        independent evidence row. This prevents a refactor from silently
+        dropping, merging, or renaming a source market.
         """
         catalog = json.loads(
             Path("signal_market_catalog.json").read_text(encoding="utf-8")
@@ -199,6 +206,92 @@ class SignalReviewTests(unittest.TestCase):
             self.assertEqual(record["observation_id"], duplicate["observation_id"])
             self.assertEqual(len(path.read_text(encoding="utf-8").splitlines()), 1)
 
+    def test_every_catalog_event_has_a_direction_policy(self):
+        catalog = json.loads(
+            Path("signal_market_catalog.json").read_text(encoding="utf-8")
+        )
+        validate_catalog_events(catalog)
+        self.assertEqual(
+            set(catalog["events"]),
+            set(EVENT_SIGNAL_POLICIES),
+        )
+        self.assertEqual(
+            catalog["definition_version"], ACTIVE_CONTRACT_DEFINITION_VERSION
+        )
+        self.assertFalse(catalog["contract_policy"]["highlighted_contracts_are_primary"])
+
+    def test_exact_contract_identity_is_not_event_identity(self):
+        first = {"conditionId": "condition-1", "groupItemTitle": "August 31"}
+        second = {"conditionId": "condition-2", "groupItemTitle": "December 31"}
+        self.assertNotEqual(
+            exact_contract_key("iran_blockade_ends", first),
+            exact_contract_key("iran_blockade_ends", second),
+        )
+        metadata = contract_signal_metadata("iran_blockade_ends", first)
+        self.assertEqual(metadata["signal_scope"], "active_contract")
+        self.assertEqual(metadata["event_id"], "iran_blockade_ends")
+        self.assertEqual(metadata["contract_id"], "condition-1")
+        self.assertEqual(metadata["bullish_direction"], "down")
+
+    def test_observation_preserves_every_contract_identity_and_annotation_boundary(self):
+        signals = [
+            {
+                **contract_signal_metadata(
+                    "iran_blockade_ends",
+                    {"conditionId": "near", "groupItemTitle": "August 31"},
+                ),
+                "key": "iran_blockade_ends::near",
+                "header": "Iranian blockade ends by August 31",
+                "label": "August 31",
+                "current": 29.5,
+                "prior_day": 39.0,
+                "change_1d": -9.5,
+                "change_7d": -32.5,
+                "market_move": "down",
+                "oil_readthrough": oil_readthrough(-9.5, "down"),
+                "level_readthrough": level_readthrough(29.5, "down"),
+            },
+            {
+                **contract_signal_metadata(
+                    "iran_blockade_ends",
+                    {"conditionId": "long", "groupItemTitle": "December 31"},
+                ),
+                "key": "iran_blockade_ends::long",
+                "header": "Iranian blockade ends by December 31",
+                "label": "December 31",
+                "current": 77.5,
+                "prior_day": 88.0,
+                "change_1d": -10.5,
+                "change_7d": -7.0,
+                "market_move": "down",
+                "oil_readthrough": oil_readthrough(-10.5, "down"),
+                "level_readthrough": level_readthrough(77.5, "down"),
+            },
+        ]
+        record = build_observation_record(
+            as_of_et="2026-08-01T09:15:00-04:00",
+            signals=signals,
+            signal_level="mixed / caution",
+            catalog={"events": {"iran_blockade_ends": {}}},
+        )
+        self.assertEqual(len(record["signals"]), 2)
+        self.assertEqual(
+            {row["contract_id"] for row in record["signals"]}, {"near", "long"}
+        )
+        self.assertTrue(all(row["signal_scope"] == "active_contract" for row in record["signals"]))
+        self.assertTrue(all(row["user_rating_vs_prior_day"] is None for row in record["signals"]))
+
+    def test_duplicate_exact_contract_rows_are_rejected(self):
+        duplicate = dict(self.signals[0])
+        with self.assertRaises(ValueError):
+            build_observation_record(
+                as_of_et="2026-08-01T09:15:00-04:00",
+                signals=[self.signals[0], duplicate],
+                signal_level="mixed / caution",
+                catalog=self.catalog,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
+
