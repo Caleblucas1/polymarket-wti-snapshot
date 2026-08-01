@@ -13,6 +13,12 @@ from signal_research.governance import (
     family_health,
     production_gate,
 )
+from signal_research.hypotheses import (
+    get_hypothesis,
+    statuses as hypothesis_statuses,
+    summarize_statuses,
+    validate_hypotheses,
+)
 from signal_research.models import ConfidenceEvidence
 from signal_research.rebound import ReboundConfig, evaluate_rebound
 from signal_research.registry import get_candidate, load_candidates, validate_registry
@@ -65,18 +71,36 @@ def command_families(_: argparse.Namespace) -> None:
     _print_json(family_health(load_candidates()))
 
 
+def command_hypotheses(_: argparse.Namespace) -> None:
+    _print_json(summarize_statuses(hypothesis_statuses()))
+
+
+def command_hypothesis(args: argparse.Namespace) -> None:
+    _print_json(get_hypothesis(args.identifier))
+
+
 def command_validate(_: argparse.Namespace) -> None:
-    errors = validate_registry()
+    registry_errors = validate_registry()
+    hypothesis_errors = validate_hypotheses()
+    errors = [
+        *(f"registry: {error}" for error in registry_errors),
+        *(f"hypotheses: {error}" for error in hypothesis_errors),
+    ]
     if errors:
         _print_json({"valid": False, "errors": errors})
         raise SystemExit(1)
     candidates = load_candidates()
+    hypothesis_summary = summarize_statuses(hypothesis_statuses())
     _print_json({
         "valid": True,
         "signals": len(candidates),
         "production_signals": sum(
             capital_rights(item) == "capped_live" for item in candidates
         ),
+        "frozen_canonical_hypotheses": hypothesis_summary["frozen_canonical"],
+        "blocked_canonical_hypotheses": hypothesis_summary["blocked_canonical"],
+        "dataset_eligible_signals": hypothesis_summary["dataset_eligible"],
+        "real_money_trading_authorized": False,
     })
 
 
@@ -135,7 +159,20 @@ def build_parser() -> argparse.ArgumentParser:
     families_parser = subparsers.add_parser("families", help="Summarize registry families")
     families_parser.set_defaults(func=command_families)
 
-    validate_parser = subparsers.add_parser("validate", help="Validate governance invariants")
+    hypotheses_parser = subparsers.add_parser(
+        "hypotheses", help="Summarize canonical hypothesis freeze status"
+    )
+    hypotheses_parser.set_defaults(func=command_hypotheses)
+
+    hypothesis_parser = subparsers.add_parser(
+        "hypothesis", help="Show one versioned canonical hypothesis"
+    )
+    hypothesis_parser.add_argument("identifier", help="Registry ID, legacy ID or alias")
+    hypothesis_parser.set_defaults(func=command_hypothesis)
+
+    validate_parser = subparsers.add_parser(
+        "validate", help="Validate registry, governance and hypothesis invariants"
+    )
     validate_parser.set_defaults(func=command_validate)
 
     confidence_parser = subparsers.add_parser("confidence", help="Calculate empirical evidence confidence")
