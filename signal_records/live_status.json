@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-07-31",
+  "records": [
+    {"registry_id": "POLICY-SEMIS-001", "operational_status": "ready_for_hypothesis", "regime_state": "unknown", "capital_rights": "research_only", "reason": "No signal has passed the production gate."},
+    {"registry_id": "ANALYST-AAPL-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_rights": "research_only", "reason": "No signal has passed the production gate."},
+    {"registry_id": "TECH-HMA-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_rights": "research_only", "reason": "No signal has passed the production gate."},
+    {"registry_id": "TECH-MVWAP-BTC-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_rights": "research_only", "reason": "No signal has passed the production gate."},
+    {"registry_id": "MACRO-XLY-BTC-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_rights": "research_only", "reason": "No signal has passed the production gate."},
+    {"registry_id": "MICRO-ASIA-SNDK-001", "operational_status": "degraded", "regime_state": "suspected_inactive", "capital_rights": "none", "reason": "The source itself suggests the participant-created regime may have ended."},
+    {"registry_id": "CROSS-ASSET-REBOUND-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_rights": "research_only", "reason": "No signal has passed the production gate."},
+    {"registry_id": "FLOW-MON-BTC-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_rights": "research_only", "reason": "No signal has passed the production gate."}
+  ]
+}

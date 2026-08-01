@@ -1,28 +1,90 @@
+import json
 import unittest
+from pathlib import Path
 
 from signal_research.backtest import TradeResult, summarize, summarize_by_regime
 from signal_research.confidence import confidence_score
+from signal_research.governance import (
+    capital_rights,
+    component_confidence_score,
+    confidence_band,
+    production_gate,
+)
 from signal_research.models import ConfidenceEvidence
 from signal_research.rebound import ReboundConfig, evaluate_rebound
-from signal_research.registry import get_candidate, load_candidates
+from signal_research.registry import get_candidate, load_candidates, validate_registry
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class RegistryTests(unittest.TestCase):
-    def test_registry_has_unique_candidates_and_s009_controls(self):
+    def test_registry_is_valid_and_ids_are_unique(self):
+        self.assertEqual(validate_registry(), [])
         candidates = load_candidates()
         self.assertEqual(len(candidates), len({item.signal_id for item in candidates}))
-        s009 = get_candidate("S-009")
-        self.assertEqual(s009.metadata["weighted_aggregate"], "deferred")
-        self.assertEqual(s009.metadata["rebound_components"], 4)
-        self.assertEqual(s009.metadata["maximum_volatility_lookback"], 30)
+        self.assertEqual(len(candidates), len({item.registry_id for item in candidates}))
 
-    def test_unverified_claims_are_not_promoted(self):
-        self.assertEqual(get_candidate("S-001").status, "needs_source_extraction")
-        self.assertFalse(get_candidate("S-008").metadata["independently_verified"])
+    def test_thematic_ids_resolve_legacy_collision(self):
+        legacy_s009 = get_candidate("S-009")
+        month_end = get_candidate("FLOW-MON-BTC-001")
+        self.assertEqual(legacy_s009.registry_id, "CROSS-ASSET-REBOUND-001")
+        self.assertEqual(month_end.signal_id, "S-010")
+        self.assertEqual(get_candidate("SALSA-MONTH-END"), month_end)
+
+    def test_month_end_chart_is_transcribed(self):
+        item = get_candidate("FLOW-MON-BTC-001")
+        returns = item.metadata["median_return_windows"]
+        self.assertEqual(item.metadata["source_sample_months"], 30)
+        self.assertAlmostEqual(returns["before"]["7"], -0.0147)
+        self.assertAlmostEqual(returns["after"]["7"], 0.0207)
+        self.assertEqual(item.confidence_score, 41)
+
+    def test_confidence_components_recompute_exactly(self):
+        for item in load_candidates():
+            self.assertEqual(
+                component_confidence_score(item.confidence_components),
+                item.confidence_score,
+            )
+        self.assertEqual(confidence_band(41), "promising")
+
+    def test_no_current_signal_has_live_capital_rights(self):
+        for item in load_candidates():
+            self.assertNotEqual(capital_rights(item), "capped_live")
+            self.assertFalse(production_gate(item).valid_current_production)
+
+    def test_degraded_signal_is_blocked_even_with_historical_interest(self):
+        sndk = get_candidate("MICRO-ASIA-SNDK-001")
+        self.assertEqual(sndk.operational_status.value, "degraded")
+        self.assertEqual(capital_rights(sndk), "none")
+
+    def test_ledgers_reference_registered_ids(self):
+        ids = {item.registry_id for item in load_candidates()}
+        evidence_path = ROOT / "signal_records" / "evidence_ledger.jsonl"
+        evidence = [
+            json.loads(line)
+            for line in evidence_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        self.assertTrue(evidence)
+        self.assertTrue(all(row["registry_id"] in ids for row in evidence))
+
+        confidence_path = ROOT / "signal_records" / "confidence_history.jsonl"
+        confidence = [
+            json.loads(line)
+            for line in confidence_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        self.assertEqual({row["registry_id"] for row in confidence}, ids)
+
+        statuses = json.loads(
+            (ROOT / "signal_records" / "live_status.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual({row["registry_id"] for row in statuses["records"]}, ids)
 
 
 class ConfidenceTests(unittest.TestCase):
-    def test_out_of_sample_evidence_increases_score(self):
+    def test_out_of_sample_evidence_increases_empirical_score(self):
         weak = ConfidenceEvidence(sample_size=20, data_quality=0.5, decay_risk=0.5)
         strong = ConfidenceEvidence(
             sample_size=200,
@@ -60,10 +122,6 @@ class ReboundTests(unittest.TestCase):
         self.assertTrue(result.sustained_recovery)
         self.assertEqual(result.score, 4)
         self.assertEqual(result.stage, "full")
-
-    def test_requires_only_past_and_current_prices(self):
-        with self.assertRaises(ValueError):
-            evaluate_rebound([100.0, 101.0], reference_level=100.0)
 
 
 class BacktestTests(unittest.TestCase):

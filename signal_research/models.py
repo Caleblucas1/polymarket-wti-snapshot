@@ -13,6 +13,20 @@ class SignalStage(str, Enum):
     RETIRED = "retired"
 
 
+class OperationalStatus(str, Enum):
+    UNSPECIFIED = "unspecified"
+    READY_FOR_HYPOTHESIS = "ready_for_hypothesis"
+    READY_FOR_DATA = "ready_for_data"
+    BACKTEST_IN_PROGRESS = "backtest_in_progress"
+    REJECTED = "rejected"
+    WATCHLIST = "watchlist"
+    PAPER_TRADING = "paper_trading"
+    PRODUCTION = "production"
+    DEGRADED = "degraded"
+    DORMANT = "dormant"
+    RETIRED = "retired"
+
+
 @dataclass(frozen=True)
 class ConfidenceEvidence:
     """Evidence used to update—not narratively override—a confidence score."""
@@ -30,8 +44,11 @@ class ConfidenceEvidence:
 @dataclass(frozen=True)
 class SignalCandidate:
     signal_id: str
+    registry_id: str
     name: str
+    family: str
     stage: SignalStage
+    operational_status: OperationalStatus
     source_urls: tuple[str, ...]
     hypothesis: str
     predictor_assets: tuple[str, ...] = ()
@@ -42,7 +59,15 @@ class SignalCandidate:
     mechanism: str = ""
     decay_mechanism: str = ""
     canonical_rule: str = ""
-    status: str = "unknown"
+    deactivation_rule: str = ""
+    benchmark: str = ""
+    data_source: str = ""
+    confidence_score: float = 0.0
+    confidence_as_of: str = ""
+    confidence_components: dict[str, float] = field(default_factory=dict)
+    production_requirements: dict[str, bool] = field(default_factory=dict)
+    aliases: tuple[str, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
     notes: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -50,12 +75,17 @@ class SignalCandidate:
     def from_dict(cls, raw: dict[str, Any]) -> "SignalCandidate":
         payload = dict(raw)
         payload["stage"] = SignalStage(payload["stage"])
+        payload["operational_status"] = OperationalStatus(
+            payload.get("operational_status", "unspecified")
+        )
         for key in (
             "source_urls",
             "predictor_assets",
             "target_assets",
             "applicable_regimes",
             "invalid_regimes",
+            "aliases",
+            "evidence_ids",
         ):
             payload[key] = tuple(payload.get(key, ()))
         return cls(**payload)

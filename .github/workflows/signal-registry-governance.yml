@@ -1,0 +1,32 @@
+name: Signal registry governance
+
+on:
+  pull_request:
+    paths:
+      - "signal_candidates.json"
+      - "signal_cli.py"
+      - "signal_research/**"
+      - "signal_records/**"
+      - "docs/SIGNAL_*.md"
+      - "tests/test_signal_research.py"
+  push:
+    paths:
+      - "signal_candidates.json"
+      - "signal_cli.py"
+      - "signal_research/**"
+      - "signal_records/**"
+      - "docs/SIGNAL_*.md"
+      - "tests/test_signal_research.py"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate registry
+        run: python signal_cli.py validate
+      - name: Run signal tests
+        run: python -m unittest discover -s tests -p "test_signal_research.py" -v

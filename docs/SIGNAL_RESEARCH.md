@@ -1,140 +1,85 @@
 # Signal research engine
 
 This layer turns social-media observations into falsifiable, cost-aware trading
-research. It does **not** promote an idea because it is intuitive, correlated in
-one chart, or profitable after retrospective optimization.
+research. The governing standard is
+[`docs/SIGNAL_GOVERNANCE.md`](SIGNAL_GOVERNANCE.md).
 
-## Lifecycle
+The project asks:
 
-Every idea has one explicit stage:
+> Can this signal earn and keep the right to influence capital allocation?
 
-1. **Candidate** — source captured; claim may still need exact extraction.
-2. **Hypothesis** — predictor, target, timing, direction and invalidation are fixed.
-3. **Backtest** — rules are frozen and evaluated with costs, benchmarks, regimes
-   and a held-out sample.
-4. **Production** — live observations are recorded without rewriting history.
-5. **Retired** — the edge failed, decayed, became untradeable, or lost data support.
+An idea does not advance because it is intuitive, correlated in one chart, or
+profitable after retrospective optimization.
 
-Promotion is evidence-based. A production signal can move backward or be retired.
+## Lifecycle and linked records
+
+Every signal moves through Candidate, Hypothesis, Backtest, Production and
+Retired. Definition, evidence, performance and live status are stored
+separately and linked by the thematic `registry_id`.
+
+`signal_candidates.json` is the definition registry.
+`signal_records/evidence_ledger.jsonl` and
+`signal_records/confidence_history.jsonl` are append-only audit records.
+`signal_records/performance_history.json` starts empty until a frozen rule
+produces reproducible outcomes. `signal_records/live_status.json` states whether
+a signal may influence research, paper trades or live capital.
 
 ## Canonical before enhanced
 
 Each signal starts with the simplest defensible specification. Enhancements such
 as adaptive thresholds, optimized basket weights, Bayesian ensembles or machine
-learning are isolated until the canonical rule demonstrates out-of-sample value.
-This prevents complexity from manufacturing an apparent historical edge.
+learning remain isolated until the canonical rule demonstrates out-of-sample
+value.
 
-For S-009, volatility adjustment and all four rebound tests are canonical because
-they define a fair cross-asset comparison. A volatility-weighted aggregate basket
-is explicitly deferred. The first version compares component and basket stage
-timestamps without learned or hand-tuned asset weights.
+For `CROSS-ASSET-REBOUND-001` (legacy `S-009`), volatility adjustment and all
+four rebound tests are canonical. A volatility-weighted aggregate is deferred.
 
-## Required research record
+For `FLOW-MON-BTC-001` (legacy `S-010`), symmetric short-then-long and long-only
+month-boundary rules must be frozen before conditional leverage filters are
+evaluated.
 
-A complete backtest should preserve:
+## Required backtest record
 
-- source URL and first-public timestamp;
-- exact observable predictor and executable entry timestamp;
-- target asset, direction, horizon and exit;
-- benchmark and transaction-cost model;
-- applicable and invalid regimes;
-- economic or market-microstructure mechanism;
-- expected decay mechanism;
-- in-sample and untouched out-of-sample boundaries;
-- every trade, including ambiguous and losing observations;
-- data revisions, exclusions and reasons;
-- overall and regime-level metrics.
+A complete backtest preserves source time, observable predictor, executable
+entry, exit, benchmark, costs, regimes, mechanism, decay, in-sample and
+out-of-sample boundaries, every trade, exclusions and data versions.
 
-Correlation is descriptive. A tradable signal must add predictive value after the
-information time, benchmark return, spread, fees, slippage, financing and borrow.
+Correlation is descriptive. A tradable signal must add predictive value after
+the information time, benchmark return, spread, fees, slippage, financing and
+borrow.
 
 ## S-009 canonical rebound definition
 
 For each asset, using only prices available at the decision timestamp:
 
-1. **Local-low reversal** — price advances a configured multiple of its own recent
-   realized volatility from the post-shock low.
-2. **Reference reclaim** — price retakes the predeclared shock reference, such as
-   pre-dip price or event VWAP.
-3. **Trend confirmation** — current price is above a short moving average and that
-   average is rising.
-4. **Sustained recovery** — price remains materially above the low for a fixed
-   number of bars and continues upward.
+1. Local-low reversal.
+2. Reference reclaim.
+3. Trend confirmation.
+4. Sustained recovery.
 
-The volatility lookback is constrained to 2–30 bars. Research should predeclare
-whether a bar is hourly, four-hour, or daily; switching bar size after viewing the
-outcome is optimization.
-
-Scores map to stages:
-
-- 0: none
-- 1: early
-- 2: provisional
-- 3: confirmed
-- 4: full
-
-Compare first-stage timestamps for BTC, ETH, SOL and HYPE against ES/SPY, NQ/QQQ,
-a MAG-7 basket and a semiconductor basket. Use equity-index futures for overnight
-comparisons so 24/7 crypto trading is not mistaken for predictive leadership.
-Analyze common macro shocks separately from crypto-specific and equity-specific
-shocks.
+The realized-volatility lookback is constrained to 2–30 bars. Compare first
+stage timestamps for BTC, ETH, SOL and HYPE against ES/SPY, NQ/QQQ, a MAG-7
+basket and a semiconductor basket. Use equity-index futures for overnight
+comparisons.
 
 ## Confidence
 
-`signal_research.confidence.confidence_score` produces a conservative 0–100 score
-from sample size, out-of-sample observations, out-of-sample Sharpe, regime
-coverage, data quality, implementation costs versus gross edge, and decay risk.
-It is a prioritization tool—not a replacement for the underlying evidence.
-Missing data lowers confidence.
+`signal_research.confidence.confidence_score` calculates an empirical score from
+completed research evidence. The registry's transparent component score is an
+early-stage prioritization and governance score. Neither is the probability of
+the next trade succeeding.
 
 ## Commands
 
 ```bash
 python signal_cli.py list
-python signal_cli.py show S-009
-python signal_cli.py rebound \
-  --prices 100,99,98,98.3,98.8,99.4,100.2,101 \
-  --reference 100 \
-  --lookback 5 \
-  --sustain-bars 3
-python signal_cli.py confidence \
-  --sample-size 200 \
-  --oos-trades 80 \
-  --oos-sharpe 1.1 \
-  --regime-coverage 0.7 \
-  --gross-edge-bps 12 \
-  --cost-bps 3 \
-  --decay-risk 0.25 \
-  --data-quality 0.9
+python signal_cli.py show FLOW-MON-BTC-001
+python signal_cli.py gate FLOW-MON-BTC-001
+python signal_cli.py families
+python signal_cli.py validate
+python signal_cli.py rebound --prices 100,99,98,98.3,98.8,99.4,100.2,101 --reference 100 --lookback 5 --sustain-bars 3
 python signal_cli.py backtest --input trade_results.json
 ```
 
-The backtest input is a JSON array whose rows contain the `TradeResult` fields in
-`signal_research/backtest.py`. Output includes overall, out-of-sample and
-regime-level results.
-
-## Current limitations and next evidence tasks
-
-This PR builds the durable research framework and formalizes the supplied
-candidates. It does not claim that any candidate is profitable. External market
-history and complete public-post history still need to be collected under
-reproducible data-source rules.
-
-Priority order:
-
-1. Collect and classify S-009 common-shock episodes without looking at subsequent
-   recovery order.
-2. Reconstruct all public AAPL campaigns for S-003, counting campaigns rather
-   than scaled entries.
-3. Reconstruct S-008 timing precisely and test the claimed regime break and
-   post-break decay.
-4. Backtest S-005, S-006 and S-007 with frozen rule variants and held-out periods.
-5. Complete exact source extraction and event-universe rules for S-001 before
-   advancing it from Candidate.
-
-Signal IDs S-002 and S-004 are reserved because the conversation's working labels
-were superseded by the fully specified S-006 and S-007 records. They are not
-separate hypotheses and must not be double-counted.
-
-No weighted aggregate should be added to S-009 until the canonical signal shows
-incremental out-of-sample predictive value.
+The framework does not claim that any current candidate is profitable. No
+current signal has passed the Production gate.
