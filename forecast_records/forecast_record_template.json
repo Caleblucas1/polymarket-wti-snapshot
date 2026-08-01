@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "forecast_id": "PROJECT-TOPIC-YYYYMMDD-001",
+  "project": "signals_or_polymarket",
+  "status": "open",
+  "question": "Precisely stated, externally resolvable forecast question",
+  "target": {
+    "event_or_asset": "",
+    "forecast_type": "binary_probability_or_numeric",
+    "horizon_start_utc": "",
+    "horizon_end_utc": "",
+    "information_cutoff_utc": ""
+  },
+  "resolution": {
+    "source": "",
+    "rule": "",
+    "resolved_at_utc": null,
+    "outcome": null
+  },
+  "initial_forecast": {
+    "created_at_utc": "",
+    "probability": null,
+    "numeric_value": null,
+    "distribution": null,
+    "benchmark_name": "",
+    "benchmark_value": null
+  },
+  "outside_view": {
+    "reference_class": "",
+    "base_rate": null,
+    "source_notes": ""
+  },
+  "decomposition": [
+    {
+      "driver": "",
+      "estimated_state": "",
+      "effect_on_forecast": "up_down_or_flat",
+      "weight_or_probability": null
+    }
+  ],
+  "evidence": {
+    "supporting": [],
+    "disconfirming": [],
+    "alternative_scenarios": []
+  },
+  "applicability": {
+    "market_regime": [],
+    "asset_classes": [],
+    "invalidating_conditions": []
+  },
+  "updates": [
+    {
+      "timestamp_utc": "",
+      "old_probability": null,
+      "new_probability": null,
+      "old_numeric_value": null,
+      "new_numeric_value": null,
+      "new_evidence": "",
+      "evidence_was_expected": null,
+      "regime_changed": false,
+      "market_moved_first": null
+    }
+  ],
+  "polymarket_comparison": {
+    "market_slug": null,
+    "market_probability_at_cutoff": null,
+    "project_minus_market_probability": null
+  },
+  "scoring": {
+    "primary_metric": "",
+    "project_score": null,
+    "benchmark_score": null,
+    "relative_improvement": null,
+    "out_of_sample": false
+  },
+  "postmortem": {
+    "completed": false,
+    "error_categories": [],
+    "what_worked": "",
+    "what_failed": "",
+    "process_changes": []
+  },
+  "audit": {
+    "immutable_original_preserved": true,
+    "real_money_trading_authorized": false
+  }
+}
