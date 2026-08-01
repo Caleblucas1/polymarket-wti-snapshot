@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "registry_id": "POLICY-US-LEGISLATION-001",
+  "variant": "pre_passage_enhanced",
+  "status": "approved_research_input_not_frozen",
+  "as_of": "2026-08-01",
+  "real_money_trading_authorized": false,
+  "purpose": "Use prediction-market probabilities as one prospective input when estimating whether and how soon U.S. federal legislation may pass before final congressional passage.",
+  "governing_question": "Can this signal earn and keep the right to influence capital allocation?",
+  "governing_principle": "canonical_before_enhanced",
+  "interpretation_rules": [
+    "A Polymarket price is a market-implied probability for the contract's exact resolution condition and deadline; it is not automatically an expected passage date.",
+    "When comparable markets exist for multiple deadlines, preserve each probability and construct a passage-probability term structure rather than selecting one favorable contract.",
+    "Any inferred incremental probability or passage hazard must be calculated only after verifying that contract definitions are comparable and the deadline probabilities are logically ordered.",
+    "Prediction-market information supplements official legislative text, schedules, votes, amendment risk and procedural status; it cannot replace them.",
+    "The probability snapshot used in a research decision must have been observable before the exposure mapping and entry decision were sealed."
+  ],
+  "approved_public_sources": [
+    {
+      "name": "Polymarket Gamma API",
+      "purpose": "Discover markets and retain question, description, outcomes, outcome prices, dates, resolution source, activity, liquidity and volume metadata.",
+      "documentation_url": "https://docs.polymarket.com/api-reference/markets/list-markets"
+    },
+    {
+      "name": "Polymarket CLOB API",
+      "purpose": "Retain executable bid, ask, midpoint, spread, price history and order-book information instead of relying only on a displayed probability.",
+      "documentation_url": "https://docs.polymarket.com/api-reference/introduction"
+    },
+    {
+      "name": "Polymarket price methodology",
+      "purpose": "Interpret displayed prices and distinguish midpoint or last-trade display from executable prices.",
+      "documentation_url": "https://docs.polymarket.com/concepts/prices-orderbook"
+    }
+  ],
+  "required_contract_checks": [
+    "The resolution condition must match the legislative milestone being modeled: House passage, Senate passage, final congressional passage, presidential signature or another explicitly named event must not be conflated.",
+    "The deadline and timezone must be explicit and stored in UTC.",
+    "The resolution source and market rules must be archived with the snapshot.",
+    "The market must be active and accepting orders at the decision timestamp.",
+    "Liquidity, volume, bid, ask, midpoint, last trade and spread must be stored; displayed probability alone is insufficient.",
+    "Markets with ambiguous wording, unresolved amendment dependence, excessively wide spreads or insufficient liquidity must be excluded or marked low quality.",
+    "Related deadline markets must have sufficiently comparable wording before they are treated as a term structure."
+  ],
+  "prospective_data_fields": [
+    "market_id",
+    "condition_id",
+    "event_id",
+    "question",
+    "description",
+    "resolution_source",
+    "resolution_milestone",
+    "deadline_utc",
+    "snapshot_timestamp_utc",
+    "yes_bid",
+    "yes_ask",
+    "yes_midpoint",
+    "last_trade_price",
+    "displayed_probability",
+    "spread",
+    "liquidity",
+    "volume",
+    "active",
+    "accepting_orders",
+    "contract_quality_status",
+    "exclusion_reason"
+  ],
+  "future_term_structure_outputs": [
+    "probability_by_deadline",
+    "incremental_probability_between_deadlines",
+    "conditional_probability_given_no_earlier_passage",
+    "approximate_passage_hazard",
+    "market_quality_weight",
+    "probability_change_since_prior_snapshot"
+  ],
+  "prohibited_uses": [
+    "Do not treat one deadline probability as a precise expected passage date.",
+    "Do not use a market whose resolution milestone differs from the legislative milestone in the trade hypothesis.",
+    "Do not infer probability from post-entry prices or from a market created after the research decision.",
+    "Do not allow the Polymarket probability to become the sole trade trigger.",
+    "Do not use displayed probability without recording executable bid-ask conditions.",
+    "Do not authorize real-money trading from this design record."
+  ],
+  "remaining_freeze_blockers": [
+    "authoritative market-discovery and contract-matching algorithm",
+    "minimum liquidity and volume thresholds",
+    "maximum acceptable spread",
+    "probability or probability-change trigger",
+    "multi-deadline term-structure calculation",
+    "handling when no suitable Polymarket market exists",
+    "weight assigned to prediction-market evidence relative to official procedural evidence",
+    "manipulation and stale-price safeguards",
+    "exact pre-entry timestamp and policy-impact memo deadline",
+    "untouched out-of-sample boundary"
+  ]
+}
