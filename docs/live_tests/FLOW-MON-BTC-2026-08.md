@@ -22,9 +22,25 @@ The test succeeds by collecting the observation honestly. Positive performance i
 
 ## Execution proxy
 
-No real order is submitted. The shadow execution price is the earliest public Binance aggregate trade at or after the frozen timestamp within a 60-second search window. When no aggregate trade is returned, the collector uses the open of the one-minute kline beginning at the frozen timestamp.
+No real order is submitted. The shadow execution price is the earliest public Binance aggregate trade at or after the frozen timestamp within a 60-second search window. When the REST API is available but returns no eligible aggregate trade, the collector uses the open of the one-minute kline beginning at the frozen timestamp.
+
+The U.S.-hosted GitHub Actions runner received HTTP 451 from Binance's futures REST API. The project did not switch exchanges, alter the entry time or substitute an approximate market price. It added a disclosed data-access fallback to Binance's official public-data archive. The archive collector selects the earliest aggregate trade at or after the identical frozen timestamp and stores both the archive ZIP hash and the selected row hash.
+
+Because the finalized daily archive is published after the relevant UTC day, the repository may remain in `awaiting_official_archive` or `open_archive_lagged` status. That is a publication delay, not a change to the economic observation.
 
 This is a reproducible research proxy. It is not a claim that a real market order would have filled at exactly that price.
+
+## Operational amendment
+
+The archive fallback was recorded after the API-access failure and before an entry price was observed. The durable configuration states that:
+
+- no outcome information was used;
+- the entry price was still unknown;
+- the signal rule did not change;
+- the cost model did not change;
+- the venue, instrument and frozen timestamps did not change.
+
+This distinction matters. Operational resilience is allowed; retrospective strategy revision is not.
 
 ## Costs
 
@@ -33,7 +49,9 @@ The cost schedule was frozen before the result was observed:
 - assumed taker fee: 5 basis points per side;
 - assumed slippage: 2 basis points per side;
 - assumed round-trip execution cost: 14 basis points;
-- funding: every public Binance funding-rate observation and its mark price during the holding interval.
+- funding: each public Binance funding-rate observation and its mark price during the holding interval.
+
+When the funding record is not yet available from an official source, the collector marks funding incomplete and withholds the final after-cost estimate. It does not silently assume zero funding.
 
 The fee and slippage assumptions are intentionally conservative and standardized. They do not represent a particular user's account tier.
 
@@ -42,29 +60,45 @@ The fee and slippage assumptions are intentionally conservative and standardized
 The GitHub workflow runs:
 
 - when the implementation is merged into `main`;
-- daily at 00:10 UTC;
+- daily at 06:30 UTC, after the prior UTC day's archive is more likely to be available;
 - manually through `workflow_dispatch`;
-- during pull-request review as a non-committing live integration test.
+- during pull-request review as a non-committing integration test.
 
 Every run:
 
-1. verifies the BTCUSDT contract is a trading perpetual;
-2. backfills the frozen entry if needed;
-3. appends any missing 00:05 UTC daily marks;
-4. refreshes funding observations;
-5. calculates gross, funding and assumed after-cost performance;
-6. closes the record at the exact August 8 timestamp;
-7. uploads the complete record as a workflow artifact;
-8. commits changed scheduled observations to `main`.
+1. attempts the Binance futures REST API first;
+2. records any restricted-location response explicitly;
+3. falls back only to Binance's official archive for the same venue and timestamps;
+4. backfills the frozen entry when the finalized file becomes available;
+5. appends missing 00:05 UTC daily marks with archive and row hashes;
+6. leaves funding and final after-cost performance pending until official funding observations are available;
+7. closes the price record at the frozen August 8 timestamp after its archive is published;
+8. uploads the complete record as a workflow artifact;
+9. commits changed scheduled observations to `main`.
+
+## Current state
+
+The first successful live workflow recorded:
+
+```text
+status: awaiting_official_archive
+pending timestamp: 2026-08-01T00:05:00Z
+live API status: restricted_location_http_451
+entry price: not yet observed
+```
+
+This is the honest state on the same UTC day as entry. The system has armed and preserved the test, but it cannot report the entry price until Binance publishes the official daily archive.
 
 ## Durable files
 
 ```text
 signal_research/live_tests/FLOW-MON-BTC-2026-08.json
 signal_research/live_flow_mon_btc.py
+signal_research/live_flow_mon_btc_resilient.py
 signal_records/live/FLOW-MON-BTC-2026-08.json
 .github/workflows/live-flow-mon-btc-aug-2026.yml
 tests/test_signal_live_flow_mon_btc.py
+tests/test_signal_live_flow_mon_btc_resilient.py
 ```
 
 ## Interpretation rules
