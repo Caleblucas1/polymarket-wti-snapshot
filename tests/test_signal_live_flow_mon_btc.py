@@ -1,7 +1,14 @@
 import json
+import sys
+import types
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+
+# The governance test runner intentionally does not install third-party packages.
+# The live workflow installs requests and exercises the real network client. Unit
+# tests use a fake session, so a minimal import stub keeps this suite deterministic.
+sys.modules.setdefault("requests", types.SimpleNamespace(Session=object))
 
 from signal_research.live_flow_mon_btc import (
     calculate_performance,
