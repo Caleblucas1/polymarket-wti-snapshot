@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "roadmap_id": "POLICY-ROADMAP-001",
+  "registry_id": "POLICY-US-LEGISLATION-001",
+  "status": "blocked_until_historical_readiness_gate",
+  "activation_timestamp_utc": null,
+  "real_money_trading_authorized": false,
+  "cases": [],
+  "note": "Prospective post-passage cases may begin only after the historical readiness gate passes and an activation timestamp is frozen. This registry is research-only and cannot authorize real-money trading."
+}

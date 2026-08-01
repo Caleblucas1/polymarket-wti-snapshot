@@ -25,6 +25,7 @@ from signal_research.policy_benchmark import (
     summarize_benchmark,
     validate_benchmark,
 )
+from signal_research.policy_roadmap import summarize_roadmap, validate_roadmap
 from signal_research.rebound import ReboundConfig, evaluate_rebound
 from signal_research.registry import get_candidate, load_candidates, validate_registry
 
@@ -92,14 +93,20 @@ def command_policy_case(args: argparse.Namespace) -> None:
     _print_json(get_policy_case(args.case_id))
 
 
+def command_policy_roadmap(_: argparse.Namespace) -> None:
+    _print_json(summarize_roadmap())
+
+
 def command_validate(_: argparse.Namespace) -> None:
     registry_errors = validate_registry()
     hypothesis_errors = validate_hypotheses()
     policy_benchmark_errors = validate_benchmark()
+    policy_roadmap_errors = validate_roadmap()
     errors = [
         *(f"registry: {error}" for error in registry_errors),
         *(f"hypotheses: {error}" for error in hypothesis_errors),
         *(f"policy_benchmark: {error}" for error in policy_benchmark_errors),
+        *(f"policy_roadmap: {error}" for error in policy_roadmap_errors),
     ]
     if errors:
         _print_json({"valid": False, "errors": errors})
@@ -107,6 +114,7 @@ def command_validate(_: argparse.Namespace) -> None:
     candidates = load_candidates()
     hypothesis_summary = summarize_statuses(hypothesis_statuses())
     policy_summary = summarize_benchmark()
+    roadmap_summary = summarize_roadmap()
     _print_json({
         "valid": True,
         "signals": len(candidates),
@@ -117,6 +125,7 @@ def command_validate(_: argparse.Namespace) -> None:
         "blocked_canonical_hypotheses": hypothesis_summary["blocked_canonical"],
         "dataset_eligible_signals": hypothesis_summary["dataset_eligible"],
         "historical_policy_benchmark": policy_summary,
+        "policy_roadmap": roadmap_summary,
         "real_money_trading_authorized": False,
     })
 
@@ -199,6 +208,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     policy_case_parser.add_argument("case_id", help="Historical policy benchmark case ID")
     policy_case_parser.set_defaults(func=command_policy_case)
+
+    policy_roadmap_parser = subparsers.add_parser(
+        "policy-roadmap",
+        help="Show the eight-step policy-alpha roadmap and readiness gate",
+    )
+    policy_roadmap_parser.set_defaults(func=command_policy_roadmap)
 
     validate_parser = subparsers.add_parser(
         "validate", help="Validate registry, governance and hypothesis invariants"
