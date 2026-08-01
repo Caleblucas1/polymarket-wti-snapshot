@@ -1,0 +1,73 @@
+{
+  "schema_version": 2,
+  "live_test_id": "FLOW-MON-BTC-2026-08",
+  "registry_id": "FLOW-MON-BTC-001",
+  "hypothesis_definition_version": 1,
+  "status": "armed",
+  "test_type": "untouched_out_of_sample_shadow",
+  "real_money_trading_authorized": false,
+  "venue": "Binance USD-M Futures",
+  "instrument": "BTCUSDT perpetual",
+  "direction": "long",
+  "quantity_btc": 1.0,
+  "leverage": 1.0,
+  "entry_timestamp_utc": "2026-08-01T00:05:00Z",
+  "exit_timestamp_utc": "2026-08-08T00:05:00Z",
+  "daily_mark_timestamp_utc": "00:05:00",
+  "execution_proxy": {
+    "method": "earliest_public_aggregate_trade_at_or_after_timestamp",
+    "search_window_seconds": 60,
+    "fallback": "one_minute_kline_open_at_timestamp",
+    "official_archive_equivalent": "earliest aggregate trade at or after the same frozen timestamp in Binance's finalized daily USD-M futures aggregate-trade archive",
+    "note": "This is a reproducible shadow-execution proxy, not a claim that a real market order would fill at exactly this price. The venue, instrument and timestamp remain unchanged when the official archive is used."
+  },
+  "cost_model": {
+    "version": 1,
+    "taker_fee_bps_per_side": 5.0,
+    "slippage_bps_per_side": 2.0,
+    "round_trip_execution_cost_bps": 14.0,
+    "funding": "Use each public Binance funding rate and mark price during the holding period for a normalized one-BTC shadow position. Until the official funding archive is available, after-cost performance remains incomplete rather than assuming zero funding.",
+    "note": "The fee and slippage schedule is a conservative frozen research assumption for comparability, not a representation of any user's account tier or realized fill."
+  },
+  "data_sources": {
+    "base_url": "https://fapi.binance.com",
+    "live_api_base_url": "https://fapi.binance.com",
+    "aggregate_trades_endpoint": "/fapi/v1/aggTrades",
+    "klines_endpoint": "/fapi/v1/klines",
+    "funding_rate_endpoint": "/fapi/v1/fundingRate",
+    "exchange_info_endpoint": "/fapi/v1/exchangeInfo",
+    "official_daily_archive_base_url": "https://data.binance.vision/data/futures/um/daily/aggTrades",
+    "official_archive_publication_lag": "normally available after the UTC trading day is finalized",
+    "source_priority": [
+      "Binance USD-M Futures public REST API",
+      "Binance official public-data archive for the identical venue, instrument and timestamp"
+    ]
+  },
+  "operational_amendments": [
+    {
+      "recorded_at_utc": "2026-08-01T06:29:55Z",
+      "type": "data_access_fallback_only",
+      "trigger": "The U.S.-hosted GitHub Actions runner received HTTP 451 restricted-location from the Binance futures REST API.",
+      "change": "Permit delayed retrieval from Binance's official immutable daily aggregate-trade archive while retaining the original venue, instrument, timestamp, direction, execution-selection rule and cost model.",
+      "outcome_information_used": false,
+      "entry_price_known_when_recorded": false,
+      "signal_rule_changed": false,
+      "cost_model_changed": false,
+      "venue_changed": false
+    }
+  ],
+  "success_criteria": {
+    "primary": "Record the exact frozen entry, daily 00:05 UTC marks, actual funding observations, frozen assumed execution costs and the exact August 8 exit without retrospective signal-rule changes.",
+    "performance_is_not_required": true,
+    "no_capital_rights_from_single_test": true
+  },
+  "failure_conditions": [
+    "entry or exit price cannot be reproduced from a declared Binance public source",
+    "record is edited after an outcome is observed without preserving the prior version",
+    "the signal, execution-selection or cost rule changes during the holding period",
+    "a delayed archive observation is represented as contemporaneously collected",
+    "the test is represented as real-money trading"
+  ],
+  "created_at_utc": "2026-08-01T06:22:00Z",
+  "notes": "This test begins on the canonical out-of-sample boundary and is intentionally simple: long from the first calendar month's 00:05 UTC mark through the eighth day's 00:05 UTC mark."
+}
