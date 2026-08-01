@@ -6,6 +6,17 @@ Every article, filing, official document, market-data source and research item u
 
 The goal is to make supporting and contradictory evidence equally visible and auditable.
 
+## Required source identity
+
+Every evidence record must identify both:
+
+- `authors` — one or more human or institutional authors responsible for the source;
+- `publisher` — the organization that issued, hosted or distributed the source.
+
+These fields are intentionally separate. A newspaper article might list individual reporters as authors and the newspaper as publisher. An official law may use an institutional author such as `United States Congress`, with `Congress.gov` or the Government Publishing Office recorded as publisher. A company filing may use the company as institutional author and the SEC as publisher or repository.
+
+A missing personal byline does not justify leaving `authors` empty. Use the responsible institution, agency, legislative chamber, company or data provider.
+
 ## Required stance
 
 Each evidence record must use exactly one stance:
@@ -35,6 +46,10 @@ Every source stores:
   "evidence_id": "POLICY-CASE-0001-EVID-001",
   "source_url": "https://example.com/article",
   "title": "Article title",
+  "authors": [
+    "Reporter One",
+    "Reporter Two"
+  ],
   "publisher": "Publisher",
   "published_at_utc": "2020-01-01T12:00:00Z",
   "accessed_at_utc": "2026-08-01T00:00:00Z",
@@ -102,6 +117,14 @@ The review must either cite contradictory or mixed evidence IDs, or explicitly s
 
 Every cited ID must exist, and its stored stance must match the review list. A source tagged `supports` cannot be cited as contradictory evidence without correcting the source record through an append-only superseding entry.
 
+## NotebookLM, Gemini and other research assistants
+
+Google NotebookLM, Google Gemini and similar tools may help organize, compare, search and synthesize the registered source set. Their outputs are not evidence records.
+
+Every use must be disclosed separately in `research_assistance_records`, including the tool, task, source IDs supplied, output reference and verification status. Any accepted claim must be checked against the original article, filing, law or dataset. The evidence citation remains the original source—not the AI-generated summary.
+
+See `docs/SIGNAL_POLICY_AI_RESEARCH_ASSISTANCE.md` for the complete rules.
+
 ## Why this matters
 
 A system can appear accurate if it preserves only evidence that confirms its original story. The benchmark therefore treats contradiction handling as part of interpretation quality.
@@ -123,12 +146,15 @@ Contradictory evidence is not a nuisance to be removed. It is one of the princip
 The validator rejects:
 
 - raw strings or unstructured source lists;
+- missing authors or publisher;
+- empty author lists, including sources with no named personal byline;
 - missing stance, timing, reliability, claim or archive fields;
 - contradicting or mixed evidence with no affected claims;
 - post-cutoff material placed in the blinded input packet;
 - contradiction reviews that do not cite the sources they found;
 - stance mismatches between a source and the contradiction review;
 - pre-cutoff evidence discovered later but omitted from the late-discovery list;
+- undisclosed or unverified AI-assisted research in a locked packet;
 - any attempt to authorize real-money trading.
 
 The relevant implementation is:
@@ -136,5 +162,6 @@ The relevant implementation is:
 ```text
 signal_research/policy_historical_benchmark.json
 signal_research/policy_benchmark.py
+docs/SIGNAL_POLICY_AI_RESEARCH_ASSISTANCE.md
 tests/test_signal_policy_historical_benchmark.py
 ```

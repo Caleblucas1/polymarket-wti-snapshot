@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry_id": "POLICY-US-LEGISLATION-001",
   "benchmark_id": "POLICY-HISTORICAL-INTERPRETATION-001",
   "example_only": true,
@@ -7,6 +7,10 @@
     "evidence_id": "POLICY-CASE-0001-EVID-001",
     "source_url": "https://example.com/article",
     "title": "Article title",
+    "authors": [
+      "Reporter One",
+      "Reporter Two"
+    ],
     "publisher": "Publisher",
     "published_at_utc": "2020-01-01T12:00:00Z",
     "accessed_at_utc": "2026-08-01T00:00:00Z",
@@ -21,6 +25,33 @@
     "reliability": "high",
     "summary": "The article reports that implementation benefited a supplier rather than the company named in the sealed memo.",
     "archive_reference": "sha256:replace-with-archived-content-hash",
+    "notes": ""
+  },
+  "research_assistance_record": {
+    "assistance_id": "POLICY-CASE-0001-AI-001",
+    "tool_family": "google_notebooklm",
+    "tool_name": "Google NotebookLM",
+    "model_or_version": "unknown_not_exposed",
+    "workspace_reference": "notebooklm:policy-case-0001",
+    "used_at_utc": "2026-08-01T00:00:00Z",
+    "temporal_role": "post_outcome_research",
+    "task": "Compare the registered source set for evidence that challenges the sealed beneficiary mapping.",
+    "input_evidence_ids": [
+      "POLICY-CASE-0001-EVID-001"
+    ],
+    "output_artifact_reference": "sha256:replace-with-output-export-hash",
+    "extracted_claims": [
+      {
+        "claim": "The realized benefit accrued to a supplier rather than the company named in the memo.",
+        "source_evidence_ids": [
+          "POLICY-CASE-0001-EVID-001"
+        ],
+        "verification_status": "verified_against_original_sources"
+      }
+    ],
+    "source_grounding_verified": true,
+    "human_reviewed": true,
+    "verification_notes": "The claim was checked against the original article rather than accepted from the generated summary.",
     "notes": ""
   },
   "contradictory_evidence_review": {

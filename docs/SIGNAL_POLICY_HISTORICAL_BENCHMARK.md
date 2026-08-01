@@ -40,7 +40,20 @@ The input packet contains only information available by the declared cutoff:
 - contemporaneous news published before the cutoff;
 - the tradable universe and point-in-time financial data available then.
 
+Every source is stored as a structured evidence record with:
+
+- one or more human or institutional authors;
+- a publisher;
+- URL, title, publication and access timestamps;
+- source type and reliability;
+- evidence stance and affected claims;
+- archive reference and notes.
+
+When no individual byline exists, the responsible institution is recorded as the author. The author and publisher remain separate fields.
+
 Every source retains its publication timestamp. The complete packet receives a deterministic hash.
+
+NotebookLM, Gemini or another research assistant may help organize and compare the registered pre-cutoff source set. Any such use must be disclosed in `research_assistance_records`. AI output is not evidence, and every accepted claim must be verified against the original registered source before the packet can lock.
 
 ### 3. Seal the policy-impact memo
 
@@ -60,6 +73,8 @@ Before any outcome is revealed, the system records and hashes:
 
 The sealed memo cannot be silently rewritten. Corrections require a new version while preserving the original.
 
+No unresolved or unverified AI-generated claim may enter the sealed memo.
+
 ### 4. Reveal the outcome packet
 
 Only after the memo hash is stored may the project reveal:
@@ -73,6 +88,8 @@ Only after the memo hash is stored may the project reveal:
 - implementation timing and competing market explanations.
 
 Niche reporting is especially valuable for identifying unexpected supply-chain or competitive transmission. It belongs in the reveal packet unless it was genuinely published before the information cutoff.
+
+NotebookLM, Gemini or another disclosed assistant may help compare the sealed memo with the registered outcome evidence. The original articles, filings, official documents and datasets remain the evidence sources.
 
 ### 5. Score the case
 
@@ -123,6 +140,8 @@ case selection
 
 Before `outcome_revealed`, a case may not contain an outcome packet or scores. A revealed or scored case must have valid input, memo and outcome hashes. This prevents retrospective articles, later earnings, stock performance or other outcome information from leaking into the original interpretation.
 
+Pre-cutoff AI assistance may reference only registered pre-cutoff evidence. Post-outcome AI assistance may use registered input and outcome evidence, but it cannot alter the sealed memo.
+
 ## Case registry
 
 The durable case registry is:
@@ -143,6 +162,18 @@ The validator and scoring implementation is:
 
 ```text
 signal_research/policy_benchmark.py
+```
+
+Source identity and contradiction rules are documented in:
+
+```text
+docs/SIGNAL_POLICY_EVIDENCE_STANCE.md
+```
+
+NotebookLM, Gemini and other AI-assistance rules are documented in:
+
+```text
+docs/SIGNAL_POLICY_AI_RESEARCH_ASSISTANCE.md
 ```
 
 ## Commands

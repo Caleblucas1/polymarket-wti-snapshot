@@ -33,27 +33,31 @@ class PolicyEvidenceOfficialTextTests(unittest.TestCase):
                 "signature_timestamp_utc": "2020-01-02T00:00:00Z",
                 "information_cutoff_utc": "2020-01-02T00:00:00Z",
                 "pre_cutoff_evidence_records": [],
+                "research_assistance_records": [],
                 "tradable_universe_at_cutoff": ["AAA"],
-                "point_in_time_financial_data_version": "v1"
-            }
+                "point_in_time_financial_data_version": "v1",
+            },
         }
         case["input_packet"]["input_packet_hash"] = payload_hash(
             case["input_packet"], "input_packet_hash"
         )
         registry = {
-            "schema_version": 2,
+            "schema_version": 3,
             "benchmark_id": BENCHMARK_ID,
             "registry_id": REGISTRY_ID,
             "status": "testing",
             "real_money_trading_authorized": False,
-            "cases": [case]
+            "cases": [case],
         }
         with tempfile.TemporaryDirectory() as directory:
             cases_path = Path(directory) / "cases.json"
             cases_path.write_text(json.dumps(registry), encoding="utf-8")
             errors = validate_cases(cases_path, protocol_path)
         self.assertTrue(
-            any("at least one official_text evidence record is required" in error for error in errors)
+            any(
+                "at least one official_text evidence record is required" in error
+                for error in errors
+            )
         )
 
 
