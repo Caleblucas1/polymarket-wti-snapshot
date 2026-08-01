@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "roadmap_id": "POLICY-ROADMAP-001",
+  "registry_id": "POLICY-US-LEGISLATION-001",
+  "real_money_trading_authorized": false,
+  "records": [],
+  "required_fields": [
+    "revision_id",
+    "created_at_utc",
+    "source_case_ids",
+    "error_taxonomy",
+    "problem_observed",
+    "change_made",
+    "version_before",
+    "version_after",
+    "applies_prospectively_only",
+    "original_results_preserved"
+  ],
+  "error_taxonomy": [
+    "text_interpretation",
+    "exposure_mapping",
+    "direction",
+    "materiality",
+    "implementation_timing",
+    "benchmark_selection",
+    "already_priced",
+    "competing_company_event",
+    "macro_confounder",
+    "execution_cost",
+    "data_quality",
+    "attribution"
+  ],
+  "note": "Empty until scored historical cases reveal specific errors. Revisions are append-only, must cite source cases, preserve original results and apply only to later framework versions."
+}
