@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "registry_id": "POLICY-US-LEGISLATION-001",
+  "benchmark_id": "POLICY-HISTORICAL-INTERPRETATION-001",
+  "example_only": true,
+  "evidence_record": {
+    "evidence_id": "POLICY-CASE-0001-EVID-001",
+    "source_url": "https://example.com/article",
+    "title": "Article title",
+    "publisher": "Publisher",
+    "published_at_utc": "2020-01-01T12:00:00Z",
+    "accessed_at_utc": "2026-08-01T00:00:00Z",
+    "source_type": "niche_news",
+    "evidence_stance": "contradicts",
+    "affected_claims": [
+      "beneficiary mapping",
+      "implementation timing"
+    ],
+    "temporal_role": "post_outcome_reveal",
+    "available_before_memo_seal": false,
+    "reliability": "high",
+    "summary": "The article reports that implementation benefited a supplier rather than the company named in the sealed memo.",
+    "archive_reference": "sha256:replace-with-archived-content-hash",
+    "notes": ""
+  },
+  "contradictory_evidence_review": {
+    "review_completed_at_utc": "2026-08-01T00:00:00Z",
+    "search_scope": [
+      "mainstream reporting",
+      "trade publications",
+      "niche industry reporting",
+      "company disclosures"
+    ],
+    "contradictory_evidence_ids": [
+      "POLICY-CASE-0001-EVID-001"
+    ],
+    "mixed_evidence_ids": [],
+    "late_discovered_pre_cutoff_evidence_ids": [],
+    "no_contradictory_evidence_found": false,
+    "reviewer_notes": "The cited article materially challenges the original exposure mapping."
+  }
+}
