@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "records": [],
+  "required_fields": [
+    "registry_id",
+    "observation_id",
+    "decision_timestamp",
+    "entry_timestamp",
+    "exit_timestamp",
+    "gross_return",
+    "cost_return",
+    "benchmark_return",
+    "regime",
+    "out_of_sample",
+    "data_version"
+  ],
+  "note": "Empty by design until a frozen rule produces reproducible backtest or live observations. Missing performance must not be replaced with narrative wins."
+}
