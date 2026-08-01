@@ -24,20 +24,23 @@ page saves answers in the browser and produces a compact response that can be
 copied into ChatGPT all at once.
 
 `signal_market_catalog.json` is the authoritative list of supplied Polymarket
-event pages. The questionnaire selects five individual conditional contracts
-from that catalog; it does not average unrelated markets into broad diplomacy,
-shipping, or oil baskets. The remaining events stay available as reference
-markets and can replace a questionnaire contract later without losing their
-identity.
+event pages. An event page is only a container: every currently active dated,
+threshold, or day-specific contract on that page is represented as its own
+exact signal row. The five contracts first used in the questionnaire remain a
+highlighted convenience view, but they are not primary signals and no other
+active event is treated as reference-only. Exact contracts are never averaged
+into broad diplomacy, shipping, or oil baskets.
 
 ## Durable daily signal review records
 
-The five-contract signal dashboard records each generated observation through
+The active-contract signal dashboard records each generated observation through
 `signal_review.persist_observation()`. The default append-only store is
 `signal_records/observations.jsonl`. Each line preserves the cutoff timestamp,
-raw probabilities, comparable prior-day and seven-day changes, level and change
-read-throughs, the signal classification, the definition version, and a
-fingerprint of the source catalog.
+the event and exact contract identity, raw probabilities, comparable prior-day
+and seven-day changes, level and change read-throughs, the signal
+classification, the definition version, and a fingerprint of the source
+catalog. A refresh can therefore contain more signal rows than event pages
+when an event has multiple active contracts.
 
 Records are duplicate-safe by cutoff timestamp, so rerunning the same daily
 update does not create a second evidence row. The dashboard's dropdown ratings
@@ -347,11 +350,12 @@ python narrative_break_signal.py --list-scenarios --show-scenario-details
 
 ### Daily signal review and calibration guardrail
 
-The five exact contracts are recorded as an append-only evidence layer by
-`signal_review.py`. Each observation stores the current probability, prior-day
-probability, one-day and seven-day changes, the catalog fingerprint, and the
-definition version. A user's daily rating is an annotation on that record; it
-cannot overwrite the odds, contract identity, or rule-based oil read-through.
+Every active exact contract is recorded as an append-only evidence layer by
+`signal_review.py`. Each observation stores the event ID, physical contract ID,
+exact contract label, current probability, prior-day probability, one-day and
+seven-day changes, the catalog fingerprint, and the definition version. A
+user's daily rating is an annotation on that record; it cannot overwrite the
+odds, contract identity, or rule-based oil read-through.
 
 The daily market dashboard presents a dropdown for each exact contract and an
 overall rating. Ratings are intentionally comparative—`Much more bullish`,
@@ -411,3 +415,4 @@ python -m unittest discover -s tests -v
 
 - [Gamma event-by-slug API](https://docs.polymarket.com/api-reference/events/get-event-by-slug)
 - [CLOB price-history API](https://docs.polymarket.com/api-reference/markets/get-prices-history)
+
