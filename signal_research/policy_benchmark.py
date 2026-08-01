@@ -118,8 +118,8 @@ def validate_protocol(path: str | Path = DEFAULT_PROTOCOL_PATH) -> list[str]:
     errors: list[str] = []
     protocol = load_protocol(path)
 
-    if protocol.get("schema_version") != 2:
-        errors.append("historical policy benchmark schema_version must be 2")
+    if protocol.get("schema_version") != 3:
+        errors.append("historical policy benchmark schema_version must be 3")
     if protocol.get("benchmark_id") != BENCHMARK_ID:
         errors.append(f"benchmark_id must be {BENCHMARK_ID}")
     if protocol.get("registry_id") != REGISTRY_ID:
@@ -138,7 +138,9 @@ def validate_protocol(path: str | Path = DEFAULT_PROTOCOL_PATH) -> list[str]:
         "lessons_recorded",
     ]
     if protocol.get("phase_order") != expected_phases:
-        errors.append("phase_order must preserve selection, packet, memo, reveal, score and lessons order")
+        errors.append(
+            "phase_order must preserve selection, packet, memo, reveal, score and lessons order"
+        )
 
     firewall = protocol.get("temporal_firewall")
     if not isinstance(firewall, dict):
@@ -151,7 +153,9 @@ def validate_protocol(path: str | Path = DEFAULT_PROTOCOL_PATH) -> list[str]:
             "post_event_prices_prohibited_before_memo_seal",
             "memo_hash_required_before_outcome_reveal",
             "source_stance_tagging_required",
+            "source_author_and_publisher_required",
             "contradictory_evidence_review_required",
+            "ai_research_assistance_disclosure_required",
         ):
             if firewall.get(key) is not True:
                 errors.append(f"temporal_firewall.{key} must be true")
@@ -164,6 +168,7 @@ def validate_protocol(path: str | Path = DEFAULT_PROTOCOL_PATH) -> list[str]:
             "evidence_id",
             "source_url",
             "title",
+            "authors",
             "publisher",
             "published_at_utc",
             "accessed_at_utc",
@@ -179,7 +184,9 @@ def validate_protocol(path: str | Path = DEFAULT_PROTOCOL_PATH) -> list[str]:
         }
         configured = set(evidence_schema.get("required_fields", []))
         if configured != required_evidence_fields:
-            errors.append("evidence_record_schema.required_fields must match the source-level audit schema")
+            errors.append(
+                "evidence_record_schema.required_fields must match the source-level audit schema"
+            )
         for key in (
             "allowed_stances",
             "allowed_temporal_roles",
@@ -187,7 +194,11 @@ def validate_protocol(path: str | Path = DEFAULT_PROTOCOL_PATH) -> list[str]:
             "allowed_reliability",
         ):
             values = evidence_schema.get(key)
-            if not isinstance(values, list) or not values or not all(_substantive_text(item) for item in values):
+            if (
+                not isinstance(values, list)
+                or not values
+                or not all(_substantive_text(item) for item in values)
+            ):
                 errors.append(f"evidence_record_schema.{key} must be a nonempty text list")
         if set(evidence_schema.get("allowed_stances", [])) != {
             "supports",
@@ -195,9 +206,83 @@ def validate_protocol(path: str | Path = DEFAULT_PROTOCOL_PATH) -> list[str]:
             "mixed",
             "neutral_context",
         }:
-            errors.append("allowed_stances must include supports, contradicts, mixed and neutral_context")
+            errors.append(
+                "allowed_stances must include supports, contradicts, mixed and neutral_context"
+            )
+        if not _substantive_text(evidence_schema.get("author_rule")):
+            errors.append("evidence_record_schema.author_rule must be substantive text")
+        if not _substantive_text(evidence_schema.get("publisher_rule")):
+            errors.append("evidence_record_schema.publisher_rule must be substantive text")
 
-    required_review_fields = set(protocol.get("required_contradictory_evidence_review_fields", []))
+    assistance_schema = protocol.get("research_assistance_schema")
+    if not isinstance(assistance_schema, dict):
+        errors.append("research_assistance_schema must be an object")
+    else:
+        required_assistance_fields = {
+            "assistance_id",
+            "tool_family",
+            "tool_name",
+            "model_or_version",
+            "workspace_reference",
+            "used_at_utc",
+            "temporal_role",
+            "task",
+            "input_evidence_ids",
+            "output_artifact_reference",
+            "extracted_claims",
+            "source_grounding_verified",
+            "human_reviewed",
+            "verification_notes",
+            "notes",
+        }
+        configured = set(assistance_schema.get("required_fields", []))
+        if configured != required_assistance_fields:
+            errors.append(
+                "research_assistance_schema.required_fields must match the AI-assistance audit schema"
+            )
+        if set(assistance_schema.get("allowed_tool_families", [])) != {
+            "google_notebooklm",
+            "google_gemini",
+            "other",
+        }:
+            errors.append(
+                "research_assistance_schema.allowed_tool_families must include Google NotebookLM, Google Gemini and other"
+            )
+        if set(assistance_schema.get("allowed_temporal_roles", [])) != {
+            "pre_cutoff_research",
+            "post_outcome_research",
+        }:
+            errors.append(
+                "research_assistance_schema.allowed_temporal_roles must preserve pre-cutoff and post-outcome separation"
+            )
+        if set(assistance_schema.get("claim_required_fields", [])) != {
+            "claim",
+            "source_evidence_ids",
+            "verification_status",
+        }:
+            errors.append(
+                "research_assistance_schema.claim_required_fields must match the extracted-claim schema"
+            )
+        if set(assistance_schema.get("allowed_verification_statuses", [])) != {
+            "verified_against_original_sources",
+            "rejected",
+            "unresolved",
+        }:
+            errors.append(
+                "research_assistance_schema.allowed_verification_statuses are invalid"
+            )
+        for key in (
+            "source_of_truth_rule",
+            "timing_rule",
+            "locking_rule",
+            "privacy_rule",
+        ):
+            if not _substantive_text(assistance_schema.get(key)):
+                errors.append(f"research_assistance_schema.{key} must be substantive text")
+
+    required_review_fields = set(
+        protocol.get("required_contradictory_evidence_review_fields", [])
+    )
     if required_review_fields != {
         "review_completed_at_utc",
         "search_scope",
@@ -207,7 +292,9 @@ def validate_protocol(path: str | Path = DEFAULT_PROTOCOL_PATH) -> list[str]:
         "no_contradictory_evidence_found",
         "reviewer_notes",
     }:
-        errors.append("required_contradictory_evidence_review_fields must match the contradiction-review schema")
+        errors.append(
+            "required_contradictory_evidence_review_fields must match the contradiction-review schema"
+        )
 
     scoring = protocol.get("scoring")
     if not isinstance(scoring, dict):
@@ -229,7 +316,10 @@ def validate_protocol(path: str | Path = DEFAULT_PROTOCOL_PATH) -> list[str]:
         "do not select cases because the subsequent winner is already known",
         "do not use post-event prices",
         "do not treat correct legal interpretation as proof of trading alpha",
+        "do not omit the author or publisher",
         "do not omit, downgrade or bury contradictory evidence",
+        "do not cite notebooklm, gemini or another ai assistant as the evidence source",
+        "do not allow an unverified ai-generated claim",
         "do not authorize real-money trading",
     ):
         if required_phrase not in prohibited:
@@ -246,6 +336,8 @@ def validate_cases(
     protocol = load_protocol(protocol_path)
     registry = load_case_registry(cases_path)
 
+    if registry.get("schema_version") != 3:
+        errors.append("case registry schema_version must be 3")
     if registry.get("benchmark_id") != BENCHMARK_ID:
         errors.append(f"case registry benchmark_id must be {BENCHMARK_ID}")
     if registry.get("registry_id") != REGISTRY_ID:
@@ -294,6 +386,7 @@ def validate_cases(
         outcome = case.get("outcome_packet")
         scores = case.get("scores")
         evidence_by_id: dict[str, dict[str, Any]] = {}
+        assistance_ids: set[str] = set()
 
         if rank >= STAGE_ORDER["packet_locked"] and stage != "retired":
             errors.extend(
@@ -316,12 +409,27 @@ def validate_cases(
                 )
                 errors.extend(evidence_errors)
                 evidence_by_id.update(input_evidence)
+                input_assistance, assistance_errors = _validate_research_assistance_records(
+                    f"{prefix}.input_packet",
+                    input_packet.get("research_assistance_records"),
+                    protocol,
+                    expected_temporal_role="pre_cutoff_research",
+                    evidence_by_id=evidence_by_id,
+                )
+                errors.extend(assistance_errors)
+                assistance_ids.update(input_assistance)
         elif input_packet is not None and not isinstance(input_packet, dict):
             errors.append(f"{prefix}: input_packet must be an object when present")
 
         if rank >= STAGE_ORDER["memo_sealed"] and stage != "retired":
             errors.extend(
-                _validate_hashed_packet(prefix, "sealed_memo", memo, required_memo, "memo_hash")
+                _validate_hashed_packet(
+                    prefix,
+                    "sealed_memo",
+                    memo,
+                    required_memo,
+                    "memo_hash",
+                )
             )
         elif memo is not None and not isinstance(memo, dict):
             errors.append(f"{prefix}: sealed_memo must be an object when present")
@@ -353,8 +461,26 @@ def validate_cases(
                 errors.extend(evidence_errors)
                 duplicate_ids = sorted(set(evidence_by_id).intersection(outcome_evidence))
                 for evidence_id in duplicate_ids:
-                    errors.append(f"{prefix}: duplicate evidence_id across packets: {evidence_id}")
+                    errors.append(
+                        f"{prefix}: duplicate evidence_id across packets: {evidence_id}"
+                    )
                 evidence_by_id.update(outcome_evidence)
+
+                outcome_assistance, assistance_errors = _validate_research_assistance_records(
+                    f"{prefix}.outcome_packet",
+                    outcome.get("research_assistance_records"),
+                    protocol,
+                    expected_temporal_role="post_outcome_research",
+                    evidence_by_id=evidence_by_id,
+                )
+                errors.extend(assistance_errors)
+                duplicate_assistance = sorted(assistance_ids.intersection(outcome_assistance))
+                for assistance_id in duplicate_assistance:
+                    errors.append(
+                        f"{prefix}: duplicate assistance_id across packets: {assistance_id}"
+                    )
+                assistance_ids.update(outcome_assistance)
+
                 errors.extend(
                     _validate_contradictory_evidence_review(
                         f"{prefix}.outcome_packet",
@@ -376,11 +502,17 @@ def validate_cases(
                     errors.append(f"{prefix}: invalid scores: {exc}")
                 else:
                     if scores.get("interpretation_accuracy", {}).get("total") != interpreted:
-                        errors.append(f"{prefix}: interpretation total must equal component sum")
+                        errors.append(
+                            f"{prefix}: interpretation total must equal component sum"
+                        )
                     if scores.get("investment_usefulness", {}).get("total") != invested:
-                        errors.append(f"{prefix}: investment total must equal component sum")
+                        errors.append(
+                            f"{prefix}: investment total must equal component sum"
+                        )
                     if not _substantive_text(scores.get("attribution_review")):
-                        errors.append(f"{prefix}: scored cases require an attribution_review")
+                        errors.append(
+                            f"{prefix}: scored cases require an attribution_review"
+                        )
 
     return errors
 
@@ -428,7 +560,9 @@ def _validate_evidence_records(
     allowed_reliability = set(schema.get("allowed_reliability", []))
     cutoff = _parse_timestamp(cutoff_timestamp)
     if cutoff is None:
-        errors.append(f"{prefix}: evidence cutoff timestamp must be a timezone-aware ISO timestamp")
+        errors.append(
+            f"{prefix}: evidence cutoff timestamp must be a timezone-aware ISO timestamp"
+        )
 
     official_text_found = False
     for index, record in enumerate(records):
@@ -457,6 +591,17 @@ def _validate_evidence_records(
         ):
             if not _substantive_text(record.get(field)):
                 errors.append(f"{record_prefix}: {field} must be substantive text")
+
+        authors = record.get("authors")
+        if (
+            not isinstance(authors, list)
+            or not authors
+            or not all(_substantive_text(author) for author in authors)
+        ):
+            errors.append(
+                f"{record_prefix}: authors must be a nonempty list of human or institutional names"
+            )
+
         if not isinstance(record.get("notes"), str):
             errors.append(f"{record_prefix}: notes must be text")
 
@@ -474,7 +619,9 @@ def _validate_evidence_records(
         if role not in allowed_roles:
             errors.append(f"{record_prefix}: invalid temporal_role {role!r}")
         elif role != expected_temporal_role:
-            errors.append(f"{record_prefix}: temporal_role must be {expected_temporal_role}")
+            errors.append(
+                f"{record_prefix}: temporal_role must be {expected_temporal_role}"
+            )
 
         reliability = record.get("reliability")
         if reliability not in allowed_reliability:
@@ -486,12 +633,16 @@ def _validate_evidence_records(
         ):
             errors.append(f"{record_prefix}: affected_claims must be a text list")
         elif stance in {"supports", "contradicts", "mixed"} and not affected_claims:
-            errors.append(f"{record_prefix}: {stance} evidence must identify affected_claims")
+            errors.append(
+                f"{record_prefix}: {stance} evidence must identify affected_claims"
+            )
 
         published = _parse_timestamp(record.get("published_at_utc"))
         accessed = _parse_timestamp(record.get("accessed_at_utc"))
         if published is None:
-            errors.append(f"{record_prefix}: published_at_utc must be timezone-aware ISO")
+            errors.append(
+                f"{record_prefix}: published_at_utc must be timezone-aware ISO"
+            )
         if accessed is None:
             errors.append(f"{record_prefix}: accessed_at_utc must be timezone-aware ISO")
         if published is not None and accessed is not None and accessed < published:
@@ -501,7 +652,9 @@ def _validate_evidence_records(
 
         available_before_memo = record.get("available_before_memo_seal")
         if not isinstance(available_before_memo, bool):
-            errors.append(f"{record_prefix}: available_before_memo_seal must be boolean")
+            errors.append(
+                f"{record_prefix}: available_before_memo_seal must be boolean"
+            )
         elif expected_temporal_role == "pre_cutoff_input" and not available_before_memo:
             errors.append(
                 f"{record_prefix}: pre-cutoff evidence must have been available before memo seal"
@@ -510,6 +663,160 @@ def _validate_evidence_records(
     if require_official_text and not official_text_found:
         errors.append(f"{prefix}: at least one official_text evidence record is required")
     return by_id, errors
+
+
+def _validate_research_assistance_records(
+    prefix: str,
+    records: object,
+    protocol: dict[str, Any],
+    *,
+    expected_temporal_role: str,
+    evidence_by_id: dict[str, dict[str, Any]],
+) -> tuple[set[str], list[str]]:
+    errors: list[str] = []
+    assistance_ids: set[str] = set()
+    if not isinstance(records, list):
+        return assistance_ids, [f"{prefix}: research_assistance_records must be a list"]
+
+    schema = protocol.get("research_assistance_schema", {})
+    required = set(schema.get("required_fields", []))
+    allowed_families = set(schema.get("allowed_tool_families", []))
+    allowed_roles = set(schema.get("allowed_temporal_roles", []))
+    claim_required = set(schema.get("claim_required_fields", []))
+    allowed_statuses = set(schema.get("allowed_verification_statuses", []))
+
+    for index, record in enumerate(records):
+        record_prefix = f"{prefix}.research_assistance[{index}]"
+        if not isinstance(record, dict):
+            errors.append(f"{record_prefix}: research-assistance record must be an object")
+            continue
+
+        missing = sorted(required - set(record))
+        if missing:
+            errors.append(f"{record_prefix}: missing fields {missing}")
+
+        assistance_id = record.get("assistance_id")
+        if not _substantive_text(assistance_id):
+            errors.append(f"{record_prefix}: assistance_id must be substantive text")
+        elif assistance_id in assistance_ids:
+            errors.append(f"{record_prefix}: duplicate assistance_id {assistance_id}")
+        else:
+            assistance_ids.add(str(assistance_id))
+
+        tool_family = record.get("tool_family")
+        if tool_family not in allowed_families:
+            errors.append(f"{record_prefix}: invalid tool_family {tool_family!r}")
+
+        for field in (
+            "tool_name",
+            "model_or_version",
+            "workspace_reference",
+            "task",
+            "output_artifact_reference",
+        ):
+            if not _substantive_text(record.get(field)):
+                errors.append(f"{record_prefix}: {field} must be substantive text")
+
+        role = record.get("temporal_role")
+        if role not in allowed_roles:
+            errors.append(f"{record_prefix}: invalid temporal_role {role!r}")
+        elif role != expected_temporal_role:
+            errors.append(
+                f"{record_prefix}: temporal_role must be {expected_temporal_role}"
+            )
+
+        if _parse_timestamp(record.get("used_at_utc")) is None:
+            errors.append(f"{record_prefix}: used_at_utc must be timezone-aware ISO")
+
+        input_ids = record.get("input_evidence_ids")
+        if (
+            not isinstance(input_ids, list)
+            or not input_ids
+            or not all(_substantive_text(item) for item in input_ids)
+        ):
+            errors.append(
+                f"{record_prefix}: input_evidence_ids must be a nonempty text list"
+            )
+            normalized_input_ids: set[str] = set()
+        else:
+            normalized_input_ids = {str(item) for item in input_ids}
+            for evidence_id in sorted(normalized_input_ids):
+                if evidence_id not in evidence_by_id:
+                    errors.append(
+                        f"{record_prefix}: unknown input evidence_id {evidence_id}"
+                    )
+
+        claims = record.get("extracted_claims")
+        if not isinstance(claims, list):
+            errors.append(f"{record_prefix}: extracted_claims must be a list")
+            claims = []
+        for claim_index, claim in enumerate(claims):
+            claim_prefix = f"{record_prefix}.extracted_claims[{claim_index}]"
+            if not isinstance(claim, dict):
+                errors.append(f"{claim_prefix}: extracted claim must be an object")
+                continue
+            missing_claim = sorted(claim_required - set(claim))
+            if missing_claim:
+                errors.append(f"{claim_prefix}: missing fields {missing_claim}")
+            if not _substantive_text(claim.get("claim")):
+                errors.append(f"{claim_prefix}: claim must be substantive text")
+
+            source_ids = claim.get("source_evidence_ids")
+            if (
+                not isinstance(source_ids, list)
+                or not source_ids
+                or not all(_substantive_text(item) for item in source_ids)
+            ):
+                errors.append(
+                    f"{claim_prefix}: source_evidence_ids must be a nonempty text list"
+                )
+            else:
+                for evidence_id in {str(item) for item in source_ids}:
+                    if evidence_id not in evidence_by_id:
+                        errors.append(
+                            f"{claim_prefix}: unknown source evidence_id {evidence_id}"
+                        )
+                    if evidence_id not in normalized_input_ids:
+                        errors.append(
+                            f"{claim_prefix}: source evidence_id {evidence_id} was not supplied to the research assistant"
+                        )
+
+            status = claim.get("verification_status")
+            if status not in allowed_statuses:
+                errors.append(
+                    f"{claim_prefix}: invalid verification_status {status!r}"
+                )
+            elif status == "unresolved":
+                errors.append(
+                    f"{claim_prefix}: unresolved AI-generated claims cannot enter a locked packet"
+                )
+
+        grounded = record.get("source_grounding_verified")
+        if not isinstance(grounded, bool):
+            errors.append(
+                f"{record_prefix}: source_grounding_verified must be boolean"
+            )
+        elif not grounded:
+            errors.append(
+                f"{record_prefix}: source grounding must be verified against original sources"
+            )
+
+        reviewed = record.get("human_reviewed")
+        if not isinstance(reviewed, bool):
+            errors.append(f"{record_prefix}: human_reviewed must be boolean")
+        elif not reviewed:
+            errors.append(
+                f"{record_prefix}: AI research assistance must be human reviewed"
+            )
+
+        if not _substantive_text(record.get("verification_notes")):
+            errors.append(
+                f"{record_prefix}: verification_notes must be substantive text"
+            )
+        if not isinstance(record.get("notes"), str):
+            errors.append(f"{record_prefix}: notes must be text")
+
+    return assistance_ids, errors
 
 
 def _validate_contradictory_evidence_review(
@@ -550,14 +857,20 @@ def _validate_contradictory_evidence_review(
     lists: dict[str, list[str]] = {}
     for field in list_fields:
         value = review.get(field)
-        if not isinstance(value, list) or not all(_substantive_text(item) for item in value):
-            errors.append(f"{prefix}: contradictory_evidence_review.{field} must be a text list")
+        if not isinstance(value, list) or not all(
+            _substantive_text(item) for item in value
+        ):
+            errors.append(
+                f"{prefix}: contradictory_evidence_review.{field} must be a text list"
+            )
             lists[field] = []
         else:
             lists[field] = [str(item) for item in value]
 
     if not isinstance(review.get("reviewer_notes"), str):
-        errors.append(f"{prefix}: contradictory_evidence_review.reviewer_notes must be text")
+        errors.append(
+            f"{prefix}: contradictory_evidence_review.reviewer_notes must be text"
+        )
 
     no_contradictory = review.get("no_contradictory_evidence_found")
     if not isinstance(no_contradictory, bool):
@@ -582,7 +895,9 @@ def _validate_contradictory_evidence_review(
         if record is None:
             errors.append(f"{prefix}: unknown contradictory evidence_id {evidence_id}")
         elif record.get("evidence_stance") != "contradicts":
-            errors.append(f"{prefix}: {evidence_id} must have evidence_stance contradicts")
+            errors.append(
+                f"{prefix}: {evidence_id} must have evidence_stance contradicts"
+            )
 
     for evidence_id in lists["mixed_evidence_ids"]:
         record = evidence_by_id.get(evidence_id)
@@ -642,33 +957,55 @@ def summarize_benchmark(
     registry = load_case_registry(cases_path)
     protocol = load_protocol(protocol_path)
     cases = registry.get("cases", [])
-    stage_counts = Counter(case.get("stage", "invalid") for case in cases if isinstance(case, dict))
-    scored = [case for case in cases if isinstance(case, dict) and case.get("stage") == "scored"]
+    stage_counts = Counter(
+        case.get("stage", "invalid") for case in cases if isinstance(case, dict)
+    )
+    scored = [
+        case
+        for case in cases
+        if isinstance(case, dict) and case.get("stage") == "scored"
+    ]
     interpretation_scores = [interpretation_score(case, protocol) for case in scored]
     investment_scores = [investment_score(case, protocol) for case in scored]
 
     stance_counts: Counter[str] = Counter()
+    assistance_counts: Counter[str] = Counter()
     cases_with_contradictory = 0
     cases_with_none_found = 0
+    cases_using_research_assistance = 0
     for case in cases:
         if not isinstance(case, dict):
             continue
         records: list[object] = []
+        assistance_records: list[object] = []
         input_packet = case.get("input_packet")
         outcome_packet = case.get("outcome_packet")
         if isinstance(input_packet, dict):
             records.extend(input_packet.get("pre_cutoff_evidence_records", []))
+            assistance_records.extend(input_packet.get("research_assistance_records", []))
         if isinstance(outcome_packet, dict):
             records.extend(outcome_packet.get("post_outcome_evidence_records", []))
+            assistance_records.extend(
+                outcome_packet.get("research_assistance_records", [])
+            )
             review = outcome_packet.get("contradictory_evidence_review")
             if isinstance(review, dict):
                 if review.get("no_contradictory_evidence_found") is True:
                     cases_with_none_found += 1
-                if review.get("contradictory_evidence_ids") or review.get("mixed_evidence_ids"):
+                if review.get("contradictory_evidence_ids") or review.get(
+                    "mixed_evidence_ids"
+                ):
                     cases_with_contradictory += 1
         for record in records:
-            if isinstance(record, dict) and _substantive_text(record.get("evidence_stance")):
+            if isinstance(record, dict) and _substantive_text(
+                record.get("evidence_stance")
+            ):
                 stance_counts[str(record["evidence_stance"])] += 1
+        if assistance_records:
+            cases_using_research_assistance += 1
+        for record in assistance_records:
+            if isinstance(record, dict) and _substantive_text(record.get("tool_family")):
+                assistance_counts[str(record["tool_family"])] += 1
 
     return {
         "benchmark_id": BENCHMARK_ID,
@@ -678,14 +1015,22 @@ def summarize_benchmark(
         "stage_counts": dict(sorted(stage_counts.items())),
         "scored_cases": len(scored),
         "mean_interpretation_accuracy": (
-            sum(interpretation_scores) / len(interpretation_scores) if interpretation_scores else None
+            sum(interpretation_scores) / len(interpretation_scores)
+            if interpretation_scores
+            else None
         ),
         "mean_investment_usefulness": (
-            sum(investment_scores) / len(investment_scores) if investment_scores else None
+            sum(investment_scores) / len(investment_scores)
+            if investment_scores
+            else None
         ),
         "evidence_stance_counts": dict(sorted(stance_counts.items())),
+        "research_assistance_counts": dict(sorted(assistance_counts.items())),
+        "cases_using_research_assistance": cases_using_research_assistance,
         "cases_with_contradictory_or_mixed_evidence": cases_with_contradictory,
         "cases_with_explicit_no_contradictory_evidence_found": cases_with_none_found,
+        "source_author_and_publisher_tagging_required": True,
+        "ai_output_is_not_evidence": True,
         "scores_kept_separate": True,
         "contradictory_evidence_preserved": True,
         "real_money_trading_authorized": False,
@@ -693,7 +1038,10 @@ def summarize_benchmark(
     }
 
 
-def get_case(case_id: str, cases_path: str | Path = DEFAULT_CASES_PATH) -> dict[str, Any]:
+def get_case(
+    case_id: str,
+    cases_path: str | Path = DEFAULT_CASES_PATH,
+) -> dict[str, Any]:
     registry = load_case_registry(cases_path)
     for case in registry.get("cases", []):
         if isinstance(case, dict) and case.get("case_id") == case_id:
