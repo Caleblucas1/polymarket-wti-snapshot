@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "decision_id": "SIGNAL-PRIORITY-2026-08-01-001",
+  "as_of": "2026-08-01",
+  "decision_origin": "explicit_user_reprioritization",
+  "governing_question": "Can this signal earn and keep the right to influence capital allocation?",
+  "real_money_trading_authorized": false,
+  "principles": [
+    "Prioritize signals that can answer economically meaningful allocation questions on a useful learning cadence.",
+    "Do not confuse clean infrastructure exercises with high-priority alpha research.",
+    "Do not bypass a blocked canonical definition merely because a signal is high priority.",
+    "Complete already-started one-off observations honestly, but do not create automatic successors without a new explicit decision."
+  ],
+  "priority_order": [
+    "CROSS-ASSET-REBOUND-001",
+    "FLOW-MON-BTC-001"
+  ],
+  "signals": {
+    "CROSS-ASSET-REBOUND-001": {
+      "priority_rank": 1,
+      "priority_tier": "highest_next_research_priority",
+      "status": "design_blocked_next_live_candidate",
+      "reason": "The signal can address a timely capital-allocation question during risk-off events and can generate observations over hours or days rather than only once per month.",
+      "allocation_question": "After a common risk-off shock, does crypto recover before U.S. equities strongly enough to justify earlier rotation into crypto exposure?",
+      "canonical_assets": {
+        "crypto": ["BTC", "ETH", "SOL", "HYPE"],
+        "equities": ["ES/SPY", "NQ/QQQ", "MAG-7 basket", "semiconductor basket"]
+      },
+      "canonical_rebound_components": [
+        "local-low reversal",
+        "pre-shock reference reclaim",
+        "trend confirmation",
+        "sustained recovery"
+      ],
+      "maximum_volatility_lookback_bars": 30,
+      "canonical_aggregation": "unweighted and mechanically frozen before any live event",
+      "experimental_aggregation": "A volatility-weighted aggregate may be maintained separately, but cannot replace or retroactively modify the canonical unweighted result.",
+      "current_blockers": [
+        "mechanical common-shock detector",
+        "pre-shock reference-level rule",
+        "maximum event horizon",
+        "exact unweighted basket timestamp aggregation rule"
+      ],
+      "live_launch_authorized": false,
+      "live_launch_gate": "All four canonical blockers must be resolved, versioned, validated and merged before the first untouched event can be armed.",
+      "implementation_sequence": [
+        "Freeze a mechanical common-shock detector that operates without observing recovery order.",
+        "Freeze the pre-shock reference level for every asset and basket.",
+        "Freeze the maximum event horizon and invalidation rules.",
+        "Freeze the exact unweighted basket timestamp aggregation and tie-breaking rule.",
+        "Map synchronized, reproducible crypto and equity-futures data sources.",
+        "Build a replay test that proves event detection and rebound timestamps use only information available at each decision bar.",
+        "Run a shadow ordering study before translating leadership into a trade.",
+        "Only after the ordering study works, freeze 1-day, 3-day and 5-day trading translations with costs, funding and turnover."
+      ],
+      "prohibited_shortcuts": [
+        "Do not hand-select a dip after seeing which asset recovered first.",
+        "Do not use the volatility-weighted aggregate as the canonical answer.",
+        "Do not call the signal live-ready while any canonical blocker remains unresolved.",
+        "Do not infer trade profitability from rebound ordering without a separately frozen trading translation."
+      ]
+    },
+    "FLOW-MON-BTC-001": {
+      "priority_rank": 99,
+      "priority_tier": "low_priority_infrastructure_only",
+      "status": "complete_current_one_off_then_dormant",
+      "reason": "The canonical rule yields only twelve observations per year and does not directly measure the flows proposed as its mechanism, so its learning cadence and likely economic value do not justify continued priority engineering.",
+      "current_one_off_test_id": "FLOW-MON-BTC-2026-08",
+      "current_one_off_must_complete_honestly": true,
+      "current_test_role": "infrastructure and audit-path exercise, plus one untouched research observation",
+      "future_month_launches_enabled": false,
+      "automatic_successor_creation_enabled": false,
+      "post_current_test_status": "dormant",
+      "capital_rights_from_current_test": "none",
+      "completion_window_end_utc": "2026-09-05T23:59:59Z",
+      "continuation_gate": "A future month may be created only after an explicit priority amendment that states a new economic rationale, expected learning value and approved resource budget.",
+      "prohibited_shortcuts": [
+        "Do not create September 2026 or later monthly test configurations automatically.",
+        "Do not interpret one profitable August observation as validation.",
+        "Do not continue recurring engineering merely because the live-test infrastructure exists.",
+        "Do not describe the signal as directly measuring capital flows without collecting flow data."
+      ]
+    }
+  }
+}
