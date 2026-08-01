@@ -507,7 +507,7 @@ def _validate_evidence_records(
                 f"{record_prefix}: pre-cutoff evidence must have been available before memo seal"
             )
 
-    if require_official_text and records and not official_text_found:
+    if require_official_text and not official_text_found:
         errors.append(f"{prefix}: at least one official_text evidence record is required")
     return by_id, errors
 
