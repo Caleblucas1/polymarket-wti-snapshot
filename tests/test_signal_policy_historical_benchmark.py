@@ -24,6 +24,14 @@ class HistoricalPolicyBenchmarkTests(unittest.TestCase):
         path.write_text(json.dumps(value), encoding="utf-8")
         return path
 
+    def validate_synthetic_case(self, case: dict) -> list[str]:
+        protocol = load_protocol()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            protocol_path = self.write_json(root, "protocol.json", protocol)
+            cases_path = self.write_json(root, "cases.json", self.case_registry([case]))
+            return validate_cases(cases_path, protocol_path)
+
     def test_committed_protocol_and_empty_registry_are_valid(self):
         self.assertEqual([], validate_protocol())
         self.assertEqual([], validate_cases())
@@ -33,32 +41,27 @@ class HistoricalPolicyBenchmarkTests(unittest.TestCase):
         self.assertEqual(REGISTRY_ID, summary["registry_id"])
         self.assertEqual(0, summary["cases"])
         self.assertEqual(0, summary["scored_cases"])
-        self.assertTrue(summary["scores_kept_separate"])
+        self.assertEqual({}, summary["evidence_stance_counts"])
+        self.assertTrue(summary["contradictory_evidence_preserved"])
         self.assertFalse(summary["real_money_trading_authorized"])
         self.assertTrue(summary["valid"])
 
-    def test_protocol_preserves_temporal_firewall_and_separate_scores(self):
+    def test_protocol_requires_source_level_stance_and_review_fields(self):
         protocol = load_protocol()
+        schema = protocol["evidence_record_schema"]
+        self.assertEqual(2, protocol["schema_version"])
         self.assertEqual(
-            [
-                "case_selection_locked",
-                "point_in_time_packet_locked",
-                "policy_impact_memo_sealed",
-                "outcome_packet_revealed",
-                "case_scored",
-                "lessons_recorded",
-            ],
-            protocol["phase_order"],
+            {"supports", "contradicts", "mixed", "neutral_context"},
+            set(schema["allowed_stances"]),
         )
-        self.assertTrue(protocol["temporal_firewall"]["memo_hash_required_before_outcome_reveal"])
-        self.assertTrue(protocol["scoring"]["scores_must_remain_separate"])
-        self.assertEqual(
-            100,
-            sum(protocol["scoring"]["interpretation_accuracy"]["component_weights"].values()),
+        self.assertIn("available_before_memo_seal", schema["required_fields"])
+        self.assertIn(
+            "late_discovered_pre_cutoff_evidence_ids",
+            protocol["required_contradictory_evidence_review_fields"],
         )
-        self.assertEqual(
-            100,
-            sum(protocol["scoring"]["investment_usefulness"]["component_weights"].values()),
+        self.assertTrue(protocol["temporal_firewall"]["source_stance_tagging_required"])
+        self.assertTrue(
+            protocol["temporal_firewall"]["contradictory_evidence_review_required"]
         )
 
     def test_case_registry_is_empty_until_selection_is_locked(self):
@@ -68,63 +71,130 @@ class HistoricalPolicyBenchmarkTests(unittest.TestCase):
         self.assertIn("selected and locked", registry["note"])
 
     def test_outcome_information_is_rejected_before_reveal(self):
-        protocol = load_protocol()
         case = self.make_selected_case(stage="selected")
         case["outcome_packet"] = {"market_returns_5d": 0.10}
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            protocol_path = self.write_json(root, "protocol.json", protocol)
-            cases_path = self.write_json(root, "cases.json", self.case_registry([case]))
-            errors = validate_cases(cases_path, protocol_path)
+        errors = self.validate_synthetic_case(case)
         self.assertTrue(any("outcome_packet is prohibited" in error for error in errors))
 
     def test_tampered_sealed_memo_hash_is_rejected(self):
-        protocol = load_protocol()
-        case = self.make_complete_case(protocol, stage="memo_sealed")
+        case = self.make_complete_case(stage="memo_sealed")
         case["sealed_memo"]["economic_mechanism"] = "silently rewritten after sealing"
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            protocol_path = self.write_json(root, "protocol.json", protocol)
-            cases_path = self.write_json(root, "cases.json", self.case_registry([case]))
-            errors = validate_cases(cases_path, protocol_path)
+        errors = self.validate_synthetic_case(case)
         self.assertTrue(any("memo_hash does not match payload" in error for error in errors))
 
     def test_scored_case_keeps_interpretation_and_investment_separate(self):
         protocol = load_protocol()
-        case = self.make_complete_case(protocol, stage="scored")
+        case = self.make_complete_case(stage="scored")
         interpretation_components = {
-            name: maximum for name, maximum in protocol["scoring"]["interpretation_accuracy"]["component_weights"].items()
+            name: maximum
+            for name, maximum in protocol["scoring"]["interpretation_accuracy"][
+                "component_weights"
+            ].items()
         }
         investment_components = {
-            name: 0 for name in protocol["scoring"]["investment_usefulness"]["component_weights"]
+            name: 0
+            for name in protocol["scoring"]["investment_usefulness"][
+                "component_weights"
+            ]
         }
         case["scores"] = {
-            "interpretation_accuracy": {"components": interpretation_components, "total": 100.0},
-            "investment_usefulness": {"components": investment_components, "total": 0.0},
+            "interpretation_accuracy": {
+                "components": interpretation_components,
+                "total": 100.0,
+            },
+            "investment_usefulness": {
+                "components": investment_components,
+                "total": 0.0,
+            },
             "attribution_review": "The law was understood correctly, but the mapped exposure produced no abnormal after-cost return.",
         }
         self.assertEqual(100.0, interpretation_score(case, protocol))
         self.assertEqual(0.0, investment_score(case, protocol))
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            protocol_path = self.write_json(root, "protocol.json", protocol)
-            cases_path = self.write_json(root, "cases.json", self.case_registry([case]))
-            self.assertEqual([], validate_cases(cases_path, protocol_path))
+        self.assertEqual([], self.validate_synthetic_case(case))
 
     def test_real_money_authorization_is_rejected(self):
-        protocol = load_protocol()
         case = self.make_selected_case(stage="selected")
         case["real_money_trading_authorized"] = True
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            protocol_path = self.write_json(root, "protocol.json", protocol)
-            cases_path = self.write_json(root, "cases.json", self.case_registry([case]))
-            errors = validate_cases(cases_path, protocol_path)
-        self.assertTrue(any("real-money trading must remain unauthorized" in error for error in errors))
+        errors = self.validate_synthetic_case(case)
+        self.assertTrue(
+            any("real-money trading must remain unauthorized" in error for error in errors)
+        )
+
+    def test_unstructured_source_lists_are_rejected(self):
+        case = self.make_complete_case(stage="memo_sealed")
+        case["input_packet"]["pre_cutoff_evidence_records"] = ["news://unsupported"]
+        self.rehash(case["input_packet"], "input_packet_hash")
+        errors = self.validate_synthetic_case(case)
+        self.assertTrue(any("evidence record must be an object" in error for error in errors))
+
+    def test_contradictory_evidence_must_name_affected_claims(self):
+        case = self.make_complete_case(stage="outcome_revealed")
+        record = case["outcome_packet"]["post_outcome_evidence_records"][0]
+        record["affected_claims"] = []
+        self.rehash(case["outcome_packet"], "outcome_packet_hash")
+        errors = self.validate_synthetic_case(case)
+        self.assertTrue(
+            any("contradicts evidence must identify affected_claims" in error for error in errors)
+        )
+
+    def test_contradiction_review_must_cite_found_evidence(self):
+        case = self.make_complete_case(stage="outcome_revealed")
+        review = case["outcome_packet"]["contradictory_evidence_review"]
+        review["contradictory_evidence_ids"] = []
+        review["no_contradictory_evidence_found"] = False
+        self.rehash(case["outcome_packet"], "outcome_packet_hash")
+        errors = self.validate_synthetic_case(case)
+        self.assertTrue(
+            any("must cite contradictory or mixed evidence" in error for error in errors)
+        )
+
+    def test_contradiction_review_rejects_stance_mismatch(self):
+        case = self.make_complete_case(stage="outcome_revealed")
+        record = case["outcome_packet"]["post_outcome_evidence_records"][0]
+        record["evidence_stance"] = "supports"
+        self.rehash(case["outcome_packet"], "outcome_packet_hash")
+        errors = self.validate_synthetic_case(case)
+        self.assertTrue(
+            any("must have evidence_stance contradicts" in error for error in errors)
+        )
+
+    def test_late_discovered_pre_cutoff_evidence_cannot_be_hidden(self):
+        case = self.make_complete_case(stage="outcome_revealed")
+        record = case["outcome_packet"]["post_outcome_evidence_records"][0]
+        record["published_at_utc"] = "2019-12-31T12:00:00Z"
+        record["available_before_memo_seal"] = True
+        review = case["outcome_packet"]["contradictory_evidence_review"]
+        review["late_discovered_pre_cutoff_evidence_ids"] = []
+        self.rehash(case["outcome_packet"], "outcome_packet_hash")
+        errors = self.validate_synthetic_case(case)
+        self.assertTrue(
+            any("late_discovered_pre_cutoff_evidence_ids missing" in error for error in errors)
+        )
+
+    def test_explicit_none_found_review_is_valid(self):
+        case = self.make_complete_case(stage="outcome_revealed")
+        record = case["outcome_packet"]["post_outcome_evidence_records"][0]
+        record["evidence_stance"] = "neutral_context"
+        record["affected_claims"] = []
+        review = case["outcome_packet"]["contradictory_evidence_review"]
+        review["contradictory_evidence_ids"] = []
+        review["mixed_evidence_ids"] = []
+        review["no_contradictory_evidence_found"] = True
+        review["reviewer_notes"] = "Search completed; no source materially contradicted the sealed claims."
+        self.rehash(case["outcome_packet"], "outcome_packet_hash")
+        self.assertEqual([], self.validate_synthetic_case(case))
+
+    def test_post_cutoff_source_cannot_enter_input_packet(self):
+        case = self.make_complete_case(stage="memo_sealed")
+        record = case["input_packet"]["pre_cutoff_evidence_records"][0]
+        record["published_at_utc"] = "2020-01-03T00:00:00Z"
+        self.rehash(case["input_packet"], "input_packet_hash")
+        errors = self.validate_synthetic_case(case)
+        self.assertTrue(any("published after its packet cutoff" in error for error in errors))
 
     def case_registry(self, cases: list[dict]) -> dict:
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "benchmark_id": BENCHMARK_ID,
             "registry_id": REGISTRY_ID,
             "status": "testing",
@@ -145,7 +215,39 @@ class HistoricalPolicyBenchmarkTests(unittest.TestCase):
             "real_money_trading_authorized": False,
         }
 
-    def make_complete_case(self, protocol: dict, stage: str) -> dict:
+    def evidence_record(
+        self,
+        evidence_id: str,
+        *,
+        source_type: str,
+        stance: str,
+        temporal_role: str,
+        published_at: str,
+        available_before_memo_seal: bool,
+        affected_claims: list[str],
+    ) -> dict:
+        return {
+            "evidence_id": evidence_id,
+            "source_url": f"https://example.test/{evidence_id}",
+            "title": f"Evidence {evidence_id}",
+            "publisher": "Synthetic Source",
+            "published_at_utc": published_at,
+            "accessed_at_utc": "2026-08-01T00:00:00Z",
+            "source_type": source_type,
+            "evidence_stance": stance,
+            "affected_claims": affected_claims,
+            "temporal_role": temporal_role,
+            "available_before_memo_seal": available_before_memo_seal,
+            "reliability": "primary" if source_type == "official_text" else "high",
+            "summary": "Synthetic evidence used to test source-level audit rules.",
+            "archive_reference": f"sha256:{evidence_id}",
+            "notes": "",
+        }
+
+    def rehash(self, payload: dict, hash_field: str) -> None:
+        payload[hash_field] = payload_hash(payload, hash_field)
+
+    def make_complete_case(self, stage: str) -> dict:
         case = self.make_selected_case(stage)
         input_packet = {
             "case_id": case["case_id"],
@@ -155,15 +257,21 @@ class HistoricalPolicyBenchmarkTests(unittest.TestCase):
             "passage_timestamp_utc": "2020-01-01T00:00:00Z",
             "signature_timestamp_utc": "2020-01-02T00:00:00Z",
             "information_cutoff_utc": "2020-01-02T00:00:00Z",
-            "official_text_sources": ["official://text"],
-            "official_summary_sources": ["official://summary"],
-            "official_fiscal_or_agency_sources": ["official://estimate"],
-            "pre_cutoff_news_sources": ["news://contemporaneous"],
-            "pre_cutoff_company_disclosures": ["issuer://filing"],
+            "pre_cutoff_evidence_records": [
+                self.evidence_record(
+                    "EVID-INPUT-001",
+                    source_type="official_text",
+                    stance="supports",
+                    temporal_role="pre_cutoff_input",
+                    published_at="2020-01-01T00:00:00Z",
+                    available_before_memo_seal=True,
+                    affected_claims=["operative text and legal mechanism"],
+                )
+            ],
             "tradable_universe_at_cutoff": ["AAA", "BBB"],
             "point_in_time_financial_data_version": "v1",
         }
-        input_packet["input_packet_hash"] = payload_hash(input_packet, "input_packet_hash")
+        self.rehash(input_packet, "input_packet_hash")
         case["input_packet"] = input_packet
 
         memo = {
@@ -184,26 +292,60 @@ class HistoricalPolicyBenchmarkTests(unittest.TestCase):
             "confidence_before_outcome": 0.60,
             "known_competing_explanations": ["earnings"],
         }
-        memo["memo_hash"] = payload_hash(memo, "memo_hash")
+        self.rehash(memo, "memo_hash")
         case["sealed_memo"] = memo
 
         if stage in {"outcome_revealed", "scored"}:
+            contradictory_id = "EVID-OUTCOME-CONTRA-001"
             outcome = {
                 "outcome_revealed_at_utc": "2026-08-01T00:00:00Z",
                 "market_returns_1d": {"AAA": 0.01, "BBB": -0.01},
                 "market_returns_5d": {"AAA": 0.02, "BBB": -0.02},
                 "market_returns_20d": {"AAA": 0.03, "BBB": -0.01},
                 "market_returns_60d": {"AAA": 0.04, "BBB": 0.00},
-                "benchmark_returns": {"1d": 0.0, "5d": 0.0, "20d": 0.01, "60d": 0.02},
-                "after_cost_abnormal_returns": {"AAA_5d": 0.018, "BBB_5d": 0.018},
-                "operating_performance_changes": {"AAA": "improved", "BBB": "unchanged"},
-                "company_disclosures_after_event": ["issuer://later-disclosure"],
-                "mainstream_reporting_after_event": ["news://later-mainstream"],
-                "trade_and_niche_reporting_after_event": ["news://later-niche"],
+                "benchmark_returns": {
+                    "1d": 0.0,
+                    "5d": 0.0,
+                    "20d": 0.01,
+                    "60d": 0.02,
+                },
+                "after_cost_abnormal_returns": {
+                    "AAA_5d": 0.018,
+                    "BBB_5d": 0.018,
+                },
+                "operating_performance_changes": {
+                    "AAA": "improved",
+                    "BBB": "unchanged",
+                },
+                "post_outcome_evidence_records": [
+                    self.evidence_record(
+                        contradictory_id,
+                        source_type="niche_news",
+                        stance="contradicts",
+                        temporal_role="post_outcome_reveal",
+                        published_at="2021-01-01T00:00:00Z",
+                        available_before_memo_seal=False,
+                        affected_claims=["beneficiary mapping", "implementation timing"],
+                    )
+                ],
+                "contradictory_evidence_review": {
+                    "review_completed_at_utc": "2026-08-01T00:00:00Z",
+                    "search_scope": [
+                        "mainstream reporting",
+                        "trade publications",
+                        "niche industry reporting",
+                        "company disclosures",
+                    ],
+                    "contradictory_evidence_ids": [contradictory_id],
+                    "mixed_evidence_ids": [],
+                    "late_discovered_pre_cutoff_evidence_ids": [],
+                    "no_contradictory_evidence_found": False,
+                    "reviewer_notes": "The niche article challenges the original beneficiary and timing claims.",
+                },
                 "implementation_timeline": "Implemented within one year.",
                 "competing_market_explanations": ["sector rally"],
             }
-            outcome["outcome_packet_hash"] = payload_hash(outcome, "outcome_packet_hash")
+            self.rehash(outcome, "outcome_packet_hash")
             case["outcome_packet"] = outcome
         return case
 
