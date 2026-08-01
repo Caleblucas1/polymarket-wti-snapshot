@@ -31,34 +31,30 @@ Canonical confirmatory claim:
 
 Entry hours: every UTC hour, with 20:00 UTC confirmatory and 19:00/21:00 robustness checks.
 
-Forward horizons:
+Forward horizons: 1, 2, 4, 8, 12, 24, 48, 96 and 168 hours.
 
-- 1, 2, 4, 8, 12 and 24 hours;
-- 48 hours (2 days);
-- 96 hours (4 days);
-- 168 hours (7 days).
+For each entry-hour × horizon cell report sample size, mean and median gross return, mean after the frozen 14-basis-point round-trip assumption, directional hit rate, standard error, confidence interval and hour rank.
 
-For each entry-hour × horizon cell report:
-
-- sample size;
-- mean and median gross return;
-- mean return after a frozen round-trip cost assumption;
-- directional hit rate;
-- standard error and confidence interval;
-- maximum adverse and favorable excursion where available.
-
-Additional exploratory questions:
-
-- Which hour/horizon combinations are persistently strongest or weakest?
-- Is 20:00→00:00 profitable while 20:00→22:00 is weak?
-- Are poor intervals concentrated by weekday, weekend or regional session?
-- Does the effect align with the U.S. cash close and change under daylight-saving time?
-- Does the result survive rolling 7, 14, 21, 30, 60, 90, 180 and 365-day windows?
-
-The all-hour and weekday matrices are exploratory. New patterns discovered there must be tested on a later untouched sample and must not rewrite the frozen 20:00 UTC claim.
+Additional exploratory questions include strong and weak hour/horizon combinations, weekday effects, regional-session effects and whether 20:00→00:00 differs from 20:00→22:00.
 
 ### Data and causality
 
-Use Binance public spot BTCUSDT one-hour klines normalized to UTC. A scheduled entry at an hourly boundary uses that bar's open. The 20:00 UTC rule contains no price-derived trigger, so the scheduled boundary is known in advance. Local-low proximity uses future data only as a diagnostic and never as an entry input.
+Use Binance public spot BTCUSDT one-hour klines normalized to UTC. A scheduled entry at an hourly boundary uses that bar's open. The local-low proximity calculation uses future data only as a diagnostic and never as an entry input.
 
-The first implementation should preserve downloaded archive hashes, source URLs, date coverage and missing-hour checks. Research only; no real-money authorization.
+Binance archive timestamps changed scale during the sample. Older files use milliseconds and newer files use microseconds. The parser normalizes timestamp magnitude before date filtering. An earlier 8,784-bar output therefore covered only 2024 and is superseded. The corrected January 2024 through June 2026 sample contains 21,888 consecutive hourly bars with no gaps.
+
+### Corrected full-sample result
+
+20:00 UTC is not a persistent local-bottom hour. Its median position in the surrounding 24-hour high-low range is approximately 50%, and about 15.9% of observations lie in the bottom quartile. The 1–48-hour returns remain negative after the frozen cost assumption. The hour ranks relatively well at 2–12 hours, but absolute profitability is not established.
+
+### Recent-regime windows
+
+The separate recent-regime analysis evaluates windows ending at the latest finalized bar: 7, 14, 21, 30, 60 and 90 days.
+
+Support requires more than positive BTC drift. The 20:00 UTC entry must outperform the cross-hour mean after costs, rank in the top six of 24 hours and show local-low concentration across adjacent windows.
+
+The latest 7-, 14-, 21- and 30-day windows show a distinct short-horizon effect: 20:00 UTC ranks near the top for 1–12-hour returns and outperforms the cross-hour average. The effect weakens in 60- and 90-day windows. The local-low diagnostic remains weak in every window, with median range positions around 35%–53% and bottom-quartile shares around 10%–17%.
+
+The current evidence therefore supports a possible recent short-horizon timing regime, not the stronger claim that 20:00 UTC is generally the day's local bottom. New patterns discovered in the all-hour matrix require a later untouched sample and must not rewrite the frozen claim.
+
+Research only; no real-money authorization.
