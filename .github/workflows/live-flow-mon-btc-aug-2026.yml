@@ -6,9 +6,12 @@ on:
       - "signal_research/live_flow_mon_btc.py"
       - "signal_research/live_flow_mon_btc_resilient.py"
       - "signal_research/live_tests/FLOW-MON-BTC-2026-08.json"
+      - "signal_research/research_priorities.json"
+      - "signal_research/priorities.py"
       - "signal_records/live/FLOW-MON-BTC-2026-08.json"
       - "tests/test_signal_live_flow_mon_btc.py"
       - "tests/test_signal_live_flow_mon_btc_resilient.py"
+      - "tests/test_signal_research_priorities.py"
       - ".github/workflows/live-flow-mon-btc-aug-2026.yml"
   push:
     branches: [main]
@@ -16,9 +19,12 @@ on:
       - "signal_research/live_flow_mon_btc.py"
       - "signal_research/live_flow_mon_btc_resilient.py"
       - "signal_research/live_tests/FLOW-MON-BTC-2026-08.json"
+      - "signal_research/research_priorities.json"
+      - "signal_research/priorities.py"
       - ".github/workflows/live-flow-mon-btc-aug-2026.yml"
   schedule:
-    - cron: "30 6 * * *"
+    - cron: "30 6 * 8 *"
+    - cron: "30 6 1-5 9 *"
   workflow_dispatch:
 
 permissions:
@@ -37,33 +43,54 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Enforce one-off collection window
+        id: collection_gate
+        shell: bash
+        run: |
+          now_utc="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" && "${now_utc}" > "2026-09-05T23:59:59Z" ]]; then
+            echo "run=false" >> "${GITHUB_OUTPUT}"
+            echo "The one-off August 2026 completion window has ended. No future monthly test is launched."
+          else
+            echo "run=true" >> "${GITHUB_OUTPUT}"
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.collection_gate.outputs.run == 'true'
         with:
           python-version: "3.11"
 
       - name: Install requirements
+        if: steps.collection_gate.outputs.run == 'true'
         run: python -m pip install -r requirements.txt
 
-      - name: Run focused unit tests and compile collectors
+      - name: Run focused unit tests and priority guardrails
+        if: steps.collection_gate.outputs.run == 'true'
         run: |
           python -m unittest \
             tests.test_signal_live_flow_mon_btc \
             tests.test_signal_live_flow_mon_btc_resilient \
+            tests.test_signal_research_priorities \
             -v
+          python -m signal_research.priorities --validate
           python -m py_compile \
             signal_research/live_flow_mon_btc.py \
-            signal_research/live_flow_mon_btc_resilient.py
+            signal_research/live_flow_mon_btc_resilient.py \
+            signal_research/priorities.py
 
-      - name: Collect frozen live shadow observation
+      - name: Collect frozen one-off shadow observation
+        if: steps.collection_gate.outputs.run == 'true'
         run: |
           python -m signal_research.live_flow_mon_btc_resilient \
             --config signal_research/live_tests/FLOW-MON-BTC-2026-08.json \
             --record signal_records/live/FLOW-MON-BTC-2026-08.json
 
       - name: Print auditable shadow record
+        if: steps.collection_gate.outputs.run == 'true'
         run: cat signal_records/live/FLOW-MON-BTC-2026-08.json
 
       - name: Upload shadow record artifact
+        if: steps.collection_gate.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: FLOW-MON-BTC-2026-08-${{ github.run_id }}
@@ -72,7 +99,7 @@ jobs:
           retention-days: 90
 
       - name: Commit scheduled or main-push snapshot
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: steps.collection_gate.outputs.run == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
         run: |
           if git diff --quiet -- signal_records/live/FLOW-MON-BTC-2026-08.json; then
             echo "No shadow-record change to commit."
