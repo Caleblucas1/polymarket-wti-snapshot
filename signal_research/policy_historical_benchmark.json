@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "benchmark_id": "POLICY-HISTORICAL-INTERPRETATION-001",
   "registry_id": "POLICY-US-LEGISLATION-001",
   "status": "implemented_awaiting_case_population",
@@ -48,7 +48,9 @@
     "memo_hash_required_before_outcome_reveal": true,
     "all_source_publication_timestamps_preserved": true,
     "source_stance_tagging_required": true,
+    "source_author_and_publisher_required": true,
     "contradictory_evidence_review_required": true,
+    "ai_research_assistance_disclosure_required": true,
     "retrospective_reporting_role": "Post-outcome mainstream, trade-publication and niche reporting may explain realized transmission only after the memo is sealed."
   },
   "evidence_record_schema": {
@@ -56,6 +58,7 @@
       "evidence_id",
       "source_url",
       "title",
+      "authors",
       "publisher",
       "published_at_utc",
       "accessed_at_utc",
@@ -98,9 +101,54 @@
       "medium",
       "low"
     ],
+    "author_rule": "Every source must name at least one human or institutional author. When no personal byline exists, use the responsible institution, agency, legislative chamber, company or data provider rather than leaving authors blank.",
+    "publisher_rule": "Publisher must identify the organization that issued or hosted the source and must remain separate from the author list.",
     "affected_claims_rule": "Supporting, contradicting and mixed evidence must identify at least one affected claim. Neutral context may use an empty list.",
     "late_discovery_rule": "Any post-outcome source that was already available before the memo seal must be listed as late-discovered pre-cutoff evidence so the omission is visible and auditable.",
     "immutability_rule": "Evidence records are append-only. A correction creates a superseding record and preserves the original evidence_id."
+  },
+  "research_assistance_schema": {
+    "purpose": "Permit tools such as Google NotebookLM and Google Gemini to organize, compare, search and synthesize the registered source set while preserving the original sources as the only evidence.",
+    "required_fields": [
+      "assistance_id",
+      "tool_family",
+      "tool_name",
+      "model_or_version",
+      "workspace_reference",
+      "used_at_utc",
+      "temporal_role",
+      "task",
+      "input_evidence_ids",
+      "output_artifact_reference",
+      "extracted_claims",
+      "source_grounding_verified",
+      "human_reviewed",
+      "verification_notes",
+      "notes"
+    ],
+    "allowed_tool_families": [
+      "google_notebooklm",
+      "google_gemini",
+      "other"
+    ],
+    "allowed_temporal_roles": [
+      "pre_cutoff_research",
+      "post_outcome_research"
+    ],
+    "claim_required_fields": [
+      "claim",
+      "source_evidence_ids",
+      "verification_status"
+    ],
+    "allowed_verification_statuses": [
+      "verified_against_original_sources",
+      "rejected",
+      "unresolved"
+    ],
+    "source_of_truth_rule": "AI-generated summaries, answers, citations and syntheses are research assistance artifacts, not evidence. Every accepted claim must be verified against the original registered evidence records.",
+    "timing_rule": "Pre-cutoff assistance may reference only pre-cutoff evidence. Post-outcome assistance may reference registered input and outcome evidence but cannot alter the sealed memo.",
+    "locking_rule": "A locked packet may contain a research-assistance record only after source grounding and human review are complete and no extracted claim remains unresolved.",
+    "privacy_rule": "Store a stable non-secret notebook or workspace reference and archived output reference; never commit credentials, access tokens or private share secrets."
   },
   "required_contradictory_evidence_review_fields": [
     "review_completed_at_utc",
@@ -120,6 +168,7 @@
     "signature_timestamp_utc",
     "information_cutoff_utc",
     "pre_cutoff_evidence_records",
+    "research_assistance_records",
     "tradable_universe_at_cutoff",
     "point_in_time_financial_data_version",
     "input_packet_hash"
@@ -153,6 +202,7 @@
     "after_cost_abnormal_returns",
     "operating_performance_changes",
     "post_outcome_evidence_records",
+    "research_assistance_records",
     "contradictory_evidence_review",
     "implementation_timeline",
     "competing_market_explanations",
@@ -200,10 +250,14 @@
     "Do not treat correct legal interpretation as proof of trading alpha.",
     "Do not treat a profitable stock move as proof that the legal interpretation caused it.",
     "Do not exclude failed intuitive trades, no-trade conclusions or ambiguous cases from the benchmark.",
+    "Do not omit the author or publisher of a source; use an institutional author when no personal byline exists.",
     "Do not omit, downgrade or bury contradictory evidence without an explicit source-level record and review note.",
+    "Do not cite NotebookLM, Gemini or another AI assistant as the evidence source when the original article, filing, law or dataset is available.",
+    "Do not allow an unverified AI-generated claim to enter a sealed memo, outcome review or score.",
     "Do not authorize real-money trading from this benchmark."
   ],
   "case_registry_path": "signal_records/policy_historical_cases.json",
   "documentation_path": "docs/SIGNAL_POLICY_HISTORICAL_BENCHMARK.md",
-  "evidence_documentation_path": "docs/SIGNAL_POLICY_EVIDENCE_STANCE.md"
+  "evidence_documentation_path": "docs/SIGNAL_POLICY_EVIDENCE_STANCE.md",
+  "research_assistance_documentation_path": "docs/SIGNAL_POLICY_AI_RESEARCH_ASSISTANCE.md"
 }
