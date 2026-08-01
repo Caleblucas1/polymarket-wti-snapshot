@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "live_test_id": "FLOW-MON-BTC-2026-08",
+  "registry_id": "FLOW-MON-BTC-001",
+  "status": "awaiting_snapshot",
+  "test_type": "untouched_out_of_sample_shadow",
+  "real_money_trading_authorized": false,
+  "entry": null,
+  "marks": [],
+  "funding_observations": [],
+  "exit": null,
+  "performance": null,
+  "last_updated_at_utc": null,
+  "data_quality": {
+    "source": "Binance USD-M Futures public REST API",
+    "complete": false,
+    "errors": []
+  },
+  "notes": "This file is updated only by the frozen live-test collector. It records a shadow observation and never represents a real-money position."
+}
