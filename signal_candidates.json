@@ -3,7 +3,8 @@
   "methodology": {
     "lifecycle": ["candidate", "hypothesis", "backtest", "production", "retired"],
     "promotion_rule": "No signal reaches production without predeclared rules, implementation costs, regime tests, and out-of-sample evidence.",
-    "canonical_before_enhanced": true
+    "canonical_before_enhanced": true,
+    "reserved_ids": ["S-002", "S-004"]
   },
   "signals": [
     {
@@ -24,15 +25,6 @@
       "notes": "The exact event definition and eligible announcement universe must be finalized before backtesting."
     },
     {
-      "signal_id": "S-002",
-      "name": "Unextracted source candidate",
-      "stage": "candidate",
-      "source_urls": ["https://x.com/docxbt/status/2083177593029689771?s=46"],
-      "hypothesis": "Pending exact extraction from the source post and attached media.",
-      "status": "needs_source_extraction",
-      "notes": "Do not infer a trading rule from the URL alone."
-    },
-    {
       "signal_id": "S-003",
       "name": "Public Apple call accuracy tracker",
       "stage": "hypothesis",
@@ -48,15 +40,6 @@
       "canonical_rule": "Count one continuous thesis as one campaign; score all timestamped bullish and bearish campaigns using predeclared horizons and disclosed exits.",
       "status": "collection_required",
       "notes": "Scaled entries are not independent forecasts. Options P&L is unscorable without contract premium or a reproducible proxy."
-    },
-    {
-      "signal_id": "S-004",
-      "name": "Unextracted source candidate",
-      "stage": "candidate",
-      "source_urls": ["https://x.com/themarketradar/status/2083180005606257023?s=46"],
-      "hypothesis": "Pending exact extraction from the source post and attached media.",
-      "status": "needs_source_extraction",
-      "notes": "Do not infer a trading rule from the URL alone."
     },
     {
       "signal_id": "S-005",
