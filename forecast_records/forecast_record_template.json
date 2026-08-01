@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "forecast_id": "PROJECT-TOPIC-YYYYMMDD-001",
-  "project": "signals_or_polymarket",
-  "status": "open",
-  "question": "Precisely stated, externally resolvable forecast question",
+  "project": "signals",
+  "status": "draft",
+  "question": "",
   "target": {
     "event_or_asset": "",
-    "forecast_type": "binary_probability_or_numeric",
+    "forecast_type": "binary_probability",
     "horizon_start_utc": "",
     "horizon_end_utc": "",
     "information_cutoff_utc": ""
@@ -30,14 +30,7 @@
     "base_rate": null,
     "source_notes": ""
   },
-  "decomposition": [
-    {
-      "driver": "",
-      "estimated_state": "",
-      "effect_on_forecast": "up_down_or_flat",
-      "weight_or_probability": null
-    }
-  ],
+  "decomposition": [],
   "evidence": {
     "supporting": [],
     "disconfirming": [],
@@ -48,26 +41,14 @@
     "asset_classes": [],
     "invalidating_conditions": []
   },
-  "updates": [
-    {
-      "timestamp_utc": "",
-      "old_probability": null,
-      "new_probability": null,
-      "old_numeric_value": null,
-      "new_numeric_value": null,
-      "new_evidence": "",
-      "evidence_was_expected": null,
-      "regime_changed": false,
-      "market_moved_first": null
-    }
-  ],
+  "updates": [],
   "polymarket_comparison": {
     "market_slug": null,
     "market_probability_at_cutoff": null,
     "project_minus_market_probability": null
   },
   "scoring": {
-    "primary_metric": "",
+    "primary_metric": "brier",
     "project_score": null,
     "benchmark_score": null,
     "relative_improvement": null,
