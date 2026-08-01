@@ -25,6 +25,11 @@ from signal_research.policy_benchmark import (
     summarize_benchmark,
     validate_benchmark,
 )
+from signal_research.policy_pilots import (
+    get_pilot as get_policy_pilot,
+    summarize_pilots,
+    validate_pilots,
+)
 from signal_research.policy_roadmap import summarize_roadmap, validate_roadmap
 from signal_research.rebound import ReboundConfig, evaluate_rebound
 from signal_research.registry import get_candidate, load_candidates, validate_registry
@@ -93,6 +98,14 @@ def command_policy_case(args: argparse.Namespace) -> None:
     _print_json(get_policy_case(args.case_id))
 
 
+def command_policy_pilots(_: argparse.Namespace) -> None:
+    _print_json(summarize_pilots())
+
+
+def command_policy_pilot(args: argparse.Namespace) -> None:
+    _print_json(get_policy_pilot(args.case_id))
+
+
 def command_policy_roadmap(_: argparse.Namespace) -> None:
     _print_json(summarize_roadmap())
 
@@ -101,11 +114,13 @@ def command_validate(_: argparse.Namespace) -> None:
     registry_errors = validate_registry()
     hypothesis_errors = validate_hypotheses()
     policy_benchmark_errors = validate_benchmark()
+    policy_pilot_errors = validate_pilots()
     policy_roadmap_errors = validate_roadmap()
     errors = [
         *(f"registry: {error}" for error in registry_errors),
         *(f"hypotheses: {error}" for error in hypothesis_errors),
         *(f"policy_benchmark: {error}" for error in policy_benchmark_errors),
+        *(f"policy_pilots: {error}" for error in policy_pilot_errors),
         *(f"policy_roadmap: {error}" for error in policy_roadmap_errors),
     ]
     if errors:
@@ -114,6 +129,7 @@ def command_validate(_: argparse.Namespace) -> None:
     candidates = load_candidates()
     hypothesis_summary = summarize_statuses(hypothesis_statuses())
     policy_summary = summarize_benchmark()
+    pilot_summary = summarize_pilots()
     roadmap_summary = summarize_roadmap()
     _print_json({
         "valid": True,
@@ -125,6 +141,7 @@ def command_validate(_: argparse.Namespace) -> None:
         "blocked_canonical_hypotheses": hypothesis_summary["blocked_canonical"],
         "dataset_eligible_signals": hypothesis_summary["dataset_eligible"],
         "historical_policy_benchmark": policy_summary,
+        "historical_policy_pilots": pilot_summary,
         "policy_roadmap": roadmap_summary,
         "real_money_trading_authorized": False,
     })
@@ -208,6 +225,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     policy_case_parser.add_argument("case_id", help="Historical policy benchmark case ID")
     policy_case_parser.set_defaults(func=command_policy_case)
+
+    policy_pilots_parser = subparsers.add_parser(
+        "policy-pilots",
+        help="Summarize non-gating retrospective policy pipeline pilots",
+    )
+    policy_pilots_parser.set_defaults(func=command_policy_pilots)
+
+    policy_pilot_parser = subparsers.add_parser(
+        "policy-pilot",
+        help="Show one non-gating retrospective policy pilot",
+    )
+    policy_pilot_parser.add_argument("case_id", help="Policy pilot case ID")
+    policy_pilot_parser.set_defaults(func=command_policy_pilot)
 
     policy_roadmap_parser = subparsers.add_parser(
         "policy-roadmap",
