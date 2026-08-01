@@ -6,7 +6,7 @@ import hashlib
 import io
 import json
 import zipfile
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -168,7 +168,7 @@ def update_from_archive(
         "complete": status == "closed" and not pending,
         "live_api_status": "restricted_location_http_451",
         "live_api_error": api_error,
-        "archive_publication_lag": true,
+        "archive_publication_lag": True,
         "pending_target_timestamps_utc": sorted(set(pending)),
         "funding_complete": False,
         "errors": [],
