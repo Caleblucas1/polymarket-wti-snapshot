@@ -1,0 +1,75 @@
+name: FLOW-MON-BTC August 2026 shadow
+
+on:
+  pull_request:
+    paths:
+      - "signal_research/live_flow_mon_btc.py"
+      - "signal_research/live_tests/FLOW-MON-BTC-2026-08.json"
+      - "signal_records/live/FLOW-MON-BTC-2026-08.json"
+      - "tests/test_signal_live_flow_mon_btc.py"
+      - ".github/workflows/live-flow-mon-btc-aug-2026.yml"
+  push:
+    branches: [main]
+    paths:
+      - "signal_research/live_flow_mon_btc.py"
+      - "signal_research/live_tests/FLOW-MON-BTC-2026-08.json"
+      - ".github/workflows/live-flow-mon-btc-aug-2026.yml"
+  schedule:
+    - cron: "10 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: flow-mon-btc-2026-08-shadow
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install requirements
+        run: python -m pip install -r requirements.txt
+
+      - name: Run focused unit tests
+        run: python -m unittest tests.test_signal_live_flow_mon_btc -v
+
+      - name: Collect frozen live shadow observation
+        run: |
+          python signal_research/live_flow_mon_btc.py \
+            --config signal_research/live_tests/FLOW-MON-BTC-2026-08.json \
+            --record signal_records/live/FLOW-MON-BTC-2026-08.json
+
+      - name: Print auditable shadow record
+        run: cat signal_records/live/FLOW-MON-BTC-2026-08.json
+
+      - name: Upload shadow record artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FLOW-MON-BTC-2026-08-${{ github.run_id }}
+          path: signal_records/live/FLOW-MON-BTC-2026-08.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Commit scheduled or main-push snapshot
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        run: |
+          if git diff --quiet -- signal_records/live/FLOW-MON-BTC-2026-08.json; then
+            echo "No shadow-record change to commit."
+            exit 0
+          fi
+          git config user.name "signals-shadow-bot"
+          git config user.email "signals-shadow-bot@users.noreply.github.com"
+          git add signal_records/live/FLOW-MON-BTC-2026-08.json
+          git commit -m "Update FLOW-MON-BTC August 2026 shadow"
+          git push origin HEAD:main
