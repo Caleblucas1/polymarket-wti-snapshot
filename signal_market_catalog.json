@@ -1,10 +1,11 @@
 {
-  "version": 2,
+  "version": 3,
   "definition_version": "all-active-contracts-v1",
-  "updated": "2026-08-01",
+  "updated": "2026-08-03",
   "notes": [
     "Event pages may contain multiple dated or threshold conditional markets.",
     "Each supplied event URL is stored once, while every currently active contract on that page is an exact signal row.",
+    "Recurring source pages use Gamma series metadata and retain prior URLs for auditability; the live resolver selects the next not-yet-ended sibling event.",
     "The questionnaire inputs remain binary: each contract is rated Up or Down over the selected observation window.",
     "Flat is available as an overall signal-level response, not as a third scenario-input state.",
     "The five first-examined contracts are highlighted for convenience, not treated as primary signals. Every active contract uses the same evidence schema and daily review controls.",
@@ -16,16 +17,21 @@
     "contract_is_signal_unit": true,
     "aggregate_event_probabilities": false,
     "highlighted_contracts_are_primary": false,
-    "fully_resolved_events_have_no_active_signal_rows": true
+    "fully_resolved_events_have_no_active_signal_rows": true,
+    "recurring_source_selection": "next_not_yet_ended_series_event"
   },
   "events": {
     "hormuz_normal_by_july_31": {
-      "label": "Strait of Hormuz traffic returns to normal by July 31",
-      "url": "https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-july-31"
+      "label": "Strait of Hormuz traffic returns to normal by August 31",
+      "url": "https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-august-31-20260702154212320",
+      "previous_urls": ["https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-july-31"],
+      "recurrence": {"series_id": "11492", "frequency": "monthly", "selection": "next_event"}
     },
     "wti_july_2026": {
-      "label": "What price will WTI hit in July 2026?",
-      "url": "https://polymarket.com/event/what-price-will-wti-hit-in-july-2026"
+      "label": "What price will WTI hit in August 2026?",
+      "url": "https://polymarket.com/event/what-price-will-wti-hit-in-august-2026",
+      "previous_urls": ["https://polymarket.com/event/what-price-will-wti-hit-in-july-2026"],
+      "recurrence": {"series_id": "10820", "frequency": "monthly", "selection": "next_event"}
     },
     "crude_oil_ath": {
       "label": "Crude oil all-time high by…?",
@@ -37,7 +43,8 @@
     },
     "us_invades_iran": {
       "label": "Will the U.S. invade Iran before 2027?",
-      "url": "https://polymarket.com/event/will-the-us-invade-iran-before-2027"
+      "url": "https://polymarket.com/event/will-the-us-invade-iran-before-2027",
+      "recurrence": {"series_id": "10135", "frequency": "monthly", "selection": "next_event"}
     },
     "iran_blockade_ends": {
       "label": "U.S. announces end of Iranian blockade by…?",
@@ -61,33 +68,46 @@
     },
     "us_iran_peace_talks": {
       "label": "Next round of U.S.–Iran peace talks by…?",
-      "url": "https://polymarket.com/event/next-round-of-us-iran-peace-talks-byptptpt-20260623022722982"
+      "url": "https://polymarket.com/event/next-round-of-us-iran-peace-talks-byptptpt-20260623022722982",
+      "recurrence": {"series_id": "11145", "frequency": "monthly", "selection": "next_event"}
     },
     "hormuz_transit_july_20": {
-      "label": "How many ships transit Hormuz — week of July 20?",
-      "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-20-20260717154058215"
+      "label": "How many ships transit Hormuz — week of August 3?",
+      "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-august-3-20260730202018839",
+      "previous_urls": [
+        "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-20-20260717154058215",
+        "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-27-20260724144200302"
+      ],
+      "recurrence": {"series_id": "11350", "frequency": "weekly", "selection": "next_event"}
     },
     "hormuz_transit_july_27": {
       "label": "How many ships transit Hormuz — week of July 27?",
-      "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-27-20260724144200302"
+      "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-july-27-20260724144200302",
+      "historical_only": true,
+      "superseded_by": "hormuz_transit_july_20"
     },
     "zero_hormuz_transit": {
       "label": "Zero ships transit Hormuz on any date by…?",
       "url": "https://polymarket.com/event/0-ships-transit-hormuz-on-any-date-byptpt-20260626172559966"
     },
     "bab_el_mandeb_average_transit": {
-      "label": "Average ships transiting Bab el-Mandeb at end of July",
-      "url": "https://polymarket.com/event/avgpt-of-ships-transiting-bab-el-mandeb-strait-end-of-july-20260713195907051"
+      "label": "Average ships transiting Bab el-Mandeb at end of August",
+      "url": "https://polymarket.com/event/avgpt-of-ships-transiting-bab-el-mandeb-strait-end-of-august-1785517679415",
+      "previous_urls": ["https://polymarket.com/event/avgpt-of-ships-transiting-bab-el-mandeb-strait-end-of-july-20260713195907051"],
+      "recurrence": {"series_id": "12225", "frequency": "monthly", "selection": "next_event"}
     },
     "iran_targets_shipping": {
       "label": "Iran successfully targets shipping by…?",
-      "url": "https://polymarket.com/event/iran-successfully-targets-shipping-onptptpt-20260625225210236"
+      "url": "https://polymarket.com/event/iran-successfully-targets-shipping-onptptpt-20260729163314520",
+      "previous_urls": ["https://polymarket.com/event/iran-successfully-targets-shipping-onptptpt-20260625225210236"],
+      "recurrence": {"series_id": "11413", "frequency": "monthly", "selection": "next_event"}
     },
     "houthis_target_shipping_july_22": {
       "label": "Houthis successfully target shipping on…? (day-specific)",
       "url": "https://polymarket.com/event/houthis-successfully-target-shipping-onptptpt-20260722225036915",
       "question_structure": "Each conditional asks whether a qualifying incident occurs on one exact calendar date.",
-      "not_a_continuation_of": "https://polymarket.com/event/houthis-successfully-target-shipping-byptptpt-20260708165455691"
+      "not_a_continuation_of": "https://polymarket.com/event/houthis-successfully-target-shipping-byptptpt-20260708165455691",
+      "recurrence": {"series_id": "12384", "frequency": "daily", "selection": "container"}
     }
   },
   "variables": [
@@ -138,4 +158,3 @@
     }
   ]
 }
-
