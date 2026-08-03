@@ -31,6 +31,22 @@ highlighted convenience view, but they are not primary signals and no other
 active event is treated as reference-only. Exact contracts are never averaged
 into broad diplomacy, shipping, or oil baskets.
 
+### Recurring event rollover
+
+Gamma exposes recurring-family metadata in `event.series[]`, including a
+stable series ID and `recurrence` value such as `weekly`, `monthly`, or
+`daily`. The series endpoint returns sibling event slugs. `recurring_events.py`
+uses that metadata to select the next not-yet-ended sibling for configured
+recurring families while retaining the logical source ID and prior URLs.
+
+The live dashboard therefore does not keep pointing at an expired July page
+when Polymarket has published the August or next-week instance. If Gamma has
+not published a successor yet, the resolver keeps the configured page and
+records `configured-fallback-no-future-sibling` instead of guessing. Daily
+Houthi questions are treated as one container because the event itself holds
+the dated contracts. Historical-only catalog slots remain auditable but are not
+fetched as duplicate live sources.
+
 ## Durable daily signal review records
 
 The active-contract signal dashboard records each generated observation through
@@ -415,4 +431,3 @@ python -m unittest discover -s tests -v
 
 - [Gamma event-by-slug API](https://docs.polymarket.com/api-reference/events/get-event-by-slug)
 - [CLOB price-history API](https://docs.polymarket.com/api-reference/markets/get-prices-history)
-
