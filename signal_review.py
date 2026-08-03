@@ -120,7 +120,13 @@ def build_observation_record(
             {
                 "key": signal["key"],
                 "event_id": signal.get("event_id"),
+                "event_instance_id": signal.get("event_instance_id"),
                 "event_label": signal.get("event_label"),
+                "source_url": signal.get("source_url"),
+                "configured_url": signal.get("configured_url"),
+                "series_id": signal.get("series_id"),
+                "recurrence": signal.get("recurrence"),
+                "source_state": signal.get("source_state"),
                 "contract_id": signal.get("contract_id"),
                 "token_id": signal.get("token_id"),
                 "header": signal["header"],
@@ -213,4 +219,3 @@ def apply_user_review(
         signal["user_note"] = notes.get(key) or None
     reviewed["review_status"] = "reviewed"
     return reviewed
-
