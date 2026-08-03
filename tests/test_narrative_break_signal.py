@@ -20,6 +20,10 @@ class NarrativeBreakSignalTests(unittest.TestCase):
         self.assertEqual(len(catalog["variables"]), 5)
         self.assertEqual(len(urls), 17)
         self.assertEqual(len(urls), len(set(urls)))
+        self.assertEqual(catalog["version"], 3)
+        self.assertEqual(catalog["events"]["wti_july_2026"]["recurrence"]["frequency"], "monthly")
+        self.assertEqual(catalog["events"]["hormuz_transit_july_20"]["recurrence"]["frequency"], "weekly")
+        self.assertTrue(catalog["events"]["hormuz_transit_july_27"]["historical_only"])
         self.assertIn(
             "https://polymarket.com/event/"
             "houthis-successfully-target-shipping-onptptpt-20260722225036915",
