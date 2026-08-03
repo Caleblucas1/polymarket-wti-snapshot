@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Durable review records for the five-contract daily signal.
+"""Durable review records for the active exact-contract signal layer.
 
 The market observation is evidence.  A user's rating is an annotation on that
 evidence.  Keeping those layers separate makes it possible to learn from
@@ -14,9 +14,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from signal_contracts import validate_exact_signal_rows
 
-SIGNAL_REVIEW_SCHEMA_VERSION = 1
-SIGNAL_DEFINITION_VERSION = "five-exact-contracts-v1"
+SIGNAL_REVIEW_SCHEMA_VERSION = 2
+SIGNAL_DEFINITION_VERSION = "all-active-contracts-v1"
 DEFAULT_OBSERVATION_PATH = (
     Path(__file__).resolve().parent / "signal_records" / "observations.jsonl"
 )
@@ -114,17 +115,32 @@ def build_observation_record(
     """Create an append-only evidence record with blank user annotations."""
     normalized_signals = []
     for signal in signals:
+        signal_scope = signal.get("signal_scope", "active_contract")
         normalized_signals.append(
             {
                 "key": signal["key"],
+                "event_id": signal.get("event_id"),
+                "event_instance_id": signal.get("event_instance_id"),
+                "event_label": signal.get("event_label"),
+                "source_url": signal.get("source_url"),
+                "configured_url": signal.get("configured_url"),
+                "series_id": signal.get("series_id"),
+                "recurrence": signal.get("recurrence"),
+                "source_state": signal.get("source_state"),
+                "contract_id": signal.get("contract_id"),
+                "token_id": signal.get("token_id"),
                 "header": signal["header"],
                 "contract_label": signal.get("label"),
+                "exact_question": signal.get("exact_question"),
+                "signal_scope": signal_scope,
                 "current_probability": _number(signal.get("current")),
                 "prior_day_probability": _number(signal.get("prior_day")),
                 "change_1d_pp": _number(signal.get("change_1d")),
                 "change_7d_pp": _number(signal.get("change_7d")),
                 "market_move": signal.get("market_move"),
                 "bullish_direction": signal.get("bullish_direction"),
+                "subject": signal.get("subject"),
+                "direction_rationale": signal.get("direction_rationale"),
                 "oil_readthrough": signal.get("oil_readthrough"),
                 "level_readthrough": signal.get("level_readthrough"),
                 "status": signal.get("status", "open"),
@@ -132,6 +148,7 @@ def build_observation_record(
                 "user_note": None,
             }
         )
+    validate_exact_signal_rows(normalized_signals)
     record = {
         "schema_version": SIGNAL_REVIEW_SCHEMA_VERSION,
         "definition_version": SIGNAL_DEFINITION_VERSION,
