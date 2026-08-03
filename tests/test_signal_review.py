@@ -57,6 +57,29 @@ class SignalReviewTests(unittest.TestCase):
         self.assertIsNone(record["signals"][0]["user_rating_vs_prior_day"])
         self.assertEqual(record["signals"][0]["change_1d_pp"], 1.5)
 
+    def test_record_captures_recurring_source_rollover_metadata(self):
+        signal = {
+            **self.signals[0],
+            "event_id": "wti_july_2026",
+            "event_instance_id": "746379",
+            "source_url": "https://polymarket.com/event/what-price-will-wti-hit-in-august-2026",
+            "configured_url": "https://polymarket.com/event/what-price-will-wti-hit-in-july-2026",
+            "series_id": "10820",
+            "recurrence": "monthly",
+            "source_state": "recurring-next",
+        }
+        record = build_observation_record(
+            as_of_et="2026-08-03T09:15:00-04:00",
+            signals=[signal],
+            signal_level="mixed / caution",
+            catalog=self.catalog,
+        )
+        stored = record["signals"][0]
+        self.assertEqual(stored["event_instance_id"], "746379")
+        self.assertEqual(stored["series_id"], "10820")
+        self.assertEqual(stored["recurrence"], "monthly")
+        self.assertEqual(stored["source_state"], "recurring-next")
+
     def test_append_is_idempotent(self):
         record = build_observation_record(
             as_of_et="2026-07-31T14:00:00-04:00",
@@ -294,4 +317,3 @@ class SignalReviewTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
