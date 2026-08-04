@@ -1,0 +1,132 @@
+{
+  "signal_id": "S-012",
+  "registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001",
+  "result_version": 1,
+  "as_of": "2026-08-04",
+  "classification": "prospective_shadow_watchlist_historical_support_not_independent_proof",
+  "lifecycle_stage": "Backtest",
+  "operational_status": "watchlist",
+  "confidence_score": 47,
+  "confidence_label": "promising_but_unconfirmed",
+  "canonical_definition_unchanged": true,
+  "historical_scope": {
+    "first_comparable_date": "2014-10-13",
+    "last_comparable_date": "2026-08-03",
+    "comparable_observations": 2968,
+    "fresh_crossovers": 11,
+    "development_end": "2021-12-31",
+    "source_exposed_validation_start": "2022-01-01",
+    "prospective_untouched_start": "2026-08-04"
+  },
+  "primary_90_day_result": {
+    "canonical_fresh_crossovers_descriptive": {
+      "events": 11,
+      "mean_after_cost_return": 0.5085833707796282,
+      "median_after_cost_return": 0.336439905012915,
+      "hit_rate": 0.9090909090909091,
+      "matched_null_expected_mean_return": 0.23219435974256197,
+      "absolute_edge": 0.27638901103706626,
+      "relative_improvement_vs_abs_expected_mean": 1.1903347322626772,
+      "one_sided_matched_null_probability": 0.0348,
+      "warning": "Several trigger holding windows overlap; this is descriptive rather than the primary independent-sample inference."
+    },
+    "nonoverlapping_primary_inference": {
+      "events": 6,
+      "mean_after_cost_return": 0.3421656446441655,
+      "median_after_cost_return": 0.32693327198730926,
+      "hit_rate": 0.8333333333333334,
+      "matched_null_expected_mean_return": 0.19238451589839686,
+      "absolute_edge": 0.14978112874576863,
+      "relative_improvement_vs_abs_expected_mean": 0.7785508519036524,
+      "clears_predeclared_25pct_improvement_target": true,
+      "one_sided_matched_null_probability": 0.21685,
+      "worst_max_adverse_excursion": -0.5002135946310167,
+      "worst_path_max_drawdown": -0.5043350294199964
+    },
+    "source_exposed_validation_nonoverlapping": {
+      "events": 2,
+      "trigger_dates": ["2022-10-21", "2025-04-09"],
+      "mean_after_cost_return": 0.20763709934748997,
+      "median_after_cost_return": 0.20763709934748997,
+      "hit_rate": 1.0,
+      "matched_null_expected_mean_return": -0.06422677657023577,
+      "absolute_edge": 0.27186387591772576,
+      "relative_improvement_vs_abs_expected_mean": 4.232874362306297,
+      "clears_predeclared_25pct_improvement_target": true,
+      "one_sided_matched_null_probability": 0.0811,
+      "warning": "Only two nonoverlapping source-exposed validation episodes exist, and neither is untouched out-of-sample evidence."
+    }
+  },
+  "nonoverlapping_horizon_summary": {
+    "30": {
+      "events": 7,
+      "mean_after_cost_return": 0.14630169574813337,
+      "hit_rate": 0.7142857142857143,
+      "matched_null_expected_mean_return": 0.05399179426863441,
+      "relative_improvement_vs_abs_expected_mean": 1.7097024229314193,
+      "one_sided_matched_null_probability": 0.12635
+    },
+    "90": {
+      "events": 6,
+      "mean_after_cost_return": 0.3421656446441655,
+      "hit_rate": 0.8333333333333334,
+      "matched_null_expected_mean_return": 0.19238451589839686,
+      "relative_improvement_vs_abs_expected_mean": 0.7785508519036524,
+      "one_sided_matched_null_probability": 0.21685
+    },
+    "180": {
+      "events": 6,
+      "mean_after_cost_return": 1.198235503088991,
+      "hit_rate": 0.8333333333333334,
+      "matched_null_expected_mean_return": 0.5604651788151144,
+      "relative_improvement_vs_abs_expected_mean": 1.1379303271296781,
+      "one_sided_matched_null_probability": 0.05505
+    },
+    "365": {
+      "events": 5,
+      "mean_after_cost_return": 2.565094403112634,
+      "hit_rate": 0.8,
+      "matched_null_expected_mean_return": 0.9767228431860818,
+      "relative_improvement_vs_abs_expected_mean": 1.6262254650922925,
+      "one_sided_matched_null_probability": 0.0015
+    }
+  },
+  "recross_exit_result": {
+    "events": 11,
+    "mean_after_cost_return": 0.0031807812435237434,
+    "median_after_cost_return": -0.006611142289210002,
+    "hit_rate": 0.45454545454545453,
+    "bootstrap_95pct_mean_interval": [-0.034589000494943324, 0.04036873252480806],
+    "decision": "not_promoted"
+  },
+  "interpretation": {
+    "historical_support": true,
+    "historical_sample_adequate_for_production": false,
+    "reason": "The canonical rule produced positive historical outcomes and cleared the predeclared 25% conditional-improvement target, but fresh crossovers cluster, only six independent 90-day episodes remain after overlap control, only two are in the source-exposed validation segment, and no untouched prospective outcome exists.",
+    "recross_exit": "The separate recross-exit test was approximately flat and did not establish a useful exit edge.",
+    "production_blocker": "At least ten untouched prospective nonoverlapping trigger outcomes plus the frozen execution, regime and robustness gates are required before a production review."
+  },
+  "latest_shadow_state": {
+    "decision_date": "2026-08-03",
+    "status": "armed_or_waiting_for_fresh_crossover",
+    "btc_realized_volatility": 0.29461473455976633,
+    "qqq_realized_volatility": 0.2411112764545147,
+    "volatility_ratio": 1.2219035911219398,
+    "btc_below_qqq": false,
+    "regime": "bear_contraction",
+    "prospective_event_count": 0
+  },
+  "artifact_provenance": {
+    "workflow_run_id": 30868542744,
+    "workflow_artifact_id": 8877016315,
+    "workflow_artifact_digest": "sha256:742ff49db7f7e813ca9bea0cac09c42f49ae6d162543b8d473d0a62926288c11",
+    "historical_artifact_sha256": "a91d3c0dc89a3c8467ca74e5b11143c605741ba8fca9eaddd3f9314f67281058",
+    "audit_artifact_sha256": "a36259eb3b025a0bad0cc23d5a6d9138c4b01186d1c603c536fd2b6d2f9b3503",
+    "shadow_artifact_sha256": "41ad9b3082d24e28f84bedc9244d7b6a7ed95f1c1f8b76623a44836cbd6c4aab",
+    "btc_source_payload_sha256": "b2e52cdb45c20f66381dd7aa189e1806016e28cae821ee024ff7733df86d1263",
+    "qqq_source_payload_sha256": "5fd8943c88c81ca98522fddff94610eee949b8571ec5f917142a3359bee73190"
+  },
+  "capital_rights": "none",
+  "real_money_trading_authorized": false,
+  "production_stage_permitted": false
+}

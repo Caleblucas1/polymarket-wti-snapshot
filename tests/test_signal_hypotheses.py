@@ -22,10 +22,10 @@ class SignalHypothesisTests(unittest.TestCase):
     def test_current_hypotheses_are_valid_and_cover_registry(self):
         self.assertEqual([], validate_hypotheses())
         summary = summarize_statuses(statuses())
-        self.assertEqual(9, summary["total"])
-        self.assertEqual(7, summary["frozen_canonical"])
+        self.assertEqual(10, summary["total"])
+        self.assertEqual(8, summary["frozen_canonical"])
         self.assertEqual(1, summary["blocked_canonical"])
-        self.assertEqual(7, summary["dataset_eligible"])
+        self.assertEqual(8, summary["dataset_eligible"])
         self.assertFalse(summary["real_money_trading_authorized"])
 
     def test_policy_alpha_freezes_post_passage_and_blocks_pre_passage_extension(self):

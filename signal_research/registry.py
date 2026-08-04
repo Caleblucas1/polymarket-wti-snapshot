@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 from .governance import capital_rights, component_confidence_score, production_gate
 from .models import SignalCandidate, SignalStage
 
 
 DEFAULT_REGISTRY = Path(__file__).resolve().parents[1] / "signal_candidates.json"
+DEFAULT_EXTENSION_DIR = Path(__file__).resolve().parent / "registry_extensions"
 REGISTRY_ID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+-[0-9]{3}$")
 
 
@@ -55,13 +57,35 @@ def validate_candidate(candidate: SignalCandidate) -> list[str]:
     return errors
 
 
+def _is_default_registry(path: str | Path) -> bool:
+    return Path(path).resolve() == DEFAULT_REGISTRY.resolve()
+
+
+def _extension_rows(directory: Path = DEFAULT_EXTENSION_DIR) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if not directory.exists():
+        return rows
+    for path in sorted(directory.glob("*.json")):
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError(f"{path}: registry extension must be a JSON object")
+        row = raw.get("signal", raw)
+        if not isinstance(row, dict):
+            raise ValueError(f"{path}: signal must be a JSON object")
+        rows.append(dict(row))
+    return rows
+
+
 def load_candidates(
     path: str | Path = DEFAULT_REGISTRY, *, validate: bool = True
 ) -> list[SignalCandidate]:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     if raw.get("schema_version") != 2:
         raise ValueError("unsupported signal registry schema")
-    candidates = [SignalCandidate.from_dict(item) for item in raw["signals"]]
+    rows = list(raw["signals"])
+    if _is_default_registry(path):
+        rows.extend(_extension_rows())
+    candidates = [SignalCandidate.from_dict(item) for item in rows]
 
     for field in ("signal_id", "registry_id"):
         values = [getattr(candidate, field) for candidate in candidates]

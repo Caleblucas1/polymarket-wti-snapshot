@@ -1,0 +1,69 @@
+{
+  "signal": {
+    "signal_id": "S-012",
+    "registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001",
+    "name": "Bitcoin realized volatility compression below QQQ",
+    "family": "cross_asset_volatility",
+    "stage": "backtest",
+    "operational_status": "watchlist",
+    "source_urls": [
+      "https://x.com/venturecoinist/status/2084249862673949183?s=46"
+    ],
+    "hypothesis": "A fresh crossover of Bitcoin 30-calendar-day realized volatility below QQQ 30-calendar-day realized volatility may identify a compressed cross-asset regime with stronger subsequent Bitcoin returns than calendar-year-matched unconditional entries.",
+    "predictor_assets": [
+      "BTC-USD 30-calendar-day realized volatility",
+      "QQQ 30-calendar-day realized volatility"
+    ],
+    "target_assets": ["BTC spot"],
+    "horizon": "30, 90, 180 and 365 calendar days; recross exit is diagnostic",
+    "applicable_regimes": [
+      "post-bear accumulation",
+      "bull expansion",
+      "cross-asset volatility compression"
+    ],
+    "invalid_regimes": [
+      "crypto-specific solvency or exchange crisis",
+      "broad macro liquidity shock",
+      "narrow event-driven QQQ volatility spike",
+      "overlapping trigger cluster treated as independent evidence"
+    ],
+    "mechanism": "Unusually low Bitcoin volatility relative to technology equities may mark exhausted crypto-specific deleveraging or an early transition from accumulation into renewed risk appetite.",
+    "decay_mechanism": "The comparison may be a denominator artifact, the relation may become crowded, or Bitcoin's market structure may change so relative volatility no longer identifies a useful transition.",
+    "canonical_rule": "After each regular QQQ close, compute 30-calendar-day close-to-close log-return realized volatility using only completed data, annualize BTC with sqrt(365) and QQQ with sqrt(252), and register a long-BTC research event only on a fresh crossover from BTC RV greater than or equal to QQQ RV to strictly below it. Enter at the first completed BTC UTC daily close after the decision and score each frozen horizon independently after 20 basis points round trip.",
+    "deactivation_rule": "Retire or redesign if ten untouched prospective nonoverlapping events show non-positive 90-day after-cost edge versus the calendar-year-matched benchmark, if the result remains confined to one market cycle, or if the archived trigger cannot be reproduced.",
+    "benchmark": "For each event, an unconditional eligible BTC entry drawn from the same calendar year and source-exposure split; the primary inference uses nonoverlapping 90-day events.",
+    "data_source": "Yahoo Finance chart payloads for BTC-USD and QQQ, archived by URL and SHA-256 in each run; QQQ uses adjusted close when available.",
+    "confidence_score": 47,
+    "confidence_as_of": "2026-08-04",
+    "confidence_components": {
+      "statistical_evidence": 10,
+      "out_of_sample_evidence": 0,
+      "economic_mechanism": 8,
+      "regime_clarity": 7,
+      "execution_quality": 8,
+      "robustness": 6,
+      "current_relevance": 8
+    },
+    "production_requirements": {
+      "executable_rule": true,
+      "out_of_sample_evidence": false,
+      "costs_and_slippage": true,
+      "regime_definition": true,
+      "deactivation_rule": true,
+      "validated_data_source": true,
+      "lookahead_review": true
+    },
+    "aliases": ["BTC-QQQ-RV", "VENTURECOINIST-RV"],
+    "evidence_ids": ["EVID-BTC-QQQ-RV-001"],
+    "notes": "Historical results are source-exposed and several fresh crossovers cluster inside the same holding period. The canonical ledger is preserved, while conservative inference uses nonoverlapping events. Watchlist status authorizes observation only, not real-money execution.",
+    "metadata": {
+      "canonical_lookback_calendar_days": 30,
+      "round_trip_cost_bps": 20,
+      "development_end": "2021-12-31",
+      "prospective_untouched_boundary": "2026-08-04",
+      "primary_horizon_calendar_days": 90,
+      "minimum_untouched_prospective_nonoverlapping_events": 10,
+      "real_money_trading_authorized": false
+    }
+  }
+}

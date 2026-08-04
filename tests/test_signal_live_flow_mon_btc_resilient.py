@@ -19,6 +19,30 @@ from signal_research.live_flow_mon_btc_resilient import (
 UTC = timezone.utc
 
 
+def fresh_record() -> dict:
+    """Frozen pre-observation fixture; the committed live record is intentionally mutable."""
+    return {
+        "schema_version": 1,
+        "live_test_id": "FLOW-MON-BTC-2026-08",
+        "registry_id": "FLOW-MON-BTC-001",
+        "status": "awaiting_snapshot",
+        "test_type": "untouched_out_of_sample_shadow",
+        "real_money_trading_authorized": False,
+        "entry": None,
+        "marks": [],
+        "funding_observations": [],
+        "exit": None,
+        "performance": None,
+        "last_updated_at_utc": None,
+        "data_quality": {
+            "source": "Binance USD-M Futures public REST API",
+            "complete": False,
+            "errors": [],
+        },
+        "notes": "Deterministic test fixture for the frozen shadow collector.",
+    }
+
+
 class FakeResponse:
     def __init__(self, status_code, *, payload=None, content=b"", text=""):
         self.status_code = status_code
@@ -65,11 +89,7 @@ class ResilientFlowMonBtcTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.record = json.loads(
-            Path("signal_records/live/FLOW-MON-BTC-2026-08.json").read_text(
-                encoding="utf-8"
-            )
-        )
+        self.record = fresh_record()
 
     def test_archive_url_is_bound_to_frozen_date(self):
         target = datetime(2026, 8, 1, 0, 5, tzinfo=UTC)

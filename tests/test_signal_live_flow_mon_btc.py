@@ -23,6 +23,30 @@ from signal_research.live_flow_mon_btc import (
 UTC = timezone.utc
 
 
+def fresh_record() -> dict:
+    """Return the frozen pre-observation fixture, independent of the evolving live record."""
+    return {
+        "schema_version": 1,
+        "live_test_id": "FLOW-MON-BTC-2026-08",
+        "registry_id": "FLOW-MON-BTC-001",
+        "status": "awaiting_snapshot",
+        "test_type": "untouched_out_of_sample_shadow",
+        "real_money_trading_authorized": False,
+        "entry": None,
+        "marks": [],
+        "funding_observations": [],
+        "exit": None,
+        "performance": None,
+        "last_updated_at_utc": None,
+        "data_quality": {
+            "source": "Binance USD-M Futures public REST API",
+            "complete": False,
+            "errors": [],
+        },
+        "notes": "Deterministic test fixture for the frozen shadow collector.",
+    }
+
+
 class FakeResponse:
     def __init__(self, payload, status_code=200):
         self._payload = payload
@@ -54,14 +78,15 @@ class LiveFlowMonBtcTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.record = json.loads(
+        self.committed_record = json.loads(
             Path("signal_records/live/FLOW-MON-BTC-2026-08.json").read_text(
                 encoding="utf-8"
             )
         )
+        self.record = fresh_record()
 
     def test_committed_static_definition_is_valid(self):
-        self.assertEqual([], validate_static(self.config, self.record))
+        self.assertEqual([], validate_static(self.config, self.committed_record))
         self.assertEqual(
             datetime(2026, 8, 1, 0, 5, tzinfo=UTC),
             parse_utc(self.config["entry_timestamp_utc"]),
