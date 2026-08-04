@@ -1,0 +1,35 @@
+{
+  "hypothesis": {
+    "registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001",
+    "definition_version": 1,
+    "variant": "canonical",
+    "freeze_status": "frozen",
+    "definition_origin": "Venture Coinist X post and user-supplied TradingView chart",
+    "source_claim": "Bitcoin buying opportunities occur when Bitcoin 30-day realized volatility falls below QQQ 30-day realized volatility.",
+    "decision_information": "At the regular QQQ close, use QQQ adjusted closes through that session and only BTC UTC daily closes whose availability timestamp is no later than the QQQ decision timestamp.",
+    "target_instrument": "BTC spot using BTC-USD daily closes as the research return proxy",
+    "benchmark": "Calendar-year and source-exposure-matched unconditional BTC entries; primary inference uses nonoverlapping 90-calendar-day events.",
+    "applicable_regimes": [
+      "bull expansion",
+      "post-bear accumulation",
+      "cross-asset volatility compression"
+    ],
+    "invalid_regimes": [
+      "crypto-specific solvency or exchange crisis",
+      "broad liquidity shock",
+      "narrow event-driven QQQ volatility spike",
+      "overlapping trigger cluster counted as independent evidence"
+    ],
+    "deactivation_rule": "Retire or redesign if ten untouched prospective nonoverlapping triggers show non-positive 90-day after-cost edge versus the matched benchmark, if the result remains confined to one market cycle, or if archived trigger reconstruction fails.",
+    "timezone": "QQQ decisions use America/New_York regular-session close; BTC closes use UTC midnight availability",
+    "bar_size": "daily",
+    "blocking_fields": [],
+    "source_fidelity_notes": "The image supports the broad relative-volatility claim but exposes neither machine-readable marker dates nor indicator source code. Exact source-marker reproduction is not claimed.",
+    "entry_rule": "Enter the research return calculation at the first completed BTC UTC daily close strictly after the QQQ-close decision timestamp.",
+    "exit_rule": "Score 30, 90, 180 and 365 calendar-day exits independently at the first BTC UTC daily close on or after the target date. Score recross exit separately as a diagnostic.",
+    "direction_rule": "Long BTC only; no leverage and no short variant in the canonical test.",
+    "trigger_rule": "On comparable QQQ trading dates, calculate sample standard deviation of close-to-close log returns within the preceding 30 calendar days. Annualize BTC with sqrt(365) and QQQ with sqrt(252). Trigger only on a fresh crossover from BTC realized volatility greater than or equal to QQQ realized volatility to strictly below it, and re-arm only after a recross.",
+    "cost_model": "Subtract 20 basis points round trip from every event return; funding is inapplicable to the spot proxy.",
+    "out_of_sample_boundary": "2026-08-04. Earlier history is source-exposed because the chart displayed historical markers; 2014-09-17 through 2021-12-31 is development and 2022-01-01 through 2026-08-03 is historical validation but not untouched."
+  }
+}
