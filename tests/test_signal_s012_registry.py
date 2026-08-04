@@ -18,8 +18,10 @@ class S012RegistryTests(unittest.TestCase):
         row = get_hypothesis("BTC-QQQ-RV")
         self.assertEqual("frozen", row["freeze_status"])
         self.assertTrue(row["dataset_eligible"])
-        self.assertEqual(30, 30)  # The exact rule is asserted through its frozen text below.
         self.assertIn("preceding 30 calendar days", row["trigger_rule"])
+        self.assertIn("sqrt(365)", row["trigger_rule"])
+        self.assertIn("sqrt(252)", row["trigger_rule"])
+        self.assertIn("2026-08-04", row["out_of_sample_boundary"])
 
     def test_registry_and_hypothesis_extension_set_is_valid(self):
         self.assertEqual([], validate_registry())
