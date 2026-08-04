@@ -67,6 +67,10 @@ def _is_default_hypotheses(path: str | Path) -> bool:
     return Path(path).resolve() == DEFAULT_HYPOTHESES_PATH.resolve()
 
 
+def _is_default_registry(path: str | Path) -> bool:
+    return Path(path).resolve() == DEFAULT_REGISTRY_PATH.resolve()
+
+
 def _extension_rows(directory: Path = DEFAULT_EXTENSION_DIR) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     if not directory.exists():
@@ -91,6 +95,16 @@ def load_hypotheses(path: str | Path = DEFAULT_HYPOTHESES_PATH) -> list[dict[str
     if _is_default_hypotheses(path):
         result.extend(_extension_rows())
     return result
+
+
+def _registry_rows(path: str | Path) -> list[dict[str, Any]]:
+    if _is_default_registry(path):
+        return [candidate.to_dict() for candidate in load_candidates(path, validate=False)]
+    raw = _read_json(path)
+    rows = raw.get("signals")
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        raise ValueError("registry signals must be a list")
+    return [dict(row) for row in rows]
 
 
 def canonical_payload(row: dict[str, Any]) -> bytes:
@@ -181,12 +195,14 @@ def validate_hypotheses(
     except ValueError as exc:
         return errors + [str(exc)]
     try:
-        registry_ids = {
-            candidate.registry_id
-            for candidate in load_candidates(registry_path, validate=False)
-        }
+        registry_rows = _registry_rows(registry_path)
     except (ValueError, TypeError, json.JSONDecodeError) as exc:
         return errors + [f"invalid registry: {exc}"]
+    registry_ids = {
+        row.get("registry_id")
+        for row in registry_rows
+        if isinstance(row, dict) and _nonempty_text(row.get("registry_id"))
+    }
 
     seen_versions: set[tuple[str, str, int]] = set()
     canonical_by_id: dict[str, list[dict[str, Any]]] = {}
@@ -256,11 +272,17 @@ def get_hypothesis(
     registry_path: str | Path = DEFAULT_REGISTRY_PATH,
 ) -> dict[str, Any]:
     aliases: dict[str, str] = {}
-    for candidate in load_candidates(registry_path, validate=False):
-        aliases[candidate.registry_id] = candidate.registry_id
-        aliases[candidate.signal_id] = candidate.registry_id
-        for alias in candidate.aliases:
-            aliases[alias] = candidate.registry_id
+    for row in _registry_rows(registry_path):
+        rid = row.get("registry_id")
+        if not isinstance(rid, str):
+            continue
+        aliases[rid] = rid
+        signal_id = row.get("signal_id")
+        if isinstance(signal_id, str):
+            aliases[signal_id] = rid
+        for alias in row.get("aliases", []):
+            if isinstance(alias, str):
+                aliases[alias] = rid
     rid = aliases.get(identifier, identifier)
     matches = [row for row in load_hypotheses(hypotheses_path) if row.get("registry_id") == rid]
     if not matches:
