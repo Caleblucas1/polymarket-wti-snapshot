@@ -47,8 +47,7 @@ jobs:
           python -m py_compile signal_research/backtest_s012_btc_qqq_rv.py
           python -m py_compile signal_research/monitor_s012_btc_qqq_rv.py
       - name: Run deterministic unit tests
-        run: |
-          python -m unittest tests.test_signal_s012_btc_qqq_rv tests.test_signal_s012_shadow
+        run: python -m unittest discover -s tests -p "test_signal_s012_*.py"
       - name: Run frozen historical backtest
         run: |
           python signal_research/backtest_s012_btc_qqq_rv.py \
