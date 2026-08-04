@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from .registry import DEFAULT_REGISTRY, load_candidates
+
 
 @dataclass(frozen=True)
 class ReliabilityIssue:
@@ -34,6 +36,21 @@ def _load_jsonl(path: str | Path) -> list[dict]:
     return rows
 
 
+def _registry_rows(path: str | Path) -> list[dict]:
+    """Load the authoritative registry while preserving isolated fixture behavior.
+
+    The production registry may be extended by governed per-signal files. Temporary
+    test registries remain raw JSON inputs so reliability tests can deliberately
+    inject malformed, missing, or orphan records without loading project extensions.
+    """
+    candidate_path = Path(path).resolve()
+    if candidate_path == DEFAULT_REGISTRY.resolve():
+        return [candidate.to_dict() for candidate in load_candidates(path, validate=False)]
+    registry = _load_json(path)
+    signals = registry.get("signals", []) if isinstance(registry, dict) else []
+    return [row for row in signals if isinstance(row, dict)]
+
+
 def validate_signal_records(
     registry_path: str | Path,
     evidence_path: str | Path,
@@ -41,9 +58,8 @@ def validate_signal_records(
     live_status_path: str | Path,
     performance_path: str | Path,
 ) -> list[ReliabilityIssue]:
-    registry = _load_json(registry_path)
-    signals = registry.get("signals", []) if isinstance(registry, dict) else []
-    ids = {row.get("registry_id") for row in signals if isinstance(row, dict)}
+    signals = _registry_rows(registry_path)
+    ids = {row.get("registry_id") for row in signals}
     issues: list[ReliabilityIssue] = []
     if None in ids or not ids:
         issues.append(ReliabilityIssue("registry.empty_or_missing_ids", "Registry has no valid registry IDs", str(registry_path)))
@@ -51,8 +67,6 @@ def validate_signal_records(
 
     aliases: dict[str, str] = {}
     for row in signals:
-        if not isinstance(row, dict):
-            continue
         rid = row.get("registry_id")
         for alias in row.get("aliases", []):
             previous = aliases.setdefault(alias, rid)
