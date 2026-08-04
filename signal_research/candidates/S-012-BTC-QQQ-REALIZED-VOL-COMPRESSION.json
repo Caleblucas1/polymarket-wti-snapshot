@@ -1,0 +1,113 @@
+{
+  "signal_id": "S-012",
+  "slug": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001",
+  "title": "Bitcoin realized-volatility compression below QQQ",
+  "lifecycle_stage": "Candidate",
+  "operational_status": "Research only",
+  "capital_right": "None",
+  "real_money_authorization": false,
+  "priority": "Medium-high discovery candidate",
+  "source": {
+    "type": "X post with chart",
+    "author_handle": "venturecoinist",
+    "url": "https://x.com/venturecoinist/status/2084249862673949183?s=46",
+    "image_description": "TradingView chart comparing BTC and QQQ 30-day realized volatility, with historical BTC buy markers near periods when BTC realized volatility fell to or below QQQ realized volatility.",
+    "source_limitations": [
+      "The repository record is grounded in the supplied chart image and URL; the full tweet text is not independently archived here.",
+      "Chart annotations are source evidence, not validation.",
+      "Exact historical marker-generation logic must be reproduced from raw data before any backtest result is accepted."
+    ]
+  },
+  "canonical_hypothesis": "When Bitcoin 30-day realized volatility crosses below QQQ 30-day realized volatility, Bitcoin enters an unusually compressed volatility regime relative to large-cap US technology equities and subsequently earns stronger forward risk-adjusted returns than an unconditional Bitcoin holding benchmark.",
+  "canonical_trigger": {
+    "metric": "realized volatility",
+    "lookback_calendar_days": 30,
+    "btc_series": "BTC daily close-to-close log-return realized volatility",
+    "qqq_series": "QQQ daily close-to-close log-return realized volatility",
+    "annualization": "sqrt(365) for BTC and sqrt(252) for QQQ",
+    "alignment_rule": "Compare both metrics only on QQQ trading dates using information available after the QQQ close; use the latest completed BTC daily close available at that decision timestamp.",
+    "entry_event": "First date on which BTC realized volatility is strictly below QQQ realized volatility after being greater than or equal to it on the prior comparable date.",
+    "anti_churn_rule": "A new event cannot be registered until BTC realized volatility has first returned to greater than or equal to QQQ realized volatility.",
+    "direction": "Long BTC"
+  },
+  "predeclared_forward_horizons_calendar_days": [30, 90, 180, 365],
+  "candidate_exit_tests": [
+    "Fixed 30-calendar-day hold",
+    "Fixed 90-calendar-day hold",
+    "Fixed 180-calendar-day hold",
+    "Fixed 365-calendar-day hold",
+    "Exit on the first comparable date when BTC realized volatility returns to greater than or equal to QQQ realized volatility"
+  ],
+  "primary_instrument": "BTC spot total return before and after explicit execution costs",
+  "secondary_generalization_assets": ["ETH", "SOL"],
+  "benchmarks": [
+    "Unconditional BTC forward return at every eligible QQQ trading-date observation",
+    "Buy-and-hold BTC over the same sample",
+    "Random-date entries matched by calendar year and holding horizon"
+  ],
+  "required_metrics": [
+    "event count",
+    "mean and median forward return",
+    "hit rate",
+    "annualized Sharpe where statistically meaningful",
+    "maximum adverse excursion",
+    "maximum drawdown",
+    "bootstrap confidence intervals",
+    "cost-adjusted return",
+    "improvement versus predeclared benchmark",
+    "regime-conditioned results"
+  ],
+  "applicable_regimes_to_test": [
+    "post-bear-market accumulation",
+    "early bull-market expansion",
+    "cross-asset volatility compression",
+    "benign or improving global liquidity"
+  ],
+  "invalid_or_failure_regimes": [
+    "crypto-specific solvency or exchange crisis",
+    "broad macro liquidity shock",
+    "single-stock or event-driven QQQ volatility spike that creates a denominator artifact",
+    "fewer than 10 independent historical trigger events",
+    "results driven by one market cycle",
+    "failure after realistic fees and slippage",
+    "trigger definition changed after observing outcomes"
+  ],
+  "research_questions": [
+    "Does the crossover improve BTC forward returns at 30, 90, 180 and 365 days?",
+    "Does it improve risk-adjusted performance or only select periods with high unconditional BTC drift?",
+    "How often does the trigger precede a further drawdown of 20% or more?",
+    "Is the effect robust to 20-, 60- and 90-day realized-volatility windows as noncanonical sensitivity checks?",
+    "Does the ratio BTC realized volatility divided by QQQ realized volatility add incremental information without replacing the canonical binary trigger?",
+    "Does the signal generalize to ETH or SOL?"
+  ],
+  "initial_confidence": {
+    "score": 0.42,
+    "label": "Preliminary",
+    "basis": [
+      "The claim is mechanical and reproducible.",
+      "The supplied chart displays multiple historical examples.",
+      "No repository backtest, untouched out-of-sample result, cost analysis or regime-stability evidence exists yet."
+    ]
+  },
+  "next_stage_gate": {
+    "target_stage": "Hypothesis",
+    "requirements": [
+      "Archive source evidence and preserve the supplied chart reference.",
+      "Freeze exact price sources, timestamps, return definitions and corporate-action handling for QQQ.",
+      "Implement a deterministic trigger extractor from raw BTC and QQQ data.",
+      "Predeclare the untouched out-of-sample boundary before viewing results.",
+      "Demonstrate that historical trigger dates reproduce the source chart closely enough to explain discrepancies.",
+      "Run cost-aware walk-forward tests with regime and sample-size reporting."
+    ]
+  },
+  "enhancements_prohibited_until_canonical_test_passes": [
+    "optimized volatility lookback",
+    "z-score threshold",
+    "volatility-ratio weighting",
+    "macro-liquidity filter",
+    "ETF-flow filter",
+    "multi-asset ensemble",
+    "machine-learning classifier"
+  ],
+  "governance_note": "Canonical before enhanced. The source chart earns this idea a Candidate record only; it grants no trading authority."
+}
