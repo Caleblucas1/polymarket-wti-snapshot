@@ -4,15 +4,15 @@
   "cost_assumption_round_trip_bps": 20.0,
   "data_sources": {
     "BTC-USD": {
-      "retrieval": "cache",
-      "rows": 4339,
-      "sha256": "b2e52cdb45c20f66381dd7aa189e1806016e28cae821ee024ff7733df86d1263",
+      "retrieval": "network",
+      "rows": 4340,
+      "sha256": "8ad380c4b8f30c89bf7d62369f252d1a6f09b674f0dc6f3874a455521399b2a6",
       "url": "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?period1=1405728000&period2=1785974400&interval=1d&events=div%2Csplits&includeAdjustedClose=true"
     },
     "QQQ": {
-      "retrieval": "cache",
-      "rows": 3027,
-      "sha256": "5fd8943c88c81ca98522fddff94610eee949b8571ec5f917142a3359bee73190",
+      "retrieval": "network",
+      "rows": 3028,
+      "sha256": "ab0722d5b1d58e71b6b415f5fcbbe47bf11b8e37cb95a777d406b378b7326971",
       "url": "https://query1.finance.yahoo.com/v8/finance/chart/QQQ?period1=1405728000&period2=1785974400&interval=1d&events=div%2Csplits&includeAdjustedClose=true"
     }
   },
@@ -20,16 +20,16 @@
   "last_historical_or_prospective_trigger": {
     "decision_date": "2025-05-07",
     "is_prospective": false,
-    "volatility_ratio": 0.9782767799770969
+    "volatility_ratio": 0.9782760514521038
   },
   "latest_comparable_observation": {
     "btc_below_qqq": false,
-    "btc_realized_volatility": 0.29461473455976633,
-    "decision_date": "2026-08-03",
-    "decision_timestamp_utc": "2026-08-03T20:00:00Z",
-    "qqq_realized_volatility": 0.2411112764545147,
+    "btc_realized_volatility": 0.2931437990500131,
+    "decision_date": "2026-08-04",
+    "decision_timestamp_utc": "2026-08-04T20:00:00Z",
+    "qqq_realized_volatility": 0.26230155771053476,
     "regime": "bear_contraction",
-    "volatility_ratio": 1.2219035911219398
+    "volatility_ratio": 1.1175831421234432
   },
   "prospective_boundary": "2026-08-04",
   "prospective_event_count": 0,
