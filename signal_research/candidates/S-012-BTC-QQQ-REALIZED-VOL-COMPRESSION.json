@@ -2,8 +2,8 @@
   "signal_id": "S-012",
   "slug": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001",
   "title": "Bitcoin realized-volatility compression below QQQ",
-  "lifecycle_stage": "Candidate",
-  "operational_status": "Research only",
+  "lifecycle_stage": "Backtest",
+  "operational_status": "Historical backtest running; prospective shadow initialized",
   "capital_right": "None",
   "real_money_authorization": false,
   "priority": "Medium-high discovery candidate",
@@ -15,7 +15,7 @@
     "source_limitations": [
       "The repository record is grounded in the supplied chart image and URL; the full tweet text is not independently archived here.",
       "Chart annotations are source evidence, not validation.",
-      "Exact historical marker-generation logic must be reproduced from raw data before any backtest result is accepted."
+      "The source image does not expose machine-readable marker dates or indicator code, so exact marker reproduction is not claimed."
     ]
   },
   "canonical_hypothesis": "When Bitcoin 30-day realized volatility crosses below QQQ 30-day realized volatility, Bitcoin enters an unusually compressed volatility regime relative to large-cap US technology equities and subsequently earns stronger forward risk-adjusted returns than an unconditional Bitcoin holding benchmark.",
@@ -30,6 +30,18 @@
     "anti_churn_rule": "A new event cannot be registered until BTC realized volatility has first returned to greater than or equal to QQQ realized volatility.",
     "direction": "Long BTC"
   },
+  "execution_definition": {
+    "entry": "First completed BTC UTC daily close strictly after the QQQ-close decision timestamp",
+    "round_trip_cost_bps": 20,
+    "funding": "Not applicable to the spot proxy"
+  },
+  "sample_boundaries": {
+    "development_end": "2021-12-31",
+    "historical_validation_start": "2022-01-01",
+    "historical_validation_end": "2026-08-03",
+    "historical_validation_is_untouched": false,
+    "prospective_untouched_start": "2026-08-04"
+  },
   "predeclared_forward_horizons_calendar_days": [30, 90, 180, 365],
   "candidate_exit_tests": [
     "Fixed 30-calendar-day hold",
@@ -43,13 +55,13 @@
   "benchmarks": [
     "Unconditional BTC forward return at every eligible QQQ trading-date observation",
     "Buy-and-hold BTC over the same sample",
-    "Random-date entries matched by calendar year and holding horizon"
+    "Calendar-year-matched unconditional entries"
   ],
   "required_metrics": [
     "event count",
     "mean and median forward return",
     "hit rate",
-    "annualized Sharpe where statistically meaningful",
+    "event Sharpe where statistically meaningful",
     "maximum adverse excursion",
     "maximum drawdown",
     "bootstrap confidence intervals",
@@ -60,8 +72,7 @@
   "applicable_regimes_to_test": [
     "post-bear-market accumulation",
     "early bull-market expansion",
-    "cross-asset volatility compression",
-    "benign or improving global liquidity"
+    "cross-asset volatility compression"
   ],
   "invalid_or_failure_regimes": [
     "crypto-specific solvency or exchange crisis",
@@ -72,13 +83,16 @@
     "failure after realistic fees and slippage",
     "trigger definition changed after observing outcomes"
   ],
+  "primary_success_target": {
+    "horizon_calendar_days": 90,
+    "metric": "mean after-cost return improvement relative to the absolute mean of the calendar-year-matched unconditional benchmark",
+    "threshold": 0.25
+  },
   "research_questions": [
     "Does the crossover improve BTC forward returns at 30, 90, 180 and 365 days?",
     "Does it improve risk-adjusted performance or only select periods with high unconditional BTC drift?",
     "How often does the trigger precede a further drawdown of 20% or more?",
-    "Is the effect robust to 20-, 60- and 90-day realized-volatility windows as noncanonical sensitivity checks?",
-    "Does the ratio BTC realized volatility divided by QQQ realized volatility add incremental information without replacing the canonical binary trigger?",
-    "Does the signal generalize to ETH or SOL?"
+    "Is the effect stable across the predeclared price regimes?"
   ],
   "initial_confidence": {
     "score": 0.42,
@@ -86,18 +100,22 @@
     "basis": [
       "The claim is mechanical and reproducible.",
       "The supplied chart displays multiple historical examples.",
-      "No repository backtest, untouched out-of-sample result, cost analysis or regime-stability evidence exists yet."
+      "The canonical definition and prospective boundary were frozen before the repository backtest result was reviewed."
     ]
   },
+  "historical_backtest_status": {
+    "status": "workflow_pending",
+    "artifact": "S012_BTC_QQQ_RV_HISTORICAL.json",
+    "result_reviewed": false
+  },
   "next_stage_gate": {
-    "target_stage": "Hypothesis",
+    "target_stage": "Backtest resolution and prospective watchlist decision",
     "requirements": [
-      "Archive source evidence and preserve the supplied chart reference.",
-      "Freeze exact price sources, timestamps, return definitions and corporate-action handling for QQQ.",
-      "Implement a deterministic trigger extractor from raw BTC and QQQ data.",
-      "Predeclare the untouched out-of-sample boundary before viewing results.",
-      "Demonstrate that historical trigger dates reproduce the source chart closely enough to explain discrepancies.",
-      "Run cost-aware walk-forward tests with regime and sample-size reporting."
+      "Complete the frozen historical run.",
+      "Store the auditable result and raw payload hashes.",
+      "Report the predeclared 90-day improvement target without changing the rule.",
+      "Update confidence using sample size, source-exposed validation, regime stability, costs and decay risk.",
+      "Keep production blocked until untouched prospective evidence exists."
     ]
   },
   "enhancements_prohibited_until_canonical_test_passes": [
@@ -109,5 +127,5 @@
     "multi-asset ensemble",
     "machine-learning classifier"
   ],
-  "governance_note": "Canonical before enhanced. The source chart earns this idea a Candidate record only; it grants no trading authority."
+  "governance_note": "Canonical before enhanced. Historical evidence can grant watchlist status only; it cannot grant capital rights."
 }
