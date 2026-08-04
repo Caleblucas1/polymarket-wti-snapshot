@@ -1,16 +1,42 @@
 {
-  "signal_id": "S-012",
-  "registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001",
-  "record_type": "untouched_prospective_shadow",
-  "as_of_date": "2026-08-03",
-  "prospective_boundary": "2026-08-04",
-  "status": "awaiting_first_post_boundary_observation",
-  "latest_comparable_observation": null,
-  "last_historical_or_prospective_trigger": null,
-  "prospective_events": [],
-  "prospective_event_count": 0,
-  "cost_assumption_round_trip_bps": 20.0,
+  "as_of_date": "2026-08-04",
   "capital_rights": "none",
+  "cost_assumption_round_trip_bps": 20.0,
+  "data_sources": {
+    "BTC-USD": {
+      "retrieval": "cache",
+      "rows": 4339,
+      "sha256": "b2e52cdb45c20f66381dd7aa189e1806016e28cae821ee024ff7733df86d1263",
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?period1=1405728000&period2=1785974400&interval=1d&events=div%2Csplits&includeAdjustedClose=true"
+    },
+    "QQQ": {
+      "retrieval": "cache",
+      "rows": 3027,
+      "sha256": "5fd8943c88c81ca98522fddff94610eee949b8571ec5f917142a3359bee73190",
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/QQQ?period1=1405728000&period2=1785974400&interval=1d&events=div%2Csplits&includeAdjustedClose=true"
+    }
+  },
+  "execution_note": "This record is an observation ledger only. It does not place orders or authorize capital.",
+  "last_historical_or_prospective_trigger": {
+    "decision_date": "2025-05-07",
+    "is_prospective": false,
+    "volatility_ratio": 0.9782767799770969
+  },
+  "latest_comparable_observation": {
+    "btc_below_qqq": false,
+    "btc_realized_volatility": 0.29461473455976633,
+    "decision_date": "2026-08-03",
+    "decision_timestamp_utc": "2026-08-03T20:00:00Z",
+    "qqq_realized_volatility": 0.2411112764545147,
+    "regime": "bear_contraction",
+    "volatility_ratio": 1.2219035911219398
+  },
+  "prospective_boundary": "2026-08-04",
+  "prospective_event_count": 0,
+  "prospective_events": [],
   "real_money_trading_authorized": false,
-  "execution_note": "This record is an observation ledger only. It does not place orders or authorize capital. The scheduled monitor will replace this bootstrap state after the first post-boundary data collection."
+  "record_type": "untouched_prospective_shadow",
+  "registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001",
+  "signal_id": "S-012",
+  "status": "armed_or_waiting_for_fresh_crossover"
 }
