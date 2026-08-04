@@ -3,7 +3,7 @@
   "slug": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001",
   "title": "Bitcoin realized-volatility compression below QQQ",
   "lifecycle_stage": "Backtest",
-  "operational_status": "Historical backtest running; prospective shadow initialized",
+  "operational_status": "Prospective shadow watchlist",
   "capital_right": "None",
   "real_money_authorization": false,
   "priority": "Medium-high discovery candidate",
@@ -13,27 +13,26 @@
     "url": "https://x.com/venturecoinist/status/2084249862673949183?s=46",
     "image_description": "TradingView chart comparing BTC and QQQ 30-day realized volatility, with historical BTC buy markers near periods when BTC realized volatility fell to or below QQQ realized volatility.",
     "source_limitations": [
-      "The repository record is grounded in the supplied chart image and URL; the full tweet text is not independently archived here.",
-      "Chart annotations are source evidence, not validation.",
-      "The source image does not expose machine-readable marker dates or indicator code, so exact marker reproduction is not claimed."
+      "The full tweet text is not independently archived in the repository.",
+      "The image does not expose machine-readable marker dates or indicator code.",
+      "Historical chart annotations are candidacy evidence, not untouched validation."
     ]
   },
-  "canonical_hypothesis": "When Bitcoin 30-day realized volatility crosses below QQQ 30-day realized volatility, Bitcoin enters an unusually compressed volatility regime relative to large-cap US technology equities and subsequently earns stronger forward risk-adjusted returns than an unconditional Bitcoin holding benchmark.",
+  "canonical_hypothesis": "When Bitcoin 30-calendar-day realized volatility crosses below QQQ 30-calendar-day realized volatility, Bitcoin enters an unusually compressed volatility regime relative to large-cap US technology equities and may earn stronger forward returns than calendar-year-matched unconditional Bitcoin entries.",
   "canonical_trigger": {
-    "metric": "realized volatility",
     "lookback_calendar_days": 30,
-    "btc_series": "BTC daily close-to-close log-return realized volatility",
-    "qqq_series": "QQQ daily close-to-close log-return realized volatility",
+    "return_type": "close-to-close log return",
     "annualization": "sqrt(365) for BTC and sqrt(252) for QQQ",
-    "alignment_rule": "Compare both metrics only on QQQ trading dates using information available after the QQQ close; use the latest completed BTC daily close available at that decision timestamp.",
-    "entry_event": "First date on which BTC realized volatility is strictly below QQQ realized volatility after being greater than or equal to it on the prior comparable date.",
-    "anti_churn_rule": "A new event cannot be registered until BTC realized volatility has first returned to greater than or equal to QQQ realized volatility.",
+    "alignment_rule": "Compare after the regular QQQ close using QQQ adjusted closes and only completed BTC UTC daily closes available by the decision timestamp.",
+    "entry_event": "Fresh crossover from BTC realized volatility greater than or equal to QQQ realized volatility to strictly below it.",
+    "anti_churn_rule": "Re-arm only after BTC realized volatility returns to greater than or equal to QQQ realized volatility.",
     "direction": "Long BTC"
   },
   "execution_definition": {
     "entry": "First completed BTC UTC daily close strictly after the QQQ-close decision timestamp",
     "round_trip_cost_bps": 20,
-    "funding": "Not applicable to the spot proxy"
+    "leverage": "none",
+    "funding": "not applicable to spot proxy"
   },
   "sample_boundaries": {
     "development_end": "2021-12-31",
@@ -42,90 +41,70 @@
     "historical_validation_is_untouched": false,
     "prospective_untouched_start": "2026-08-04"
   },
-  "predeclared_forward_horizons_calendar_days": [30, 90, 180, 365],
-  "candidate_exit_tests": [
-    "Fixed 30-calendar-day hold",
-    "Fixed 90-calendar-day hold",
-    "Fixed 180-calendar-day hold",
-    "Fixed 365-calendar-day hold",
-    "Exit on the first comparable date when BTC realized volatility returns to greater than or equal to QQQ realized volatility"
-  ],
-  "primary_instrument": "BTC spot total return before and after explicit execution costs",
-  "secondary_generalization_assets": ["ETH", "SOL"],
-  "benchmarks": [
-    "Unconditional BTC forward return at every eligible QQQ trading-date observation",
-    "Buy-and-hold BTC over the same sample",
-    "Calendar-year-matched unconditional entries"
-  ],
-  "required_metrics": [
-    "event count",
-    "mean and median forward return",
-    "hit rate",
-    "event Sharpe where statistically meaningful",
-    "maximum adverse excursion",
-    "maximum drawdown",
-    "bootstrap confidence intervals",
-    "cost-adjusted return",
-    "improvement versus predeclared benchmark",
-    "regime-conditioned results"
-  ],
-  "applicable_regimes_to_test": [
-    "post-bear-market accumulation",
-    "early bull-market expansion",
-    "cross-asset volatility compression"
-  ],
-  "invalid_or_failure_regimes": [
-    "crypto-specific solvency or exchange crisis",
-    "broad macro liquidity shock",
-    "single-stock or event-driven QQQ volatility spike that creates a denominator artifact",
-    "fewer than 10 independent historical trigger events",
-    "results driven by one market cycle",
-    "failure after realistic fees and slippage",
-    "trigger definition changed after observing outcomes"
-  ],
+  "frozen_forward_horizons_calendar_days": [30, 90, 180, 365],
+  "diagnostic_exit": "First comparable recross to BTC realized volatility greater than or equal to QQQ realized volatility",
   "primary_success_target": {
     "horizon_calendar_days": 90,
-    "metric": "mean after-cost return improvement relative to the absolute mean of the calendar-year-matched unconditional benchmark",
+    "metric": "mean after-cost return improvement relative to the absolute mean of a calendar-year and source-exposure-matched unconditional benchmark",
     "threshold": 0.25
   },
-  "research_questions": [
-    "Does the crossover improve BTC forward returns at 30, 90, 180 and 365 days?",
-    "Does it improve risk-adjusted performance or only select periods with high unconditional BTC drift?",
-    "How often does the trigger precede a further drawdown of 20% or more?",
-    "Is the effect stable across the predeclared price regimes?"
-  ],
-  "initial_confidence": {
-    "score": 0.42,
-    "label": "Preliminary",
-    "basis": [
-      "The claim is mechanical and reproducible.",
-      "The supplied chart displays multiple historical examples.",
-      "The canonical definition and prospective boundary were frozen before the repository backtest result was reviewed."
-    ]
+  "historical_backtest": {
+    "status": "complete_and_reviewed",
+    "comparable_observations": 2968,
+    "fresh_crossovers": 11,
+    "primary_nonoverlapping_90_day_events": 6,
+    "source_exposed_validation_nonoverlapping_90_day_events": 2,
+    "primary_nonoverlapping_90_day_mean_after_cost_return": 0.3421656446441655,
+    "primary_nonoverlapping_90_day_hit_rate": 0.8333333333333334,
+    "primary_matched_null_expected_mean_return": 0.19238451589839686,
+    "primary_relative_improvement_vs_abs_expected_mean": 0.7785508519036524,
+    "clears_predeclared_25pct_improvement_target": true,
+    "one_sided_matched_null_probability": 0.21685,
+    "worst_90_day_max_adverse_excursion": -0.5002135946310167,
+    "source_exposed_validation_nonoverlapping_mean_after_cost_return": 0.20763709934748997,
+    "source_exposed_validation_nonoverlapping_hit_rate": 1.0,
+    "recross_exit_mean_after_cost_return": 0.0031807812435237434,
+    "recross_exit_promoted": false,
+    "result_path": "signal_research/results/S-012-BTC-QQQ-RV-RESULT.json"
   },
-  "historical_backtest_status": {
-    "status": "workflow_pending",
-    "artifact": "S012_BTC_QQQ_RV_HISTORICAL.json",
-    "result_reviewed": false
+  "decision": {
+    "classification": "prospective_shadow_watchlist_historical_support_not_independent_proof",
+    "historical_support": true,
+    "historical_sample_adequate_for_production": false,
+    "reason": "The rule cleared the predeclared historical improvement target, but overlapping trigger clusters leave only six independent 90-day episodes, only two are in the source-exposed validation segment, the worst historical adverse excursion was about 50%, and no untouched prospective outcome exists.",
+    "confidence_score": 47,
+    "confidence_label": "promising_but_unconfirmed"
   },
-  "next_stage_gate": {
-    "target_stage": "Backtest resolution and prospective watchlist decision",
-    "requirements": [
-      "Complete the frozen historical run.",
-      "Store the auditable result and raw payload hashes.",
-      "Report the predeclared 90-day improvement target without changing the rule.",
-      "Update confidence using sample size, source-exposed validation, regime stability, costs and decay risk.",
-      "Keep production blocked until untouched prospective evidence exists."
-    ]
+  "latest_shadow_state": {
+    "as_of": "2026-08-04",
+    "latest_comparable_decision_date": "2026-08-03",
+    "status": "armed_or_waiting_for_fresh_crossover",
+    "btc_realized_volatility": 0.29461473455976633,
+    "qqq_realized_volatility": 0.2411112764545147,
+    "volatility_ratio": 1.2219035911219398,
+    "prospective_event_count": 0
   },
-  "enhancements_prohibited_until_canonical_test_passes": [
-    "optimized volatility lookback",
-    "z-score threshold",
+  "production_gate": {
+    "minimum_untouched_prospective_nonoverlapping_events": 10,
+    "required_primary_edge": "positive and at least 25% above the frozen matched benchmark",
+    "required_regime_coverage": "positive evidence in more than one predeclared regime",
+    "required_execution_review": true,
+    "automatic_live_authorization": false
+  },
+  "enhancements_prohibited_until_canonical_resolution": [
+    "optimized lookback",
     "volatility-ratio weighting",
-    "macro-liquidity filter",
-    "ETF-flow filter",
-    "multi-asset ensemble",
-    "machine-learning classifier"
+    "z-score or percentile threshold",
+    "macro or ETF-flow filter",
+    "ETH or SOL generalization",
+    "ensemble or machine learning"
   ],
-  "governance_note": "Canonical before enhanced. Historical evidence can grant watchlist status only; it cannot grant capital rights."
+  "artifact_provenance": {
+    "workflow_run_id": 30868542744,
+    "workflow_artifact_id": 8877016315,
+    "historical_sha256": "a91d3c0dc89a3c8467ca74e5b11143c605741ba8fca9eaddd3f9314f67281058",
+    "audit_sha256": "a36259eb3b025a0bad0cc23d5a6d9138c4b01186d1c603c536fd2b6d2f9b3503",
+    "shadow_sha256": "41ad9b3082d24e28f84bedc9244d7b6a7ed95f1c1f8b76623a44836cbd6c4aab"
+  },
+  "governance_note": "Canonical before enhanced. Watchlist status authorizes automated observation only and grants no capital rights."
 }
