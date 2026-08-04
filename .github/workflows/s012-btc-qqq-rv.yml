@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "signal_research/backtest_s012_btc_qqq_rv.py"
+      - "signal_research/audit_s012_btc_qqq_rv.py"
       - "signal_research/monitor_s012_btc_qqq_rv.py"
       - "signal_research/candidates/S-012-BTC-QQQ-REALIZED-VOL-COMPRESSION.json"
       - "signal_research/hypotheses/S-012-BTC-QQQ-REALIZED-VOL-COMPRESSION.json"
@@ -15,6 +16,7 @@ on:
     branches: [main]
     paths:
       - "signal_research/backtest_s012_btc_qqq_rv.py"
+      - "signal_research/audit_s012_btc_qqq_rv.py"
       - "signal_research/monitor_s012_btc_qqq_rv.py"
       - "signal_research/candidates/S-012-BTC-QQQ-REALIZED-VOL-COMPRESSION.json"
       - "signal_research/hypotheses/S-012-BTC-QQQ-REALIZED-VOL-COMPRESSION.json"
@@ -45,6 +47,7 @@ jobs:
       - name: Compile research programs
         run: |
           python -m py_compile signal_research/backtest_s012_btc_qqq_rv.py
+          python -m py_compile signal_research/audit_s012_btc_qqq_rv.py
           python -m py_compile signal_research/monitor_s012_btc_qqq_rv.py
       - name: Run deterministic unit tests
         run: python -m unittest discover -s tests -p "test_signal_s012_*.py"
@@ -55,6 +58,14 @@ jobs:
             --end 2026-08-03 \
             --cost-bps 20 \
             --output artifacts/S012_BTC_QQQ_RV_HISTORICAL.json
+      - name: Audit overlap and matched benchmark inference
+        run: |
+          python signal_research/audit_s012_btc_qqq_rv.py \
+            --start 2014-09-17 \
+            --end 2026-08-03 \
+            --cost-bps 20 \
+            --historical-input artifacts/S012_BTC_QQQ_RV_HISTORICAL.json \
+            --output artifacts/S012_BTC_QQQ_RV_AUDIT.json
       - name: Build current shadow record artifact
         run: |
           python signal_research/monitor_s012_btc_qqq_rv.py \
