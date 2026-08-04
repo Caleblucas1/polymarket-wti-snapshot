@@ -89,3 +89,35 @@ class SignalCandidate:
         ):
             payload[key] = tuple(payload.get(key, ()))
         return cls(**payload)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return the canonical JSON-compatible registry representation."""
+        return {
+            "signal_id": self.signal_id,
+            "registry_id": self.registry_id,
+            "name": self.name,
+            "family": self.family,
+            "stage": self.stage.value,
+            "operational_status": self.operational_status.value,
+            "source_urls": list(self.source_urls),
+            "hypothesis": self.hypothesis,
+            "predictor_assets": list(self.predictor_assets),
+            "target_assets": list(self.target_assets),
+            "horizon": self.horizon,
+            "applicable_regimes": list(self.applicable_regimes),
+            "invalid_regimes": list(self.invalid_regimes),
+            "mechanism": self.mechanism,
+            "decay_mechanism": self.decay_mechanism,
+            "canonical_rule": self.canonical_rule,
+            "deactivation_rule": self.deactivation_rule,
+            "benchmark": self.benchmark,
+            "data_source": self.data_source,
+            "confidence_score": self.confidence_score,
+            "confidence_as_of": self.confidence_as_of,
+            "confidence_components": dict(self.confidence_components),
+            "production_requirements": dict(self.production_requirements),
+            "aliases": list(self.aliases),
+            "evidence_ids": list(self.evidence_ids),
+            "notes": self.notes,
+            "metadata": dict(self.metadata),
+        }
