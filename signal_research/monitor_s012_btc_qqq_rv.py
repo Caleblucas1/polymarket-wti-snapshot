@@ -5,19 +5,34 @@ import json
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from backtest_s012_btc_qqq_rv import (
-    DEFAULT_START,
-    HORIZONS,
-    PROSPECTIVE_BOUNDARY,
-    ROUND_TRIP_COST_BPS,
-    build_comparable_observations,
-    event_outcome,
-    extract_trigger_indices,
-    iso_z,
-    load_data,
-    parse_date,
-    serialize_event,
-)
+try:
+    from .backtest_s012_btc_qqq_rv import (
+        DEFAULT_START,
+        HORIZONS,
+        PROSPECTIVE_BOUNDARY,
+        ROUND_TRIP_COST_BPS,
+        build_comparable_observations,
+        event_outcome,
+        extract_trigger_indices,
+        iso_z,
+        load_data,
+        parse_date,
+        serialize_event,
+    )
+except ImportError:  # Supports direct script execution.
+    from backtest_s012_btc_qqq_rv import (
+        DEFAULT_START,
+        HORIZONS,
+        PROSPECTIVE_BOUNDARY,
+        ROUND_TRIP_COST_BPS,
+        build_comparable_observations,
+        event_outcome,
+        extract_trigger_indices,
+        iso_z,
+        load_data,
+        parse_date,
+        serialize_event,
+    )
 
 UTC = timezone.utc
 
