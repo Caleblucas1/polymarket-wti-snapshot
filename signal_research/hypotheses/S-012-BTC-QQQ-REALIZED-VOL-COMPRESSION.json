@@ -1,0 +1,80 @@
+{
+  "registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001",
+  "signal_id": "S-012",
+  "definition_version": 1,
+  "variant": "canonical",
+  "freeze_status": "frozen",
+  "definition_origin": "Venture Coinist X post and user-supplied TradingView chart",
+  "source_claim": "Bitcoin buying opportunities occur when Bitcoin 30-day realized volatility falls below QQQ 30-day realized volatility.",
+  "source_fidelity_notes": "The supplied image supports the broad relative-volatility claim but does not expose machine-readable marker dates or indicator code. Exact source-marker reproduction is therefore not claimed.",
+  "decision_information": "At the regular QQQ close, use QQQ adjusted closes through that session and only BTC UTC daily closes whose availability timestamp is no later than the QQQ decision timestamp.",
+  "target_instrument": "BTC spot; research return proxy is Yahoo Finance BTC-USD daily close",
+  "timezone": "QQQ decisions use America/New_York regular-session close; BTC closes use UTC midnight availability",
+  "bar_size": "daily",
+  "trigger_rule": "On comparable QQQ trading dates, calculate sample standard deviation of close-to-close log returns within the preceding 30 calendar days. Annualize BTC with sqrt(365) and QQQ with sqrt(252). Trigger only on a fresh crossover from BTC realized volatility greater than or equal to QQQ realized volatility to strictly below it. Re-arm only after BTC realized volatility returns to greater than or equal to QQQ realized volatility.",
+  "entry_rule": "Enter the research return calculation at the first completed BTC UTC daily close strictly after the QQQ-close decision timestamp.",
+  "exit_rule": "Score 30, 90, 180 and 365 calendar-day exits independently at the first BTC UTC daily close on or after the target date. Also score a separate exit at the first BTC close after a comparable-date recross to BTC realized volatility greater than or equal to QQQ realized volatility.",
+  "direction_rule": "Long BTC only; no leverage and no short variant in the canonical test.",
+  "cost_model": "Subtract 20 basis points round trip from every event return. This is a frozen conservative research allowance for fees and slippage; funding is not applicable to the spot proxy.",
+  "benchmark": "Unconditional BTC forward returns from all eligible QQQ trading-date observations, matched by trigger calendar year and holding horizon. Buy-and-hold is reported as context, not the primary conditional benchmark.",
+  "out_of_sample_boundary": "2026-08-04. All earlier history is source-exposed because the chart displayed historical markers; 2014-09-17 through 2021-12-31 is development and 2022-01-01 through 2026-08-03 is labeled historical validation but not untouched.",
+  "applicable_regimes": [
+    "bull expansion",
+    "post-bear accumulation",
+    "cross-asset volatility compression"
+  ],
+  "invalid_regimes": [
+    "crypto-specific solvency or exchange crisis",
+    "broad liquidity shock",
+    "QQQ volatility spike caused by a narrow event rather than broad risk",
+    "fewer than ten independent historical triggers",
+    "one market cycle dominates the result"
+  ],
+  "regime_proxy": "Classify BTC using its 200-day moving average and trailing 90-calendar-day return into bull expansion, post-bear accumulation, bear contraction, or late-bull/transition. These are price-only research proxies and do not claim to measure global liquidity directly.",
+  "data_source": {
+    "provider": "Yahoo Finance chart endpoint",
+    "btc_symbol": "BTC-USD",
+    "qqq_symbol": "QQQ",
+    "qqq_price_field": "adjusted close when available",
+    "raw_payload_hashing": "SHA-256 stored in each backtest output",
+    "failure_policy": "Fail rather than silently substitute another provider"
+  },
+  "missing_data_rule": "Skip observations lacking a valid close. Require at least 25 BTC returns and 13 QQQ returns inside the 30-calendar-day window.",
+  "primary_research_target": "At the 90-calendar-day horizon, determine whether the signal's mean after-cost return improves by at least 25% relative to the absolute mean of the calendar-year-matched unconditional benchmark.",
+  "secondary_outputs": [
+    "30, 180 and 365-day after-cost returns",
+    "crossover-exit return",
+    "event count and hit rate",
+    "bootstrap confidence interval",
+    "maximum adverse excursion and path drawdown",
+    "10%, 20% and 30% subsequent-drawdown rates",
+    "regime-conditioned results"
+  ],
+  "historical_advancement_gate": {
+    "minimum_independent_triggers": 10,
+    "required_90_day_validation_mean_net_return": "positive",
+    "required_target_improvement": "at least 25% versus the predeclared matched benchmark",
+    "effect_of_passing": "watchlist and untouched shadow monitoring only; no capital rights"
+  },
+  "production_gate": {
+    "minimum_untouched_prospective_triggers": 10,
+    "required_90_day_after_cost_edge": "positive and at least 25% above the matched benchmark",
+    "required_confidence_interval": "95% bootstrap interval must not be materially negative",
+    "required_regime_coverage": "positive evidence in more than one predeclared regime",
+    "required_execution_review": true,
+    "automatic_live_authorization": false
+  },
+  "deactivation_rule": "Retire or redesign the canonical signal if ten untouched prospective triggers show non-positive 90-day after-cost edge versus the matched benchmark, if the trigger cannot be reproduced from archived source data, or if performance is attributable to one event or one market cycle.",
+  "blocking_fields": [],
+  "enhancements_prohibited_until_canonical_resolution": [
+    "optimized lookback",
+    "ratio weighting",
+    "z-score threshold",
+    "macro filter",
+    "ETF-flow filter",
+    "ETH or SOL generalization",
+    "ensemble or machine learning"
+  ],
+  "capital_rights": "none",
+  "real_money_trading_authorized": false
+}
