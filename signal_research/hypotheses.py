@@ -6,9 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from .registry import load_candidates
+
 
 DEFAULT_HYPOTHESES_PATH = Path("signal_hypotheses.json")
 DEFAULT_REGISTRY_PATH = Path("signal_candidates.json")
+DEFAULT_EXTENSION_DIR = Path(__file__).resolve().parent / "hypothesis_extensions"
 ALLOWED_FREEZE_STATUSES = {"blocked", "frozen", "retired"}
 ALLOWED_VARIANTS = {"canonical", "enhanced"}
 PLACEHOLDER_TOKENS = {"tbd", "todo", "unknown", "later", "n/a", "na"}
@@ -60,6 +63,23 @@ def _read_json(path: str | Path) -> dict[str, Any]:
     return value
 
 
+def _is_default_hypotheses(path: str | Path) -> bool:
+    return Path(path).resolve() == DEFAULT_HYPOTHESES_PATH.resolve()
+
+
+def _extension_rows(directory: Path = DEFAULT_EXTENSION_DIR) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if not directory.exists():
+        return rows
+    for path in sorted(directory.glob("*.json")):
+        raw = _read_json(path)
+        row = raw.get("hypothesis", raw)
+        if not isinstance(row, dict):
+            raise ValueError(f"{path}: hypothesis must be a JSON object")
+        rows.append(dict(row))
+    return rows
+
+
 def load_hypotheses(path: str | Path = DEFAULT_HYPOTHESES_PATH) -> list[dict[str, Any]]:
     raw = _read_json(path)
     rows = raw.get("hypotheses")
@@ -67,7 +87,10 @@ def load_hypotheses(path: str | Path = DEFAULT_HYPOTHESES_PATH) -> list[dict[str
         raise ValueError(f"{path}: hypotheses must be a list")
     if not all(isinstance(row, dict) for row in rows):
         raise ValueError(f"{path}: every hypothesis must be an object")
-    return [dict(row) for row in rows]
+    result = [dict(row) for row in rows]
+    if _is_default_hypotheses(path):
+        result.extend(_extension_rows())
+    return result
 
 
 def canonical_payload(row: dict[str, Any]) -> bytes:
@@ -146,7 +169,6 @@ def validate_hypotheses(
 ) -> list[str]:
     errors: list[str] = []
     hypotheses_raw = _read_json(hypotheses_path)
-    registry_raw = _read_json(registry_path)
 
     if hypotheses_raw.get("governing_principle") != "canonical_before_enhanced":
         errors.append("hypothesis file must declare canonical_before_enhanced")
@@ -154,20 +176,17 @@ def validate_hypotheses(
     if not isinstance(policy, dict) or policy.get("real_money_trading_authorized") is not False:
         errors.append("hypothesis file must explicitly prohibit real-money authorization")
 
-    rows = hypotheses_raw.get("hypotheses")
-    if not isinstance(rows, list):
-        return errors + ["hypotheses must be a list"]
-    if not all(isinstance(row, dict) for row in rows):
-        return errors + ["every hypothesis must be an object"]
-
-    registry_rows = registry_raw.get("signals")
-    if not isinstance(registry_rows, list):
-        return errors + ["registry signals must be a list"]
-    registry_ids = {
-        row.get("registry_id")
-        for row in registry_rows
-        if isinstance(row, dict) and _nonempty_text(row.get("registry_id"))
-    }
+    try:
+        rows = load_hypotheses(hypotheses_path)
+    except ValueError as exc:
+        return errors + [str(exc)]
+    try:
+        registry_ids = {
+            candidate.registry_id
+            for candidate in load_candidates(registry_path, validate=False)
+        }
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        return errors + [f"invalid registry: {exc}"]
 
     seen_versions: set[tuple[str, str, int]] = set()
     canonical_by_id: dict[str, list[dict[str, Any]]] = {}
@@ -236,21 +255,12 @@ def get_hypothesis(
     hypotheses_path: str | Path = DEFAULT_HYPOTHESES_PATH,
     registry_path: str | Path = DEFAULT_REGISTRY_PATH,
 ) -> dict[str, Any]:
-    registry = _read_json(registry_path)
     aliases: dict[str, str] = {}
-    for row in registry.get("signals", []):
-        if not isinstance(row, dict):
-            continue
-        rid = row.get("registry_id")
-        if not isinstance(rid, str):
-            continue
-        aliases[rid] = rid
-        signal_id = row.get("signal_id")
-        if isinstance(signal_id, str):
-            aliases[signal_id] = rid
-        for alias in row.get("aliases", []):
-            if isinstance(alias, str):
-                aliases[alias] = rid
+    for candidate in load_candidates(registry_path, validate=False):
+        aliases[candidate.registry_id] = candidate.registry_id
+        aliases[candidate.signal_id] = candidate.registry_id
+        for alias in candidate.aliases:
+            aliases[alias] = candidate.registry_id
     rid = aliases.get(identifier, identifier)
     matches = [row for row in load_hypotheses(hypotheses_path) if row.get("registry_id") == rid]
     if not matches:
