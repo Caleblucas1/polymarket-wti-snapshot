@@ -2,136 +2,160 @@
 
 ## Decision
 
-**Lifecycle:** Candidate  
-**Operational status:** Research only  
+**Lifecycle:** Backtest complete  
+**Operational status:** Prospective shadow watchlist  
+**Confidence:** 47/100 — promising but unconfirmed  
 **Capital right:** None  
-**Real-money authorization:** False  
-**Priority:** Medium-high discovery candidate
+**Real-money authorization:** False
 
-This candidate comes from the Venture Coinist X post and the supplied TradingView chart comparing Bitcoin and QQQ 30-day realized volatility. The chart marks several historical BTC buying areas near periods when BTC realized volatility fell to or below QQQ realized volatility.
+The canonical signal earned the right to be monitored prospectively, but it did **not** earn production status or capital influence. Historical performance is encouraging; the independent sample and untouched evidence are not yet sufficient.
 
-The chart is source evidence, not validation. The repository must reproduce the trigger from raw data before accepting any historical examples.
+## Source and fidelity boundary
 
-## Canonical hypothesis
+The candidate comes from the Venture Coinist X post and the supplied TradingView chart comparing Bitcoin and QQQ 30-day realized volatility. The chart marks several historical BTC buying areas near periods when BTC realized volatility fell to or below QQQ realized volatility.
 
-> When Bitcoin 30-day realized volatility crosses below QQQ 30-day realized volatility, Bitcoin enters an unusually compressed volatility regime relative to large-cap US technology equities and subsequently earns stronger forward risk-adjusted returns than an unconditional Bitcoin holding benchmark.
+The chart is evidence for candidacy, not proof. It does not expose machine-readable marker timestamps or indicator source code, so the repository independently tests the frozen rule and does not claim exact reproduction of every source marker.
 
-## Frozen canonical trigger
+## Frozen canonical rule
 
-- Compute daily close-to-close log-return realized volatility over 30 calendar days.
+- Compute close-to-close log-return realized volatility over the preceding 30 calendar days.
 - Annualize BTC with `sqrt(365)` and QQQ with `sqrt(252)`.
-- Compare the two only on QQQ trading dates after the QQQ close.
-- Use the latest completed BTC daily close available at that timestamp.
-- Register an event only when BTC realized volatility moves from greater than or equal to QQQ realized volatility to strictly below it.
-- Do not register another event until BTC realized volatility has returned to greater than or equal to QQQ realized volatility.
-- Direction: long BTC.
+- Compare the series only after the regular QQQ close.
+- Use only QQQ adjusted closes and completed BTC UTC daily closes available by the decision timestamp.
+- Trigger on a fresh crossover from BTC realized volatility greater than or equal to QQQ realized volatility to strictly below it.
+- Re-arm only after BTC realized volatility returns to greater than or equal to QQQ realized volatility.
+- Enter the research return calculation at the first completed BTC UTC close after the decision.
+- Subtract 20 basis points round trip.
+- Direction: long BTC spot proxy; no leverage.
 
-The unequal annualization conventions are explicit because the assets trade on different calendars. A sensitivity test may place both on a common convention, but it cannot silently replace the canonical definition.
+Frozen exits are 30, 90, 180 and 365 calendar days. A recross exit is scored separately and cannot replace the primary horizon after the result is known.
 
-## Predeclared horizons
+## Sample integrity
 
-- 30 calendar days
-- 90 calendar days
-- 180 calendar days
-- 365 calendar days
-- crossover exit: first comparable date when BTC realized volatility returns to greater than or equal to QQQ realized volatility
+- Comparable observations: **2,968**
+- Canonical fresh crossovers: **11**
+- Development segment: through **2021-12-31**
+- Source-exposed historical validation: **2022-01-01 through 2026-08-03**
+- Untouched prospective boundary: **2026-08-04**
 
-Each exit must be scored independently. The best historical exit cannot be promoted retrospectively as the canonical result.
+The chart already displayed historical examples, so no pre-boundary observation is represented as truly untouched. In addition, several crossover events occur close together and their holding periods overlap. The repository preserves all 11 events descriptively but uses greedily selected nonoverlapping episodes for the primary inference.
 
-## Benchmarks
+## Primary 90-day result
 
-1. Unconditional BTC forward return from every eligible QQQ trading-date observation.
-2. Buy-and-hold BTC over the same sample.
-3. Random-date entries matched by calendar year and holding horizon.
+### All fresh crossovers — descriptive
 
-The signal must show value relative to a predeclared benchmark rather than merely benefiting from Bitcoin's long-run positive drift.
+- Events: **11**
+- Mean after-cost return: **50.86%**
+- Median after-cost return: **33.64%**
+- Hit rate: **90.9%**
+- Calendar-year and source-exposure-matched null mean: **23.22%**
+- Relative improvement versus the absolute matched mean: **119.0%**
 
-## Required outputs
+This is not the primary independent-sample estimate because some holding windows overlap.
 
-- independent event count;
-- mean and median forward returns;
-- hit rate;
-- cost-adjusted returns;
-- maximum adverse excursion;
-- maximum drawdown;
-- bootstrap confidence intervals;
-- regime-conditioned performance;
-- improvement versus the benchmark;
-- event-level table showing every trigger and outcome.
+### Nonoverlapping episodes — primary inference
 
-## Regimes to test
+- Events: **6**
+- Mean after-cost return: **34.22%**
+- Median after-cost return: **32.69%**
+- Hit rate: **83.3%**
+- Matched-null expected mean: **19.24%**
+- Absolute edge: **14.98 percentage points**
+- Relative improvement versus the absolute matched mean: **77.9%**
+- One-sided matched-null probability of an equal-or-better mean: **21.7%**
+- Worst maximum adverse excursion: **−50.0%**
+- Worst path drawdown: **−50.4%**
 
-Potentially applicable:
+The rule clears the project's predeclared 25% conditional-improvement target historically. It does not clear a conventional evidentiary bar for production: six independent episodes are too few, and the downside path can be extreme.
 
-- post-bear-market accumulation;
-- early bull-market expansion;
-- cross-asset volatility compression;
-- benign or improving global liquidity.
+### Source-exposed validation episodes
 
-Potentially invalid:
+After overlap control, only two episodes remain: **2022-10-21** and **2025-04-09**.
 
-- crypto-specific solvency or exchange crises;
-- broad macro liquidity shocks;
-- event-driven QQQ volatility spikes that create a comparison artifact;
-- samples dominated by one market cycle;
-- fewer than ten independent trigger events;
-- results that disappear after costs.
+- Mean after-cost return: **20.76%**
+- Hit rate: **100%**
+- Matched-null expected mean: **−6.42%**
+- Relative improvement versus the absolute matched mean: **423.3%**
+- One-sided matched-null probability: **8.1%**
 
-## False-positive test
+This is supportive but fragile. Two source-exposed episodes are not independent proof and are not untouched out-of-sample evidence.
 
-For every event, record whether BTC experiences an additional drawdown of at least 10%, 20% or 30% before the selected exit. A positive average return is insufficient if the trigger regularly exposes the strategy to unacceptable interim losses.
+## Other frozen horizons
 
-## Canonical research sequence
+Using nonoverlapping events:
 
-1. Freeze BTC and QQQ price sources, timestamps, adjusted-close treatment and missing-data rules.
-2. Predeclare an untouched out-of-sample boundary.
-3. Reproduce the crossover history from raw data.
-4. Compare reconstructed events with the source chart and document every discrepancy.
-5. Run cost-aware historical and walk-forward tests.
-6. Report performance by regime and market cycle.
-7. Decide whether the candidate advances to Hypothesis, remains a Candidate, or is rejected.
+| Horizon | Events | Mean after-cost return | Hit rate | Matched-null mean | Relative improvement |
+|---|---:|---:|---:|---:|---:|
+| 30 days | 7 | 14.63% | 71.4% | 5.40% | 171.0% |
+| 90 days | 6 | 34.22% | 83.3% | 19.24% | 77.9% |
+| 180 days | 6 | 119.82% | 83.3% | 56.05% | 113.8% |
+| 365 days | 5 | 256.51% | 80.0% | 97.67% | 162.6% |
 
-## Initial confidence
+These horizons are correlated and cannot be treated as four independent confirmations.
 
-**0.42 / 1.00 — Preliminary**
+## Recross exit
 
-Positive evidence:
+The volatility recross exit was not useful enough to promote:
 
-- the idea is mechanical;
-- it is reproducible;
-- the chart displays multiple historical examples;
-- the economic interpretation is plausible as cross-asset relative volatility compression.
+- Mean after-cost return: **0.32%**
+- Median after-cost return: **−0.66%**
+- Hit rate: **45.5%**
+- Bootstrap 95% mean interval: approximately **−3.46% to 4.04%**
 
-Missing evidence:
+The fixed 90-day horizon remains the predeclared primary test. No exit is reselected after the result.
 
-- no repository backtest;
-- no untouched out-of-sample test;
-- no cost analysis;
-- no independent sample-size assessment;
-- no proof that the chart markers were generated by the stated rule alone.
+## Current prospective state
+
+As of the first post-boundary record:
+
+- Latest comparable decision date: **2026-08-03**
+- BTC realized volatility: **29.46%**
+- QQQ realized volatility: **24.11%**
+- BTC/QQQ volatility ratio: **1.222**
+- BTC below QQQ: **No**
+- Regime proxy: **bear contraction**
+- Status: **armed and waiting for a fresh crossover**
+- Untouched prospective events: **0**
+
+The weekday workflow updates the shadow ledger automatically. It observes and scores the frozen rule; it cannot place orders.
+
+## Confidence update
+
+Confidence moves from **42/100 to 47/100**.
+
+It rises because the rule is causal, reproducible, cost-aware, historically positive and directionally stable across several episodes. It remains below production quality because:
+
+- there are only six nonoverlapping 90-day historical episodes;
+- only two are in the source-exposed validation segment;
+- there are no untouched prospective outcomes;
+- the worst historical adverse excursion is about 50%;
+- the mechanism is plausible but not uniquely identified;
+- the source image cannot be exactly reconstructed marker-for-marker.
+
+## Production gate
+
+A production review cannot begin until all frozen requirements pass, including:
+
+- at least **10 untouched prospective nonoverlapping trigger outcomes**;
+- positive 90-day after-cost edge of at least 25% versus the frozen matched benchmark;
+- evidence in more than one predeclared regime;
+- stable data and execution behavior;
+- an explicit review of adverse excursion, decay risk and implementation costs.
+
+Passing that gate would permit a review, not automatic live authorization.
 
 ## Enhancements held back
 
-The following are separate experiments and cannot be added until the simple crossover is tested honestly:
+Optimized lookbacks, volatility-ratio weighting, z-scores, macro filters, ETF-flow filters, ETH/SOL generalization and ensembles remain separate future candidates. They cannot rewrite the canonical S-012 record.
 
-- 20-, 60- or 90-day optimized lookbacks;
-- BTC/QQQ volatility-ratio scores;
-- z-score or percentile thresholds;
-- macro-liquidity filters;
-- ETF-flow filters;
-- ETH and SOL variants;
-- combination with the crypto-versus-equities rebound signal;
-- machine-learning or ensemble models.
+## Durable records
 
-## Source record
-
-- Author handle: `@venturecoinist`
-- X post: `https://x.com/venturecoinist/status/2084249862673949183?s=46`
-- Evidence supplied: TradingView chart image showing BTC price, historical buy markers, and BTC versus QQQ 30-day realized-volatility series.
-- Limitation: the full tweet text is not independently archived in this commit. The record therefore preserves only claims directly supported by the supplied URL and image.
-
-## Next action
-
-Build the deterministic data and trigger-reproduction layer. Do not tune exits, thresholds or lookbacks before the canonical event history and untouched test boundary are frozen.
+- Frozen hypothesis: `signal_research/hypothesis_extensions/S-012-BTC-QQQ-RV.json`
+- Registry record: `signal_research/registry_extensions/S-012-BTC-QQQ-RV.json`
+- Backtest program: `signal_research/backtest_s012_btc_qqq_rv.py`
+- Conservative overlap audit: `signal_research/audit_s012_btc_qqq_rv.py`
+- Durable result: `signal_research/results/S-012-BTC-QQQ-RV-RESULT.json`
+- Prospective ledger: `signal_records/live/S-012-BTC-QQQ-RV-SHADOW.json`
+- Workflow artifact run: `30868542744`
 
 **Governing rule:** Canonical before enhanced.
