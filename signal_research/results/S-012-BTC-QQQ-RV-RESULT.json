@@ -10,9 +10,9 @@
   "confidence_label": "promising_but_unconfirmed",
   "canonical_definition_unchanged": true,
   "historical_scope": {
-    "first_comparable_date": "2014-10-20",
+    "first_comparable_date": "2014-10-13",
     "last_comparable_date": "2026-08-03",
-    "comparable_observations": 2986,
+    "comparable_observations": 2968,
     "fresh_crossovers": 11,
     "development_end": "2021-12-31",
     "source_exposed_validation_start": "2022-01-01",
@@ -91,11 +91,19 @@
       "one_sided_matched_null_probability": 0.0015
     }
   },
+  "recross_exit_result": {
+    "events": 11,
+    "mean_after_cost_return": 0.0031807812435237434,
+    "median_after_cost_return": -0.006611142289210002,
+    "hit_rate": 0.45454545454545453,
+    "bootstrap_95pct_mean_interval": [-0.034589000494943324, 0.04036873252480806],
+    "decision": "not_promoted"
+  },
   "interpretation": {
     "historical_support": true,
     "historical_sample_adequate_for_production": false,
     "reason": "The canonical rule produced positive historical outcomes and cleared the predeclared 25% conditional-improvement target, but fresh crossovers cluster, only six independent 90-day episodes remain after overlap control, only two are in the source-exposed validation segment, and no untouched prospective outcome exists.",
-    "recross_exit": "Not promoted; the separate recross-exit test was approximately flat and did not establish a useful exit edge.",
+    "recross_exit": "The separate recross-exit test was approximately flat and did not establish a useful exit edge.",
     "production_blocker": "At least ten untouched prospective nonoverlapping trigger outcomes plus the frozen execution, regime and robustness gates are required before a production review."
   },
   "latest_shadow_state": {
