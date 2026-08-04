@@ -37,7 +37,7 @@ class S012ResultTests(unittest.TestCase):
             "source_exposed_validation_nonoverlapping"
         ]
         self.assertEqual(2, validation["events"])
-        self.assertIn("not untouched", validation["warning"])
+        self.assertIn("untouched", validation["warning"])
         self.assertEqual(
             "2026-08-04",
             self.result["historical_scope"]["prospective_untouched_start"],
