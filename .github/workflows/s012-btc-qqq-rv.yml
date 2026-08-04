@@ -1,0 +1,98 @@
+name: S-012 BTC versus QQQ realized volatility
+
+on:
+  pull_request:
+    paths:
+      - "signal_research/backtest_s012_btc_qqq_rv.py"
+      - "signal_research/monitor_s012_btc_qqq_rv.py"
+      - "signal_research/candidates/S-012-BTC-QQQ-REALIZED-VOL-COMPRESSION.json"
+      - "signal_research/hypotheses/S-012-BTC-QQQ-REALIZED-VOL-COMPRESSION.json"
+      - "signal_records/live/S-012-BTC-QQQ-RV-SHADOW.json"
+      - "docs/signal_cards/BTC-QQQ-REALIZED-VOL-COMPRESSION-001.md"
+      - "tests/test_signal_s012_*.py"
+      - ".github/workflows/s012-btc-qqq-rv.yml"
+  push:
+    branches: [main]
+    paths:
+      - "signal_research/backtest_s012_btc_qqq_rv.py"
+      - "signal_research/monitor_s012_btc_qqq_rv.py"
+      - "signal_research/candidates/S-012-BTC-QQQ-REALIZED-VOL-COMPRESSION.json"
+      - "signal_research/hypotheses/S-012-BTC-QQQ-REALIZED-VOL-COMPRESSION.json"
+      - "signal_records/live/S-012-BTC-QQQ-RV-SHADOW.json"
+      - "docs/signal_cards/BTC-QQQ-REALIZED-VOL-COMPRESSION-001.md"
+      - "tests/test_signal_s012_*.py"
+      - ".github/workflows/s012-btc-qqq-rv.yml"
+  schedule:
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: s012-btc-qqq-rv-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test-and-backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile research programs
+        run: |
+          python -m py_compile signal_research/backtest_s012_btc_qqq_rv.py
+          python -m py_compile signal_research/monitor_s012_btc_qqq_rv.py
+      - name: Run deterministic unit tests
+        run: |
+          python -m unittest tests.test_signal_s012_btc_qqq_rv tests.test_signal_s012_shadow
+      - name: Run frozen historical backtest
+        run: |
+          python signal_research/backtest_s012_btc_qqq_rv.py \
+            --start 2014-09-17 \
+            --end 2026-08-03 \
+            --cost-bps 20 \
+            --output artifacts/S012_BTC_QQQ_RV_HISTORICAL.json
+      - name: Build current shadow record artifact
+        run: |
+          python signal_research/monitor_s012_btc_qqq_rv.py \
+            --cost-bps 20 \
+            --output artifacts/S012_BTC_QQQ_RV_SHADOW.json
+      - name: Upload auditable results
+        uses: actions/upload-artifact@v4
+        with:
+          name: s012-btc-qqq-rv-${{ github.run_id }}
+          path: artifacts/S012_BTC_QQQ_RV_*.json
+          retention-days: 90
+
+  update-prospective-record:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Refresh untouched prospective record
+        run: |
+          python signal_research/monitor_s012_btc_qqq_rv.py \
+            --refresh \
+            --cost-bps 20 \
+            --output signal_records/live/S-012-BTC-QQQ-RV-SHADOW.json
+      - name: Commit observation only when data changed
+        run: |
+          if git diff --quiet -- signal_records/live/S-012-BTC-QQQ-RV-SHADOW.json; then
+            echo "No S-012 observation change"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add signal_records/live/S-012-BTC-QQQ-RV-SHADOW.json
+          git commit -m "Update S-012 prospective shadow record"
+          git push
