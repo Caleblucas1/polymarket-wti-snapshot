@@ -19,7 +19,9 @@ Each forecast record contains:
 6. **Catalysts up and down** — observable developments that would change the estimate.
 7. **Evidence needed** — missing information most likely to narrow the range or
    materially change the point estimate.
-8. **Timestamp, contract identity, question, and resolution deadline** — enough
+8. **Resolution criteria and source** — the frozen rule and authoritative data
+   source that determine the outcome.
+9. **Timestamp, contract identity, question, and resolution deadline** — enough
    information to score the forecast later without hindsight.
 
 The point estimate and plausible range are different objects. A 12.5% point
@@ -37,8 +39,11 @@ stability of the estimate, not the probability that the event occurs.
 - Forecasts are append-only. A changed view creates a new record; it does not
   overwrite the prior forecast.
 - Market probabilities and independent estimates must preserve their sources.
-- Exact market rules and contract identifiers should be captured before the
-  forecast is treated as fully scoreable.
+- Resolution criteria and the authoritative resolution source are required.
+- When a condition ID is unavailable, forecast identity includes the exact
+  question and deadline so dated contracts on one event page cannot collide.
+- The exact contract identifier should still be captured before the forecast is
+  treated as completely linked to the market's raw contract data.
 - Catalysts must be observable and directional. Narrative that cannot change the
   estimate is not a catalyst.
 
@@ -66,14 +71,17 @@ market:
 - independent point estimate: 12.5%, the midpoint of the agreed 10%-15% initial band;
 - plausible range: 5%-25%;
 - confidence: moderate-low;
-- edge: -3.0 percentage points versus the market.
+- edge: -3.0 percentage points versus the market;
+- resolution rule: YES if IMF PortWatch publishes a seven-day moving average of
+  Strait of Hormuz Arrivals of Ships of at least 60 for any date through August 31.
 
-The exact Polymarket contract identifier and resolution rules remain listed as
-missing evidence rather than being guessed.
+The repository's existing market event ID and exact source URL are linked. The
+August 31 condition identifier remains explicitly listed as missing evidence
+rather than being guessed.
 
 ## Files
 
 - `signal_research/forecasting.py` validates and appends forecasts.
 - `signal_records/forecast_history.jsonl` is the append-only ledger.
-- `tests/test_forecasting.py` protects the identity, range, edge, confidence,
-  and duplicate-safety rules.
+- `tests/test_forecasting.py` protects the identity, rules, range, edge,
+  confidence, and duplicate-safety requirements.
