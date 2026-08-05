@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-FORECAST_SCHEMA_VERSION = 1
+FORECAST_SCHEMA_VERSION = 2
 CONFIDENCE_LEVELS = frozenset(
     {"low", "moderate_low", "moderate", "moderate_high", "high"}
 )
@@ -35,10 +35,27 @@ def _clean_strings(values: Iterable[str] | None) -> list[str]:
 
 
 def forecast_id_for(
-    *, as_of_et: str, forecaster: str, event_id: str, contract_id: str | None
+    *,
+    as_of_et: str,
+    forecaster: str,
+    event_id: str,
+    question: str,
+    resolution_deadline: str,
+    contract_id: str | None,
 ) -> str:
+    """Return an exact-contract-safe forecast identity.
+
+    Some event pages contain several dated contracts. When a condition ID has
+    not yet been captured, deadline plus exact question prevents two contracts
+    on the same event page from collapsing into one forecast identity.
+    """
+    contract_identity = (contract_id or "").strip()
+    if not contract_identity:
+        contract_identity = "|".join(
+            [resolution_deadline.strip(), question.strip()]
+        )
     canonical = "|".join(
-        [as_of_et.strip(), forecaster.strip(), event_id.strip(), (contract_id or "").strip()]
+        [as_of_et.strip(), forecaster.strip(), event_id.strip(), contract_identity]
     )
     digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
     return f"forecast-{digest}"
@@ -56,6 +73,8 @@ def build_forecast_record(
     plausible_high: float,
     confidence_level: str,
     resolution_deadline: str,
+    resolution_criteria: str,
+    resolution_source: str,
     contract_id: str | None = None,
     source_url: str | None = None,
     market_probability_source: str = "observed_market",
@@ -89,6 +108,8 @@ def build_forecast_record(
         ("event_id", event_id),
         ("question", question),
         ("resolution_deadline", resolution_deadline),
+        ("resolution_criteria", resolution_criteria),
+        ("resolution_source", resolution_source),
         ("market_probability_source", market_probability_source),
     ):
         if not str(value).strip():
@@ -100,6 +121,8 @@ def build_forecast_record(
             as_of_et=as_of_et,
             forecaster=forecaster,
             event_id=event_id,
+            question=question,
+            resolution_deadline=resolution_deadline,
             contract_id=contract_id,
         ),
         "as_of_et": as_of_et,
@@ -110,6 +133,8 @@ def build_forecast_record(
         "contract_id": contract_id,
         "question": question,
         "resolution_deadline": resolution_deadline,
+        "resolution_criteria": resolution_criteria.strip(),
+        "resolution_source": resolution_source.strip(),
         "source_url": source_url,
         "market_probability_source": market_probability_source,
         "market_probability": market,
@@ -137,6 +162,8 @@ def validate_forecast_record(record: dict[str, Any]) -> dict[str, Any]:
         contract_id=record.get("contract_id"),
         question=record["question"],
         resolution_deadline=record["resolution_deadline"],
+        resolution_criteria=record["resolution_criteria"],
+        resolution_source=record["resolution_source"],
         source_url=record.get("source_url"),
         market_probability_source=record.get(
             "market_probability_source", "observed_market"
