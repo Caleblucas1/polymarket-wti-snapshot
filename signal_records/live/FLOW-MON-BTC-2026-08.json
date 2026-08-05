@@ -7,7 +7,7 @@
     "live_api_error": "Binance public API request failed: 451 /fapi/v1/exchangeInfo {\n  \"code\": 0,\n  \"msg\": \"Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error.\"\n}",
     "live_api_status": "restricted_location_http_451",
     "pending_target_timestamps_utc": [
-      "2026-08-04T00:05:00Z"
+      "2026-08-05T00:05:00Z"
     ],
     "source": "Binance official public-data archive"
   },
@@ -27,7 +27,7 @@
   "exit": null,
   "funding_observations": [],
   "funding_status": "pending_official_monthly_archive",
-  "last_updated_at_utc": "2026-08-04T09:17:56.390282Z",
+  "last_updated_at_utc": "2026-08-05T09:15:31.606961Z",
   "live_test_id": "FLOW-MON-BTC-2026-08",
   "marks": [
     {
@@ -55,25 +55,38 @@
       "source_method": "binance_public_archive_earliest_aggregate_trade",
       "source_payload_hash": "33cad0af0dd991954da869648244ff05124aaa9778c6785972bd0202a93ddf3c",
       "target_timestamp_utc": "2026-08-03T00:05:00Z"
+    },
+    {
+      "aggregate_trade_id": 3401367711,
+      "archive_url": "https://data.binance.vision/data/futures/um/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2026-08-04.zip",
+      "archive_zip_sha256": "a65cbff78332f7902ff79fe390387eaab162f048dcf9f2606f301045a78d14ad",
+      "buyer_was_maker": false,
+      "observed_at_utc": "2026-08-04T00:05:00.136000Z",
+      "price": 63558.8,
+      "publication_lag_note": "Binance publishes finalized daily public-data files the following day; the frozen market timestamp is unchanged.",
+      "quantity_btc": 0.003,
+      "source_method": "binance_public_archive_earliest_aggregate_trade",
+      "source_payload_hash": "5397969896e23eab4c5db08caf19124fe3cd49b8eb1059e39d46ff43092279df",
+      "target_timestamp_utc": "2026-08-04T00:05:00Z"
     }
   ],
   "notes": "This file is updated only by the frozen live-test collector. It records a shadow observation and never represents a real-money position.",
   "performance": {
-    "as_of_timestamp_utc": "2026-08-03T00:05:00Z",
+    "as_of_timestamp_utc": "2026-08-04T00:05:00Z",
     "assumed_round_trip_execution_cost_return": -0.0014,
     "closed": false,
     "cumulative_funding_cash_flow_usdt_for_one_btc": 0,
     "cumulative_funding_return": 0.0,
-    "current_or_exit_price": 63488.0,
+    "current_or_exit_price": 63558.8,
     "entry_price": 62928.9,
     "estimated_after_cost_return_if_closed": null,
     "funding_complete": false,
-    "gross_return": 0.008884630114303516,
+    "gross_return": 0.010009709370416564,
     "notional_note": "Returns are normalized to a one-BTC, one-times-leverage shadow position; no real position exists.",
-    "provisional_gross_minus_execution_cost": 0.007484630114303515
+    "provisional_gross_minus_execution_cost": 0.008609709370416564
   },
   "real_money_trading_authorized": false,
-  "record_fingerprint": "0637bb408584a3fe0ec2a3325c329205aa3038b016bde118c93b181757c7bcc3",
+  "record_fingerprint": "3e2969523bbfff80eb9ac0261eec7a023154528017c8a2da5faffc5cc0dab523",
   "registry_id": "FLOW-MON-BTC-001",
   "schema_version": 1,
   "status": "open_archive_lagged",
