@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Durable review records for the active exact-contract signal layer.
 
-The market observation is evidence.  A user's rating is an annotation on that
-evidence.  Keeping those layers separate makes it possible to learn from
+The market observation is evidence. A user's rating is an annotation on that
+evidence. Keeping those layers separate makes it possible to learn from
 ratings without silently changing contract definitions or historical odds.
 """
 
@@ -14,10 +14,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from signal_collection_classifier import classify_signal_collection, evidence_metadata
 from signal_contracts import validate_exact_signal_rows
 
-SIGNAL_REVIEW_SCHEMA_VERSION = 2
-SIGNAL_DEFINITION_VERSION = "all-active-contracts-v1"
+SIGNAL_REVIEW_SCHEMA_VERSION = 3
+SIGNAL_DEFINITION_VERSION = "all-active-contracts-v2"
 DEFAULT_OBSERVATION_PATH = (
     Path(__file__).resolve().parent / "signal_records" / "observations.jsonl"
 )
@@ -112,14 +113,20 @@ def build_observation_record(
     signal_level: str,
     catalog: dict[str, Any],
 ) -> dict[str, Any]:
-    """Create an append-only evidence record with blank user annotations."""
+    """Create an append-only record with a freshly recomputed collection label.
+
+    ``signal_level`` is retained as the caller-reported value for auditability,
+    but the authoritative label is recomputed from current exact-contract data.
+    """
     normalized_signals = []
     for signal in signals:
         signal_scope = signal.get("signal_scope", "active_contract")
+        event_id = signal.get("event_id")
+        evidence = evidence_metadata(event_id) if event_id else {}
         normalized_signals.append(
             {
                 "key": signal["key"],
-                "event_id": signal.get("event_id"),
+                "event_id": event_id,
                 "event_instance_id": signal.get("event_instance_id"),
                 "event_label": signal.get("event_label"),
                 "source_url": signal.get("source_url"),
@@ -135,20 +142,26 @@ def build_observation_record(
                 "signal_scope": signal_scope,
                 "current_probability": _number(signal.get("current")),
                 "prior_day_probability": _number(signal.get("prior_day")),
-                "change_1d_pp": _number(signal.get("change_1d")),
-                "change_7d_pp": _number(signal.get("change_7d")),
+                "change_1d_pp": _number(signal.get("change_1d_pp", signal.get("change_1d"))),
+                "change_7d_pp": _number(signal.get("change_7d_pp", signal.get("change_7d"))),
                 "market_move": signal.get("market_move"),
                 "bullish_direction": signal.get("bullish_direction"),
                 "subject": signal.get("subject"),
                 "direction_rationale": signal.get("direction_rationale"),
                 "oil_readthrough": signal.get("oil_readthrough"),
                 "level_readthrough": signal.get("level_readthrough"),
+                "evidence_domain": evidence.get("domain"),
+                "flow_relevance": evidence.get("flow_relevance"),
+                "geography": evidence.get("geography"),
+                "independence_group": evidence.get("independence_group"),
+                "cross_chokepoint_rule": evidence.get("cross_chokepoint_rule"),
                 "status": signal.get("status", "open"),
                 "user_rating_vs_prior_day": None,
                 "user_note": None,
             }
         )
     validate_exact_signal_rows(normalized_signals)
+    classification = classify_signal_collection(normalized_signals)
     record = {
         "schema_version": SIGNAL_REVIEW_SCHEMA_VERSION,
         "definition_version": SIGNAL_DEFINITION_VERSION,
@@ -156,7 +169,9 @@ def build_observation_record(
         "observation_id": as_of_et,
         "as_of_et": as_of_et,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "signal_level": signal_level,
+        "signal_level": classification["label"],
+        "reported_signal_level": signal_level,
+        "classification": classification,
         "signals": normalized_signals,
         "review_status": "unreviewed",
     }
@@ -192,12 +207,7 @@ def persist_observation(
     signal_level: str,
     catalog: dict[str, Any],
 ) -> tuple[dict[str, Any], bool]:
-    """Build and persist one dashboard observation in one idempotent operation.
-
-    The dashboard generator should call this function after collecting its
-    source data.  It writes only the raw observation; user ratings and notes
-    remain annotations that can be exported from the dashboard separately.
-    """
+    """Build and persist one dashboard observation in one idempotent operation."""
     record = build_observation_record(
         as_of_et=as_of_et,
         signals=signals,
