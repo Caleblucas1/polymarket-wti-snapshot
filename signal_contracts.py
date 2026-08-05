@@ -1,7 +1,7 @@
 """Definitions for the uniform active-contract signal layer.
 
-An event page is a container.  A dated, threshold, or day-specific market on
-that page is the exact contract that can be used as evidence.  This module
+An event page is a container. A dated, threshold, or day-specific market on
+that page is the exact contract that can be used as evidence. This module
 keeps those two identities separate and supplies the directional interpretation
 needed by the oil read-through without combining contracts into baskets.
 """
@@ -11,10 +11,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from signal_collection_classifier import evidence_metadata
+
 
 ACTIVE_CONTRACT_DEFINITION_VERSION = "all-active-contracts-v1"
 
-# These are the first contracts the questionnaire examined.  They are a
+# These are the first contracts the questionnaire examined. They are a
 # highlighted view only; they are not a privileged or authoritative subset.
 HIGHLIGHTED_CONTRACT_KEYS = frozenset(
     {
@@ -27,7 +29,7 @@ HIGHLIGHTED_CONTRACT_KEYS = frozenset(
 )
 
 # Default direction means: when the exact contract's Yes probability rises,
-# does that add an oil-bullish impulse?  Labels with threshold directionality
+# does that add an oil-bullish impulse? Labels with threshold directionality
 # are handled by contract_bullish_direction below.
 EVENT_SIGNAL_POLICIES: dict[str, dict[str, str]] = {
     "hormuz_normal_by_july_31": {
@@ -58,7 +60,10 @@ EVENT_SIGNAL_POLICIES: dict[str, dict[str, str]] = {
     "iran_blockade_ends": {
         "default_bullish_direction": "down",
         "subject": "blockade-normalization odds",
-        "rationale": "More blockade-ending odds imply lower long-run physical risk.",
+        "rationale": (
+            "More blockade-ending odds are generally oil-bearish political/legal normalization, "
+            "but they do not prove vessel traffic has normalized in Hormuz or Bab el-Mandeb."
+        ),
     },
     "us_iran_nuclear_deal": {
         "default_bullish_direction": "down",
@@ -83,7 +88,10 @@ EVENT_SIGNAL_POLICIES: dict[str, dict[str, str]] = {
     "us_iran_peace_talks": {
         "default_bullish_direction": "down",
         "subject": "peace-talk odds",
-        "rationale": "More diplomacy odds are oil-bearish absent a separate escalation signal.",
+        "rationale": (
+            "More diplomacy odds are generally oil-bearish absent a separate escalation signal, "
+            "but they do not directly confirm vessel flow in Hormuz or Bab el-Mandeb."
+        ),
     },
     "hormuz_transit_july_20": {
         "default_bullish_direction": "down",
@@ -170,7 +178,7 @@ def contract_bullish_direction(event_id: str, market: dict[str, Any]) -> str:
 
 
 def contract_signal_metadata(event_id: str, market: dict[str, Any]) -> dict[str, str]:
-    """Return exact-contract identity and directional metadata for a market row."""
+    """Return exact-contract identity, direction, and evidence-scope metadata."""
     policy = EVENT_SIGNAL_POLICIES.get(event_id)
     if policy is None:
         raise KeyError(f"No oil-direction policy configured for {event_id!r}")
@@ -183,6 +191,7 @@ def contract_signal_metadata(event_id: str, market: dict[str, Any]) -> dict[str,
     ).strip() or None
     token_id = str(market.get("token_id") or market.get("token") or "").strip() or None
     direction = contract_bullish_direction(event_id, market)
+    evidence = evidence_metadata(event_id)
     return {
         "key": exact_contract_key(event_id, market),
         "event_id": event_id,
@@ -193,6 +202,11 @@ def contract_signal_metadata(event_id: str, market: dict[str, Any]) -> dict[str,
         "subject": policy["subject"],
         "direction_rationale": policy["rationale"],
         "signal_scope": "active_contract",
+        "evidence_domain": evidence["domain"],
+        "flow_relevance": evidence["flow_relevance"],
+        "geography": evidence["geography"],
+        "independence_group": evidence["independence_group"],
+        "cross_chokepoint_rule": evidence["cross_chokepoint_rule"],
     }
 
 
@@ -221,4 +235,3 @@ def validate_exact_signal_rows(signals: list[dict[str, Any]]) -> None:
     for signal in signals:
         if signal.get("signal_scope") != "active_contract":
             raise ValueError("Every row in the active-contract layer must have signal_scope=active_contract")
-
