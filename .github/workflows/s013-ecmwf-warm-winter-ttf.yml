@@ -1,0 +1,54 @@
+name: S-013 ECMWF warm winter versus TTF
+
+on:
+  pull_request:
+    paths:
+      - "signal_research/evaluate_s013_ecmwf_ttf_candidate.py"
+      - "signal_research/registry_extensions/S-013-ECMWF-WARM-WINTER-TTF.json"
+      - "signal_research/hypothesis_extensions/S-013-ECMWF-WARM-WINTER-TTF.json"
+      - "signal_research/candidates/S-013-ECMWF-WARM-WINTER-TTF.json"
+      - "signal_research/inputs/S-013-ECMWF-WARM-WINTER-TTF-SOURCE.json"
+      - "signal_research/results/S-013-ECMWF-WARM-WINTER-TTF-RESULT.json"
+      - "signal_records/live/S-013-ECMWF-WARM-WINTER-TTF-SHADOW.json"
+      - "docs/signal_cards/ECMWF-WARM-WINTER-TTF-001.md"
+      - "tests/test_signal_s013_*.py"
+      - ".github/workflows/s013-ecmwf-warm-winter-ttf.yml"
+  push:
+    branches: [main]
+    paths:
+      - "signal_research/evaluate_s013_ecmwf_ttf_candidate.py"
+      - "signal_research/inputs/S-013-ECMWF-WARM-WINTER-TTF-SOURCE.json"
+      - "signal_research/results/S-013-ECMWF-WARM-WINTER-TTF-RESULT.json"
+      - "tests/test_signal_s013_*.py"
+      - ".github/workflows/s013-ecmwf-warm-winter-ttf.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile evaluator
+        run: python -m py_compile signal_research/evaluate_s013_ecmwf_ttf_candidate.py
+      - name: Run S-013 tests
+        run: python -m unittest discover -s tests -p "test_signal_s013_*.py"
+      - name: Rebuild deterministic candidate result
+        run: |
+          python signal_research/evaluate_s013_ecmwf_ttf_candidate.py \
+            --source signal_research/inputs/S-013-ECMWF-WARM-WINTER-TTF-SOURCE.json \
+            --output artifacts/S-013-ECMWF-WARM-WINTER-TTF-RESULT.json
+          cmp artifacts/S-013-ECMWF-WARM-WINTER-TTF-RESULT.json \
+            signal_research/results/S-013-ECMWF-WARM-WINTER-TTF-RESULT.json
+      - name: Upload auditable result
+        uses: actions/upload-artifact@v4
+        with:
+          name: s013-ecmwf-warm-winter-ttf-${{ github.run_id }}
+          path: artifacts/S-013-ECMWF-WARM-WINTER-TTF-RESULT.json
+          retention-days: 90

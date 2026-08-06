@@ -1,0 +1,21 @@
+{
+  "signal_id": "S-013",
+  "registry_id": "ECMWF-WARM-WINTER-TTF-001",
+  "record_type": "source_observation_shadow",
+  "as_of_date": "2026-08-05",
+  "prospective_source_capture_boundary": "2026-08-05",
+  "canonical_public_release_not_before": "2026-08-06T12:00:00Z",
+  "forecast_initialization_visible": "2026-08-01",
+  "valid_season": "DJF 2026/27",
+  "qualitative_weather_direction": "warm_europe",
+  "qualitative_ttf_weather_impulse": "bearish",
+  "canonical_fixed_region_probability": null,
+  "canonical_trigger_evaluable": false,
+  "status": "awaiting_machine_readable_forecast_and_market_history",
+  "position": null,
+  "entry": null,
+  "outcomes": null,
+  "capital_rights": "none",
+  "real_money_trading_authorized": false,
+  "execution_note": "The screenshot is recorded as source evidence only. It does not create a TTF order, paper position or canonical trigger."
+}

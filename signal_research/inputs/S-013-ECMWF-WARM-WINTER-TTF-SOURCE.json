@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "signal_id": "S-013",
+  "registry_id": "ECMWF-WARM-WINTER-TTF-001",
+  "captured_at": "2026-08-05",
+  "x_source_url": "https://x.com/tleilax___/status/2085057971159969932?s=46",
+  "source_author": "tleilax___",
+  "source_text_visible_in_screenshot": "Hot winter expected. This is going to make winter TTF trading all the more enjoyable.",
+  "forecast_image": {
+    "sha256": "b8777486d5c84bb6f4cde8391f868d9f2014a7e74cba2cdbe1fe4bae78faf399",
+    "title": "ECMWF Seasonal Forecast",
+    "variable": "probability of most likely category of 2m temperature",
+    "forecast_start_visible": "2026-08-01",
+    "valid_season": "DJF 2026/27",
+    "system": "System 5",
+    "ensemble_size_visible": 51,
+    "climate_size_visible": 600,
+    "climate_period_visible": "1993-2016",
+    "qualitative_assessment": "Most of continental Europe and the Mediterranean are shown in orange or red upper-tercile probability categories, with substantial 70-100 percent color coverage.",
+    "numeric_fixed_region_probability_available": false
+  },
+  "screenshot": {
+    "sha256": "89db047ff0309d9cdff0186284a85986e53329c09ccd4549bf7f8c6999f14b0b",
+    "excluded_embedded_claim": "Polymarket Super El Nino claim",
+    "exclusion_reason": "It is a separate quoted post and is neither required nor verified for the ECMWF-to-TTF hypothesis."
+  },
+  "official_research_sources": {
+    "ecmwf_chart": "https://charts.ecmwf.int/products/seasonal_system5_standard_2mtm",
+    "copernicus_dataset": "https://cds.climate.copernicus.eu/datasets/seasonal-monthly-single-levels",
+    "ecmwf_reliability": "https://charts.ecmwf.int/products/seasonal_system5_standard_rdiag_2mtm",
+    "ecmwf_roc": "https://charts.ecmwf.int/products/seasonal_system5_standard_roc_2mtm",
+    "ice_contract_specification": "https://www.ice.com/products/27996665/Dutch-TTF-Gas-Futures"
+  },
+  "data_readiness": {
+    "machine_readable_august_2026_fixed_region_probability_available": false,
+    "historical_point_in_time_ecmwf_events_available": false,
+    "historical_ice_ttf_settlements_available": false,
+    "reason": "The user supplied chart is source evidence, while the repository currently lacks the gridded issuance archive and licensed point-in-time TTF settlement series required for an honest event study."
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "signal_id": "S-013",
+  "slug": "ECMWF-WARM-WINTER-TTF-001",
+  "title": "ECMWF warm European winter forecast versus Dutch TTF",
+  "lifecycle_stage": "Hypothesis blocked for data",
+  "operational_status": "Research only",
+  "capital_right": "None",
+  "real_money_authorization": false,
+  "source": {
+    "type": "X post with ECMWF seasonal forecast map",
+    "author_handle": "tleilax___",
+    "url": "https://x.com/tleilax___/status/2085057971159969932?s=46",
+    "forecast_map_sha256": "b8777486d5c84bb6f4cde8391f868d9f2014a7e74cba2cdbe1fe4bae78faf399",
+    "screenshot_sha256": "89db047ff0309d9cdff0186284a85986e53329c09ccd4549bf7f8c6999f14b0b",
+    "visible_claim": "Hot winter expected. This is going to make winter TTF trading all the more enjoyable.",
+    "visible_chart": "ECMWF System 5 probabilistic most-likely tercile forecast for DJF 2026/27 2m temperature, initialized 2026-08-01.",
+    "limitations": [
+      "The chart is a probability-category map, not a deterministic temperature forecast.",
+      "No exact area-weighted European probability can be recovered from the image alone.",
+      "The embedded Polymarket Super El Nino statement is separate and excluded from the signal."
+    ]
+  },
+  "canonical_hypothesis": "An August ECMWF forecast assigning at least 60 percent probability to upper-tercile DJF temperatures over a fixed European gas-demand box causes a bearish information shock in the equal-weight Dutch TTF December-January-February strip.",
+  "current_source_assessment": {
+    "qualitative_weather_direction": "warm Europe",
+    "qualitative_ttf_impulse": "bearish weather-demand impulse",
+    "canonical_trigger_evaluable_from_supplied_material": false,
+    "trade_authorized": false
+  },
+  "decision": "Accept as a candidate and preserve a frozen proposed rule, but block the backtest and any shadow position until machine-readable ECMWF data and point-in-time TTF settlement history are available.",
+  "governing_rule": "Canonical before enhanced. Source evidence earns research work, not capital rights."
+}

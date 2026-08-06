@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-08-04",
+  "as_of": "2026-08-05",
   "environment": "research_and_experimentation_only",
   "real_money_trading_authorized": false,
   "production_definition": "Production in this file means production-quality research infrastructure, data collection, monitoring, paper trading, and experimentation. It does not authorize brokerage execution or real-money trading.",
@@ -13,7 +13,8 @@
     {"registry_id": "MICRO-ASIA-SNDK-001", "operational_status": "degraded", "regime_state": "suspected_inactive", "capital_right": "none", "real_money_authorized": false, "reason": "The source suggests the participant-created regime may have ended. Historical research only; no capital influence."},
     {"registry_id": "CROSS-ASSET-REBOUND-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_right": "research_only", "real_money_authorized": false, "reason": "Research and backtesting only. No real-money trading authorization."},
     {"registry_id": "FLOW-MON-BTC-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_right": "research_only", "real_money_authorized": false, "reason": "Month-end seasonality research and paper experimentation only. No real-money trading authorization."},
-    {"registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001", "operational_status": "watchlist", "regime_state": "armed_waiting_for_fresh_crossover", "capital_right": "research_only", "real_money_authorized": false, "reason": "The canonical historical pattern merits prospective observation, but clustered events and zero untouched outcomes prohibit production or capital influence."}
+    {"registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001", "operational_status": "watchlist", "regime_state": "armed_waiting_for_fresh_crossover", "capital_right": "research_only", "real_money_authorized": false, "reason": "The canonical historical pattern merits prospective observation, but clustered events and zero untouched outcomes prohibit production or capital influence."},
+    {"registry_id": "ECMWF-WARM-WINTER-TTF-001", "operational_status": "ready_for_data", "regime_state": "warm_source_signal_observed_canonical_metric_unavailable", "capital_right": "research_only", "real_money_authorized": false, "reason": "The supplied ECMWF map supports a qualitative warm-Europe and bearish-TTF weather impulse, but machine-readable regional probabilities and point-in-time TTF history are missing. No position or capital influence."}
   ],
   "records": [
     {"registry_id": "POLICY-US-LEGISLATION-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_rights": "research_only", "real_money_authorized": false, "reason": "The post-passage canonical rule is frozen for dataset construction. The pre-passage extension remains blocked. No real-money trading authorization."},
@@ -24,6 +25,7 @@
     {"registry_id": "MICRO-ASIA-SNDK-001", "operational_status": "degraded", "regime_state": "suspected_inactive", "capital_rights": "none", "real_money_authorized": false, "reason": "The source suggests the participant-created regime may have ended. Historical research only; no capital influence."},
     {"registry_id": "CROSS-ASSET-REBOUND-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_rights": "research_only", "real_money_authorized": false, "reason": "Research and backtesting only. No real-money trading authorization."},
     {"registry_id": "FLOW-MON-BTC-001", "operational_status": "ready_for_data", "regime_state": "unknown", "capital_rights": "research_only", "real_money_authorized": false, "reason": "Month-end seasonality research and paper experimentation only. No real-money trading authorization."},
-    {"registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001", "operational_status": "watchlist", "regime_state": "armed_waiting_for_fresh_crossover", "capital_rights": "research_only", "real_money_authorized": false, "reason": "The canonical historical pattern merits prospective observation, but clustered events and zero untouched outcomes prohibit production or capital influence."}
+    {"registry_id": "BTC-QQQ-REALIZED-VOL-COMPRESSION-001", "operational_status": "watchlist", "regime_state": "armed_waiting_for_fresh_crossover", "capital_rights": "research_only", "real_money_authorized": false, "reason": "The canonical historical pattern merits prospective observation, but clustered events and zero untouched outcomes prohibit production or capital influence."},
+    {"registry_id": "ECMWF-WARM-WINTER-TTF-001", "operational_status": "ready_for_data", "regime_state": "warm_source_signal_observed_canonical_metric_unavailable", "capital_rights": "research_only", "real_money_authorized": false, "reason": "The supplied ECMWF map supports a qualitative warm-Europe and bearish-TTF weather impulse, but machine-readable regional probabilities and point-in-time TTF history are missing. No position or capital influence."}
   ]
 }

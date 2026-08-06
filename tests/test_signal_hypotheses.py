@@ -22,9 +22,9 @@ class SignalHypothesisTests(unittest.TestCase):
     def test_current_hypotheses_are_valid_and_cover_registry(self):
         self.assertEqual([], validate_hypotheses())
         summary = summarize_statuses(statuses())
-        self.assertEqual(10, summary["total"])
+        self.assertEqual(11, summary["total"])
         self.assertEqual(8, summary["frozen_canonical"])
-        self.assertEqual(1, summary["blocked_canonical"])
+        self.assertEqual(2, summary["blocked_canonical"])
         self.assertEqual(8, summary["dataset_eligible"])
         self.assertFalse(summary["real_money_trading_authorized"])
 

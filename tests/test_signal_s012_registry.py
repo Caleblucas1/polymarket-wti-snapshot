@@ -12,7 +12,7 @@ class S012RegistryTests(unittest.TestCase):
         )
         self.assertEqual("backtest", candidate.stage.value)
         self.assertEqual("watchlist", candidate.operational_status.value)
-        self.assertEqual(9, len(load_candidates()))
+        self.assertEqual(10, len(load_candidates()))
 
     def test_s012_canonical_hypothesis_is_frozen_and_resolvable(self):
         row = get_hypothesis("BTC-QQQ-RV")
