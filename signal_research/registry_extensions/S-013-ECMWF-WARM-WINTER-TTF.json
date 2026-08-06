@@ -1,0 +1,69 @@
+{
+  "signal": {
+    "signal_id": "S-013",
+    "registry_id": "ECMWF-WARM-WINTER-TTF-001",
+    "name": "ECMWF warm-winter forecast versus Dutch TTF",
+    "family": "weather_energy",
+    "stage": "hypothesis",
+    "operational_status": "ready_for_data",
+    "source_urls": [
+      "https://x.com/tleilax___/status/2085057971159969932?s=46",
+      "https://charts.ecmwf.int/products/seasonal_system5_standard_2mtm"
+    ],
+    "hypothesis": "A high-probability August ECMWF SEAS5 forecast for above-upper-tercile DJF temperatures across a fixed European gas-demand region should create a bearish weather impulse in the Dutch TTF December-January-February strip relative to matched August release windows.",
+    "predictor_assets": ["ECMWF SEAS5 DJF 2m-temperature upper-tercile probability"],
+    "target_assets": ["ICE Endex Dutch TTF December, January and February monthly futures"],
+    "horizon": "Primary: five ICE trading sessions after the verified forecast release; secondary: 20 sessions and November 30 diagnostics",
+    "applicable_regimes": [
+      "normal European gas-market functioning with weather-sensitive winter risk premium",
+      "liquid TTF winter contracts before the heating season",
+      "no dominant contemporaneous physical-supply shock"
+    ],
+    "invalid_regimes": [
+      "major pipeline or LNG outage",
+      "war, sanctions or infrastructure disruption dominating weather information",
+      "extreme storage or policy intervention overwhelming temperature demand",
+      "forecast probability reconstructed from chart colors rather than machine-readable data"
+    ],
+    "mechanism": "Warmer European winter expectations reduce expected heating demand and weather-risk premium, which should pressure the winter TTF strip all else equal.",
+    "decay_mechanism": "The weather forecast may be anticipated, revised, poorly calibrated at long lead, or overwhelmed by storage, supply, geopolitics and power-sector demand.",
+    "canonical_rule": "Using the August-initialized ECMWF SEAS5 ensemble, calculate the area-weighted probability that DJF mean 2m temperature is in the model's upper tercile over 35-60N and 10W-30E. Trigger a short-TTF research event only when that probability is at least 60 percent. Enter at the next ICE settlement after the verified public release and use an equal-weight December-January-February monthly strip. Exit after five ICE trading sessions; subtract EUR 0.05/MWh round trip.",
+    "deactivation_rule": "Reject or redesign if the machine-readable forecast cannot be reproduced point in time, if at least ten independent historical or prospective events show non-negative after-cost TTF returns relative to the matched benchmark, or if the result is confined to one supply regime.",
+    "benchmark": "Same-year-season unconditional five-session TTF DJF-strip returns sampled from matched August dates, with release-year and supply-regime controls.",
+    "data_source": "ECMWF/Copernicus seasonal forecast and hindcast fields plus point-in-time ICE Endex Dutch TTF settlement history. The supplied chart and screenshot are source evidence only.",
+    "confidence_score": 32,
+    "confidence_as_of": "2026-08-05",
+    "confidence_components": {
+      "statistical_evidence": 0,
+      "out_of_sample_evidence": 0,
+      "economic_mechanism": 11,
+      "regime_clarity": 6,
+      "execution_quality": 3,
+      "robustness": 2,
+      "current_relevance": 10
+    },
+    "production_requirements": {
+      "executable_rule": false,
+      "out_of_sample_evidence": false,
+      "costs_and_slippage": true,
+      "regime_definition": true,
+      "deactivation_rule": true,
+      "validated_data_source": false,
+      "lookahead_review": true
+    },
+    "aliases": ["ECMWF-TTF", "WARM-WINTER-TTF"],
+    "evidence_ids": ["EVID-ECMWF-WARM-WINTER-TTF-001"],
+    "notes": "The uploaded map is probabilistic and visually warm across much of Europe, but it does not provide a machine-readable regional probability. The embedded Polymarket El Nino claim is excluded. Historical ICE settlement data is not available in the repository, so no market-performance claim is made.",
+    "metadata": {
+      "forecast_system": "ECMWF SEAS5 System 5",
+      "forecast_initialization": "2026-08-01",
+      "valid_season": "DJF 2026/27",
+      "fixed_region": "35N-60N, 10W-30E",
+      "trigger_probability": 0.6,
+      "round_trip_cost_eur_per_mwh": 0.05,
+      "prospective_source_capture_boundary": "2026-08-05",
+      "canonical_public_release_not_before": "2026-08-06T12:00:00Z",
+      "real_money_trading_authorized": false
+    }
+  }
+}
