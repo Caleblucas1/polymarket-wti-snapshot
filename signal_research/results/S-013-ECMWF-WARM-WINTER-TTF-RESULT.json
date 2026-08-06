@@ -1,0 +1,61 @@
+{
+  "as_of": "2026-08-05",
+  "backtest_results": null,
+  "blocking_fields": [
+    "machine_readable_ecmwf_fixed_region_probability",
+    "point_in_time_historical_ecmwf_events",
+    "point_in_time_ice_ttf_settlements"
+  ],
+  "candidate_accepted": true,
+  "canonical_rule": {
+    "direction": "short",
+    "entry": "next official ICE settlement after verified public release",
+    "forecast": "August ECMWF SEAS5 DJF 2m temperature",
+    "instrument": "equal-weight ICE Dutch TTF December-January-February monthly futures strip",
+    "primary_exit": "official settlement after five ICE trading sessions",
+    "region": "35N-60N, 10W-30E",
+    "round_trip_cost_eur_per_mwh": 0.05,
+    "trigger": "area-weighted upper-tercile probability >= 60%"
+  },
+  "capital_rights": "none",
+  "classification": "candidate_accepted_hypothesis_blocked_market_data_unavailable",
+  "confidence_band": "preliminary",
+  "confidence_components": {
+    "current_relevance": 10,
+    "economic_mechanism": 11,
+    "execution_quality": 3,
+    "out_of_sample_evidence": 0,
+    "regime_clarity": 6,
+    "robustness": 2,
+    "statistical_evidence": 0
+  },
+  "confidence_score": 32,
+  "data_readiness": {
+    "backtest_executable": false,
+    "canonical_trigger_evaluable": false,
+    "historical_ttf_settlements_available": false,
+    "historical_weather_events_available": false
+  },
+  "decision": "Preserve and prioritize the candidate for data acquisition; do not infer a trade from the screenshot and do not claim historical alpha.",
+  "evaluation_version": 1,
+  "excluded_evidence": [
+    {
+      "claim": "Polymarket Super El Nino claim",
+      "reason": "It is a separate quoted post and is neither required nor verified for the ECMWF-to-TTF hypothesis."
+    }
+  ],
+  "operational_status": "ready_for_data",
+  "qualified_source_read": {
+    "canonical_probability_observed": null,
+    "reason": "The supplied ECMWF map visually favors upper-tercile temperatures across much of Europe, but the fixed-region numeric probability is unavailable.",
+    "statement_strength": "qualitative_only",
+    "ttf_weather_impulse": "bearish",
+    "weather_direction": "warm_europe"
+  },
+  "real_money_trading_authorized": false,
+  "registry_id": "ECMWF-WARM-WINTER-TTF-001",
+  "shadow_position": null,
+  "signal_id": "S-013",
+  "source_payload_sha256": "39606c3eb24766f9bf9d5571d2c746ba8c22f2d2cc562251eb65e6e930ba74ae",
+  "stage": "hypothesis"
+}
