@@ -1,0 +1,39 @@
+{
+  "hypothesis": {
+    "registry_id": "ECMWF-WARM-WINTER-TTF-001",
+    "definition_version": 1,
+    "variant": "canonical",
+    "freeze_status": "blocked",
+    "definition_origin": "Tleilax X post, user-supplied ECMWF seasonal map, official ECMWF/Copernicus documentation and ICE Dutch TTF contract specification",
+    "source_claim": "A hot European winter is expected and should create a tradeable opportunity in winter Dutch TTF futures.",
+    "decision_information": "Use only a verified public August ECMWF SEAS5 release and machine-readable ensemble or tercile-probability fields available at the decision timestamp. Do not infer a numeric trigger from screenshot colors and do not use the embedded Polymarket El Nino claim.",
+    "target_instrument": "Equal-weight ICE Endex Dutch TTF December, January and February monthly futures for the forecast winter",
+    "benchmark": "Matched August five-session returns for the same DJF strip construction, controlled by release year and broad supply regime",
+    "applicable_regimes": [
+      "weather-sensitive European gas risk premium",
+      "liquid pre-winter TTF curve",
+      "absence of a dominant simultaneous physical-supply shock"
+    ],
+    "invalid_regimes": [
+      "pipeline or LNG disruption",
+      "war, sanctions or infrastructure damage",
+      "storage or regulatory intervention dominating weather",
+      "non-point-in-time forecast or settlement reconstruction"
+    ],
+    "deactivation_rule": "Reject or redesign if point-in-time forecast reconstruction fails, if ten independent events do not show a negative after-cost five-session TTF response versus the frozen benchmark, or if apparent performance is explained by one supply regime.",
+    "timezone": "ECMWF release timestamps in UTC; ICE entry and exit use official exchange settlement dates and Central European exchange time",
+    "bar_size": "ECMWF seasonal issuance and daily ICE settlements",
+    "blocking_fields": [
+      "Retrieve and archive the machine-readable August 2026 ECMWF SEAS5 field needed to calculate the fixed-region upper-tercile probability.",
+      "Acquire point-in-time historical ICE Endex Dutch TTF December, January and February settlement history with contract identifiers and rolls.",
+      "Construct at least ten independent August forecast-release events without lookahead or survivorship bias."
+    ],
+    "source_fidelity_notes": "The map supports a broad warm-European-winter interpretation but not a precise regional probability. The screenshot's separate Polymarket Super El Nino statement is not part of this source claim or trigger.",
+    "trigger_rule": "For the August-initialized ECMWF SEAS5 forecast, calculate the area-weighted probability that DJF mean 2m temperature lies in the model-specific upper tercile over 35N-60N and 10W-30E. Trigger only when the probability is at least 60 percent.",
+    "entry_rule": "Enter a short research position at the next official ICE settlement after the verified public release timestamp, using an equal-weight strip of the December, January and February monthly TTF contracts.",
+    "exit_rule": "Primary exit is the official settlement after five ICE trading sessions. Twenty-session and November 30 exits are diagnostics and cannot replace the primary result after outcomes are observed.",
+    "direction_rule": "Short the equal-weight DJF TTF strip only; no long or options variant belongs to the canonical test.",
+    "cost_model": "Subtract EUR 0.05/MWh round trip from the strip return, covering at least two minimum ticks plus a conservative allowance for commission and slippage.",
+    "out_of_sample_boundary": "2026-08-05 source capture. The first untouched canonical observation begins only after the verified public August 2026 release and machine-readable regional calculation; the screenshot alone cannot start a canonical trade."
+  }
+}
