@@ -1,35 +1,35 @@
 {
-  "as_of_date": "2026-08-05",
+  "as_of_date": "2026-08-07",
   "capital_rights": "none",
   "cost_assumption_round_trip_bps": 20.0,
   "data_sources": {
     "BTC-USD": {
       "retrieval": "network",
-      "rows": 4341,
-      "sha256": "b7798e873356dff2eb9c46f1ef0a45f3dccb79782a83aae6a0bd9204cd488988",
-      "url": "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?period1=1405728000&period2=1786060800&interval=1d&events=div%2Csplits&includeAdjustedClose=true"
+      "rows": 4342,
+      "sha256": "6e272138e8709e508c1ae021d1ecbfa93a84b1e44a8c2ceab3478800422e4506",
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?period1=1405728000&period2=1786233600&interval=1d&events=div%2Csplits&includeAdjustedClose=true"
     },
     "QQQ": {
       "retrieval": "network",
-      "rows": 3029,
-      "sha256": "e11208ee40094c93c93cbf3fd4362f4a851e20f1026bda6c68889362f0b902b4",
-      "url": "https://query1.finance.yahoo.com/v8/finance/chart/QQQ?period1=1405728000&period2=1786060800&interval=1d&events=div%2Csplits&includeAdjustedClose=true"
+      "rows": 3030,
+      "sha256": "9bd801e4a1756e9b6e309255740a41de48518b71f94f05d357cd207dd470f8ed",
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/QQQ?period1=1405728000&period2=1786233600&interval=1d&events=div%2Csplits&includeAdjustedClose=true"
     }
   },
   "execution_note": "This record is an observation ledger only. It does not place orders or authorize capital.",
   "last_historical_or_prospective_trigger": {
     "decision_date": "2025-05-07",
     "is_prospective": false,
-    "volatility_ratio": 0.9782771509508317
+    "volatility_ratio": 0.9782764025973936
   },
   "latest_comparable_observation": {
     "btc_below_qqq": false,
-    "btc_realized_volatility": 0.2938613317151077,
-    "decision_date": "2026-08-05",
-    "decision_timestamp_utc": "2026-08-05T20:00:00Z",
-    "qqq_realized_volatility": 0.2597346427854826,
+    "btc_realized_volatility": 0.29430858521824943,
+    "decision_date": "2026-08-06",
+    "decision_timestamp_utc": "2026-08-06T20:00:00Z",
+    "qqq_realized_volatility": 0.2518603604881872,
     "regime": "bear_contraction",
-    "volatility_ratio": 1.1313905937368958
+    "volatility_ratio": 1.1685387277608266
   },
   "prospective_boundary": "2026-08-04",
   "prospective_event_count": 0,
