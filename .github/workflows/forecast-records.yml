@@ -1,0 +1,42 @@
+name: Forecast record validation and scoring
+
+on:
+  pull_request:
+    paths:
+      - "forecast_records/**"
+      - "tests/test_forecasting.py"
+      - "docs/SUPERFORECASTING_OPERATING_STANDARD.md"
+      - "docs/FORECAST_RECORD_AUTOMATION.md"
+      - ".github/workflows/forecast-records.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-score-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile forecasting tools
+        run: python -m py_compile forecast_records/forecasting.py
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -p "test_forecasting.py" -v
+      - name: Validate prospective records
+        run: python forecast_records/forecasting.py validate --records forecast_records/records
+      - name: Generate accuracy and calibration reports
+        run: |
+          python forecast_records/forecasting.py report \
+            --records forecast_records/records \
+            --json-output artifacts/forecast_accuracy_report.json \
+            --markdown-output artifacts/forecast_accuracy_report.md
+      - name: Upload auditable forecast reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-accuracy-${{ github.run_id }}
+          path: artifacts/forecast_accuracy_report.*
+          retention-days: 90

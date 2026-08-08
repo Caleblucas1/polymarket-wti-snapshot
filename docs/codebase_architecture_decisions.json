@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "target_layout": [
+    "apps",
+    "core",
+    "signals",
+    "polymarket",
+    "forecast_records",
+    "data",
+    "docs",
+    "tests",
+    ".github/workflows"
+  ],
+  "governing_constraints": {
+    "signal_lifecycle": ["candidate", "hypothesis", "backtest", "production"],
+    "canonical_before_enhanced": true,
+    "prospective_forecasts_only": true,
+    "append_only_evidence": true,
+    "production_implies_capital_authorization": false
+  },
+  "decisions": [
+    {
+      "id": "ADR-001",
+      "name": "self_contained_signal_directories",
+      "status": "adopted_target_incremental_migration",
+      "required_contents": [
+        "signal definition",
+        "canonical hypothesis",
+        "backtest",
+        "results",
+        "regimes",
+        "costs",
+        "out-of-sample boundary",
+        "deactivation or reactivation rule",
+        "lifecycle stage",
+        "capital-rights status"
+      ]
+    },
+    {
+      "id": "ADR-002",
+      "name": "forecast_records_separate_from_signal_research",
+      "status": "implemented_in_pr36"
+    },
+    {
+      "id": "ADR-003",
+      "name": "open_and_resolved_forecasts_separated_and_scored",
+      "status": "adopted_target_partial_implementation"
+    },
+    {
+      "id": "ADR-004",
+      "name": "polymarket_ingestion_bounded_context",
+      "status": "adopted_target_partial_implementation"
+    },
+    {
+      "id": "ADR-005",
+      "name": "shared_rules_in_core_orchestration_in_apps",
+      "status": "adopted_target_incremental_migration"
+    },
+    {
+      "id": "ADR-006",
+      "name": "explicit_data_authority_and_grain",
+      "status": "partially_implemented"
+    },
+    {
+      "id": "ADR-007",
+      "name": "compatibility_wrappers_during_migration",
+      "status": "required"
+    },
+    {
+      "id": "ADR-008",
+      "name": "tests_mirror_architecture",
+      "status": "adopted_target_incremental_migration"
+    },
+    {
+      "id": "ADR-009",
+      "name": "automation_grouped_by_responsibility",
+      "status": "partially_implemented"
+    },
+    {
+      "id": "ADR-010",
+      "name": "incremental_value_driven_migration",
+      "status": "required"
+    }
+  ],
+  "speed_standard": [
+    "Prefer the smallest safe durable change.",
+    "Do not rewrite working collectors without a measurable benefit.",
+    "Preserve public commands and data paths with compatibility wrappers.",
+    "Run focused tests first and the full reliability suite before merge.",
+    "Keep architectural cleanup separate from urgent data delivery.",
+    "Report whether a change is documented, partially implemented, or fully migrated."
+  ]
+}
